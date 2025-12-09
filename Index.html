@@ -33,7 +33,6 @@
      .spin-slow { animation: spin 2s linear infinite; }
      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
      
-     /* Estilos específicos para inputs al estilo Material/AppSheet */
      .input-label { font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-bottom: 0.25rem; display: block; }
      .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.5rem; font-size: 0.875rem; transition: all 0.2s; outline: none; }
      .input-field:focus { border-color: #D32F2F; ring: 1px solid #D32F2F; }
@@ -51,33 +50,22 @@
    <script type="text/babel">
      const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-     // --- COMUNICACIÓN CON APPS SCRIPT (LIMPIA) ---
+     // --- COMUNICACIÓN CON APPS SCRIPT ---
      const runServer = (endpoint, payload = {}) => {
        return new Promise((resolve, reject) => {
-         if (typeof google === 'undefined' || !google.script) {
-            reject(new Error("Error: Debes ejecutar esta aplicación desde Google Apps Script."));
-            return;
-         }
+         if (typeof google === 'undefined' || !google.script) { reject(new Error("Ejecutar en GAS")); return; }
          google.script.run
-           .withSuccessHandler((res) => {
-               if (res && res.error) {
-                   reject(new Error(res.message));
-               } else {
-                   resolve(res);
-               }
-           })
+           .withSuccessHandler((res) => { if (res && res.error) reject(new Error(res.message)); else resolve(res); })
            .withFailureHandler((err) => reject(err))
            .apiHandler({ endpoint, payload });
        });
      };
 
-     // --- COMPONENTES UI E ICONOS ---
+     // --- ICONOS ---
      const Icon = ({ name, size = 20, className = "" }) => {
        const icons = {
          Home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
          ClipboardList: <><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>,
-         MessageCircleWarning: <><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M12 8v4"/><path d="M12 16h.01"/></>,
-         FileSignature: <><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V11"/><path d="M18 5.675V9H14.675L18 5.675Z"/><path d="M18 11l-2.293 2.293a1 1 0 0 0 0 1.414l1.586 1.586a1 1 0 0 0 1.414 0L21 14"/><path d="M12 15l-3 3 .707 2.293 2.293-2.293 3-3"/></>,
          History: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/><path d="M12 7v5l4 2"/></>,
          FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>,
          ChevronRight: <path d="m9 18 6-6-6-6"/>,
@@ -88,531 +76,129 @@
          ShieldCheck: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>,
          LogIn: <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></>,
          Search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
-         Lock: <><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
          RefreshCw: <><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></>,
          Info: <><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="8"/><line x1="12" x2="12.01" y2="16"/></>,
          CheckCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
          Clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
          CloudLightning: <><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></>,
          Monitor: <><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>,
-         Server: <><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></>,
-         Plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
          X: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
          CheckBig: <><polyline points="20 6 9 17 4 12"/></>
        };
-       return (
-         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-           {icons[name] || <circle cx="12" cy="12" r="10"/>}
-         </svg>
-       );
+       return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name] || <circle cx="12" cy="12" r="10"/>}</svg>;
      };
 
      const Toast = ({ message, onClose }) => {
        useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
-       return (
-           <div className="toast flex items-center gap-2">
-               <Icon name="Info" className="text-blue-400" />
-               <span>{message}</span>
-           </div>
-       );
+       return <div className="toast flex items-center gap-2"><Icon name="Info" className="text-blue-400" /><span>{message}</span></div>;
      };
 
-     // --- MODAL DE ÉXITO MODERNO ---
-     const SuccessModal = ({ onClose }) => {
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 relative flex flex-col items-center text-center transform transition-all scale-100">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
-                        <Icon name="X" size={20} />
-                    </button>
-                    
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 relative">
-                        <div className="absolute inset-0 bg-green-200 rounded-full animate-ping opacity-25"></div>
-                        <Icon name="CheckBig" size={40} className="text-green-600" />
-                    </div>
-                    
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">¡Solicitud Creada!</h3>
-                    <p className="text-gray-500 text-sm mb-6">Tu ticket ha sido registrado correctamente y se ha enviado al equipo de soporte.</p>
-                    
-                    <button 
-                        onClick={onClose}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-green-600/30"
-                    >
-                        Entendido
-                    </button>
-                </div>
+     const SuccessModal = ({ onClose }) => (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 relative flex flex-col items-center text-center">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><Icon name="X" size={20} /></button>
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 relative"><div className="absolute inset-0 bg-green-200 rounded-full animate-ping opacity-25"></div><Icon name="CheckBig" size={40} className="text-green-600" /></div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">¡Solicitud Creada!</h3>
+                <p className="text-gray-500 text-sm mb-6">Tu ticket ha sido registrado correctamente.</p>
+                <button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition">Entendido</button>
             </div>
-        );
-     };
+        </div>
+     );
 
      const getStatusTextColor = (status) => {
        if (!status) return 'text-gray-600';
        const s = status.toString().toLowerCase();
-       if (s === 'cerrado' || s.includes('resuelto')) return 'text-green-600';
-       if (s.includes('abierto') || s.includes('soporte') || s.includes('proceso')) return 'text-blue-600';
-       if (s.includes('cancelado') || s.includes('rechazado')) return 'text-red-600';
+       if (s === 'cerrado' || s.includes('resuelto') || s.includes('entregado')) return 'text-green-600';
+       if (s.includes('abierto') || s.includes('proceso') || s.includes('ejecución') || s.includes('programado') || s.includes('tramite')) return 'text-blue-600';
        return 'text-yellow-600';
      };
-
      const getStatusBadgeColor = (status) => {
          if (!status) return 'bg-gray-100 text-gray-600';
          const s = status.toString().toLowerCase();
-         if (s === 'cerrado' || s.includes('resuelto')) return 'bg-green-100 text-green-700';
-         if (s.includes('abierto') || s.includes('soporte') || s.includes('proceso')) return 'bg-blue-100 text-blue-700';
-         if (s.includes('cancelado') || s.includes('rechazado')) return 'bg-red-100 text-red-700';
+         if (s === 'cerrado' || s.includes('resuelto') || s.includes('entregado')) return 'bg-green-100 text-green-700';
+         if (s.includes('abierto') || s.includes('proceso') || s.includes('ejecución') || s.includes('programado') || s.includes('tramite')) return 'bg-blue-100 text-blue-700';
          return 'bg-yellow-100 text-yellow-700';
      };
 
-     // --- LOGIN VIEW ---
-     const LoginView = ({ onSuccess, isCheckingCache }) => {
-           if (isCheckingCache) {
-               return (
-                   <div className="flex h-screen items-center justify-center bg-gray-100">
-                       <div className="flex flex-col items-center">
-                           <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-16 w-auto mb-4 opacity-50 grayscale" />
-                       </div>
-                   </div>
-               );
-           }
+     // --- VISTAS ---
 
+     const LoginView = ({ onSuccess, isCheckingCache }) => {
+           if (isCheckingCache) return <div className="flex h-screen items-center justify-center bg-gray-100"><img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-16 opacity-50 grayscale" /></div>;
            const [loading, setLoading] = useState(false);
            const [errorMsg, setErrorMsg] = useState(null);
-
-           const login = async () => {
-               setLoading(true);
-               setErrorMsg(null);
-               try {
-                   await onSuccess(null);
-               } catch (e) {
-                   console.error(e);
-                   setLoading(false);
-                   setErrorMsg(e.message || "Error desconocido al iniciar sesión.");
-               }
-           };
-
+           const login = async () => { setLoading(true); try { await onSuccess(null); } catch (e) { setLoading(false); setErrorMsg(e.message); } };
            return (
                <div className="flex flex-col h-screen bg-gray-100">
                    <div className="bg-appRed h-2 w-full"></div>
                    <div className="flex-1 flex items-center justify-center p-4">
                        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-                           <div className="flex justify-center mb-6">
-                               <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-20 w-auto object-contain" />
-                           </div>
+                           <div className="flex justify-center mb-6"><img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-20 w-auto object-contain" /></div>
                            <h1 className="text-2xl font-bold text-gray-800 mb-2">Ticket Tracker</h1>
-                           <p className="text-gray-500 mb-8 text-sm">Gestión de Tecnología & Servicios</p>
-                          
-                           {errorMsg && (
-                               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-left animate-fade-in">
-                                   <Icon name="AlertTriangle" className="text-red-600 flex-shrink-0" size={20} />
-                                   <div>
-                                       <h4 className="text-sm font-bold text-red-700">Acceso Denegado</h4>
-                                       <p className="text-xs text-red-600 mt-1">{errorMsg}</p>
-                                   </div>
-                               </div>
-                           )}
-
-                           {loading ? (
-                               <div className="py-6"><div className="w-10 h-10 border-4 border-appRed border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p className="text-xs text-gray-400">Autenticando...</p></div>
-                           ) : (
-                               <div className="space-y-3">
-                                   <button onClick={login} className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded flex items-center justify-center gap-2 transition shadow-sm"><Icon name="User" size={18} /> Ingresar con Google</button>
-                               </div>
-                           )}
-                           <div className="mt-8 text-[10px] text-gray-400">© 2025 G4S Secure Solutions.</div>
+                           {errorMsg && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-left"><h4 className="text-sm font-bold text-red-700">Acceso Denegado</h4><p className="text-xs text-red-600">{errorMsg}</p></div>}
+                           {loading ? <div className="py-6"><div className="w-10 h-10 border-4 border-appRed border-t-transparent rounded-full animate-spin mx-auto"></div></div> : <button onClick={login} className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded flex items-center justify-center gap-2"><Icon name="User" size={18} /> Ingresar con Google</button>}
                        </div>
                    </div>
                </div>
            );
      };
 
-     // --- SIDEBAR ---
      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSync, isSyncing }) => {
-       const menuItems = [
-         { id: 'home', icon: 'Home', title: 'Inicio' },
-         { id: 'create', icon: 'ClipboardList', title: 'Nueva Solicitud' },
-         { id: 'process', icon: 'Monitor', title: 'Tickets Activos' },
-         { id: 'history', icon: 'History', title: 'Historial Tickets' },
-       ];
-     
+       const menuItems = [ { id: 'home', icon: 'Home', title: 'Inicio' }, { id: 'create', icon: 'ClipboardList', title: 'Nueva Solicitud' }, { id: 'process', icon: 'Monitor', title: 'Tickets Activos' }, { id: 'history', icon: 'History', title: 'Historial Tickets' } ];
        return (
          <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-lg z-10 fixed">
-           <div className="p-6 border-b border-gray-100 flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
-              <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-8 w-auto object-contain" />
-              <span className="font-bold text-gray-800 text-lg">Ticket Tracker</span>
-           </div>
+           <div className="p-6 border-b border-gray-100 flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}><img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-8 w-auto object-contain" /><span className="font-bold text-gray-800 text-lg">Ticket Tracker</span></div>
            <div className="flex-1 overflow-y-auto py-4">
-             {menuItems.map((item) => (
-               <div key={item.id} onClick={() => setView(item.id)} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === item.id ? 'bg-red-50 border-appRed' : 'border-transparent hover:bg-gray-50'}`}>
-                 <div className="flex items-center gap-3">
-                   <Icon name={item.icon} className={`${currentView === item.id ? 'text-appRed' : 'text-gray-400'}`} size={20} />
-                   <div className={`font-medium text-sm ${currentView === item.id ? 'text-appRed font-bold' : 'text-gray-600'}`}>{item.title}</div>
-                 </div>
-               </div>
-             ))}
+             {menuItems.map((item) => (<div key={item.id} onClick={() => setView(item.id)} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === item.id ? 'bg-red-50 border-appRed' : 'border-transparent hover:bg-gray-50'}`}><div className="flex items-center gap-3"><Icon name={item.icon} className={`${currentView === item.id ? 'text-appRed' : 'text-gray-400'}`} size={20} /><div className={`font-medium text-sm ${currentView === item.id ? 'text-appRed font-bold' : 'text-gray-600'}`}>{item.title}</div></div></div>))}
              <div className="my-2 border-t border-gray-100"></div>
-             <div onClick={() => setView('config')} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === 'config' ? 'bg-blue-50 border-appBlue' : 'border-transparent hover:bg-gray-50'}`}>
-               <div className="flex items-start gap-3">
-                 <Icon name="Settings" className={`${currentView === 'config' ? 'text-appBlue' : 'text-gray-400'}`} size={20} />
-                 <div className={`font-medium text-sm ${currentView === 'config' ? 'text-appBlue font-bold' : 'text-gray-600'}`}>Configuración</div>
-               </div>
-             </div>
+             <div onClick={() => setView('config')} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === 'config' ? 'bg-blue-50 border-appBlue' : 'border-transparent hover:bg-gray-50'}`}><div className="flex items-start gap-3"><Icon name="Settings" className={`${currentView === 'config' ? 'text-appBlue' : 'text-gray-400'}`} size={20} /><div className={`font-medium text-sm ${currentView === 'config' ? 'text-appBlue font-bold' : 'text-gray-600'}`}>Configuración</div></div></div>
            </div>
            <div className="p-4 border-t bg-gray-50">
               <div className="flex flex-col gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                   <div className="p-2 rounded-full bg-gray-200"><Icon name="User" size={16} className="text-gray-600" /></div>
-                   <div className="overflow-hidden flex-1">
-                       <div className="text-[10px] uppercase font-bold text-gray-500">Usuario</div>
-                       <div className="text-xs font-bold text-gray-800 truncate w-full" title={userContext?.email}>{userContext?.email || '...'}</div>
-                   </div>
-                </div>
-                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">
-                   {isSyncing ? (
-                        <div className="sync-indicator text-blue-600 font-bold"><Icon name="RefreshCw" size={10} className="spin-slow" /> Actualizando...</div>
-                   ) : (
-                        <div className="sync-indicator"><Icon name="CloudLightning" size={10} /> Al día</div>
-                   )}
-                   {lastSync && <span className="text-[9px] text-gray-400">{new Date(Number(lastSync)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>}
-                </div>
+                <div className="flex items-center gap-2"><div className="p-2 rounded-full bg-gray-200"><Icon name="User" size={16} className="text-gray-600" /></div><div className="overflow-hidden flex-1"><div className="text-[10px] uppercase font-bold text-gray-500">Usuario</div><div className="text-xs font-bold text-gray-800 truncate w-full" title={userContext?.email}>{userContext?.email || '...'}</div></div></div>
+                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">{isSyncing ? <div className="sync-indicator text-blue-600 font-bold"><Icon name="RefreshCw" size={10} className="spin-slow" /> Actualizando...</div> : <div className="sync-indicator"><Icon name="CloudLightning" size={10} /> Al día</div>}{lastSync && <span className="text-[9px] text-gray-400">{new Date(Number(lastSync)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>}</div>
               </div>
-              <button onClick={onLogout} className="w-full py-2 px-3 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2">
-                <Icon name="LogIn" size={14} className="rotate-180"/> Salir
-              </button>
+              <button onClick={onLogout} className="w-full py-2 px-3 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2"><Icon name="LogIn" size={14} className="rotate-180"/> Salir</button>
            </div>
          </div>
        );
      };
 
-     // --- CREATE REQUEST VIEW (UNIFICADA & REAL) ---
      const CreateRequest = ({ userContext, setView, onRefresh }) => {
-       const [formData, setFormData] = useState({
-           idSede: '',
-           ticketCliente: '',
-           clasificacion: 'Hardware',
-           tipoServicio: 'Visita técnica', // Nuevo visual
-           prioridad: 'Media',
-           solicitud: '',
-           observacion: ''
-       });
+       const [formData, setFormData] = useState({ idSede: '', ticketCliente: '', clasificacion: 'Hardware', tipoServicio: 'Visita técnica', prioridad: 'Media', solicitud: '', observacion: '' });
        const [submitting, setSubmitting] = useState(false);
-       const [showSuccess, setShowSuccess] = useState(false); // Estado para el modal
-
-       // Fecha actual formateada
+       const [showSuccess, setShowSuccess] = useState(false);
        const currentDate = useMemo(() => new Date().toLocaleString(), []);
 
-       const handleChange = (field, value) => {
-           setFormData(prev => ({ ...prev, [field]: value }));
-       };
-
+       const handleChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
        const handleSubmit = () => {
-           if (!formData.idSede || !formData.solicitud || !formData.observacion) {
-               alert("Por favor completa los campos obligatorios.");
-               return;
-           }
-
+           if (!formData.idSede || !formData.solicitud || !formData.observacion) { alert("Completa los campos obligatorios."); return; }
            setSubmitting(true);
-           
-           // Preparamos payload, concatenando info extra en observación si es necesario
-           const payload = {
-             ...formData,
-             // Concatenamos el tipo de servicio a la observación para no perder el dato en el backend actual
-             observacion: `[Tipo: ${formData.tipoServicio}] ${formData.observacion}`
-           };
-
-           runServer('createRequest', payload)
-             .then(() => {
-                 // REEMPLAZADO: alert por el modal de éxito
-                 setShowSuccess(true);
-             })
-             .catch(err => {
-                 console.error(err);
-                 alert("❌ Error al crear ticket: " + err.message);
-                 setSubmitting(false); // Solo desbloqueamos si hubo error
-             });
-             // No hacemos finally(submitting=false) aquí para que no parpadee antes de que el usuario cierre el modal
+           const payload = { ...formData, observacion: `[Tipo: ${formData.tipoServicio}] ${formData.observacion}` };
+           runServer('createRequest', payload).then(() => setShowSuccess(true)).catch(err => { alert("Error: " + err.message); setSubmitting(false); });
        };
-       
-       const handleSuccessClose = () => {
-          setShowSuccess(false);
-          setSubmitting(false);
-          if(onRefresh) onRefresh(true);
-          setView('home');
-       };
+       const handleSuccessClose = () => { setShowSuccess(false); setSubmitting(false); if(onRefresh) onRefresh(true); setView('home'); };
 
        return (
          <div className="p-8 max-w-4xl mx-auto animate-fade-in relative">
            {showSuccess && <SuccessModal onClose={handleSuccessClose} />}
-         
-           {/* Header Flotante / Superior */}
-           <div className="flex justify-between items-center mb-6">
-             <h2 className="text-xl font-medium text-gray-800">Crear Solicitud</h2>
-             <div className="flex gap-2">
-                <button
-                     type="button"
-                     onClick={() => setView('home')}
-                     disabled={submitting}
-                     className="px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-medium hover:bg-red-50 transition"
-                 >
-                     Cancelar
-                </button>
-                <button
-                     type="button"
-                     onClick={handleSubmit}
-                     disabled={submitting || !formData.idSede || !formData.solicitud || !formData.observacion}
-                     className="bg-appRed text-white px-6 py-2 rounded shadow hover:bg-red-700 font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                 >
-                     {submitting ? (
-                         <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Guardando...</>
-                     ) : (
-                         "Guardar"
-                     )}
-                 </button>
-             </div>
-           </div>
-
+           <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-medium text-gray-800">Crear Solicitud</h2><div className="flex gap-2"><button onClick={() => setView('home')} disabled={submitting} className="px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-medium hover:bg-red-50">Cancelar</button><button onClick={handleSubmit} disabled={submitting} className="bg-appRed text-white px-6 py-2 rounded shadow hover:bg-red-700 font-medium text-sm flex items-center gap-2">{submitting ? "Guardando..." : "Guardar"}</button></div></div>
            <div className="bg-white p-8 rounded shadow-sm border border-gray-200">
-               
-                 {/* Sección 1: Consecutivo Del Ticket */}
-                 <h3 className="section-title mt-0">Consecutivo Del Ticket</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                   <div>
-                       <label className="input-label">Ticket G4S *</label>
-                       <input
-                           type="text"
-                           className="input-field bg-gray-50 text-gray-400 cursor-not-allowed"
-                           placeholder="Generado automáticamente"
-                           disabled
-                           readOnly
-                       />
-                   </div>
-                   <div>
-                       <label className="input-label">Ticket (Opcional)</label>
-                       <input
-                           type="text"
-                           className="input-field"
-                           value={formData.ticketCliente}
-                           onChange={(e) => handleChange('ticketCliente', e.target.value)}
-                       />
-                   </div>
-                 </div>
-
-                 {/* Sección 2: Sitio Solicitud */}
-                 <h3 className="section-title">Sitio Solicitud</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                   <div>
-                       <label className="input-label">Sede *</label>
-                       <select
-                           className="input-field"
-                           value={formData.idSede}
-                           onChange={(e) => handleChange('idSede', e.target.value)}
-                       >
-                           <option value="">Seleccione Sede...</option>
-                           {userContext && userContext.allowedClientIds && userContext.allowedClientIds.map(id => (
-                               <option key={id} value={id}>{userContext.clientNames && userContext.clientNames[id] ? userContext.clientNames[id] : id}</option>
-                           ))}
-                       </select>
-                   </div>
-                   <div>
-                       <label className="input-label">Fecha creación cliente *</label>
-                       <div className="relative">
-                         <input
-                             type="text"
-                             className="input-field bg-gray-50 text-gray-600"
-                             value={currentDate}
-                             readOnly
-                         />
-                         <div className="absolute right-3 top-2.5 text-gray-400"><Icon name="Clock" size={16}/></div>
-                       </div>
-                   </div>
-                 </div>
-
-                 {/* Sección 3: Motivo Del Servicio */}
-                 <h3 className="section-title">Motivo Del Servicio</h3>
-                 <div className="space-y-4 mb-6">
-                    <div>
-                         <label className="input-label">Solicitud *</label>
-                         <input
-                             type="text"
-                             className="input-field"
-                             value={formData.solicitud}
-                             onChange={(e) => handleChange('solicitud', e.target.value)}
-                         />
-                    </div>
-                    
-                    <div>
-                       <label className="input-label">Clasificación Solicitud</label>
-                       <select
-                           className="input-field"
-                           value={formData.clasificacion}
-                           onChange={(e) => handleChange('clasificacion', e.target.value)}
-                       >
-                           <option value="Hardware">Hardware</option>
-                           <option value="Software">Software</option>
-                           <option value="Redes">Redes</option>
-                           <option value="Acceso">Acceso</option>
-                           <option value="Otro">Otro</option>
-                       </select>
-                    </div>
-
-                    <div>
-                        <label className="input-label">Clasificación *</label>
-                        <div className="flex">
-                           {['Visita técnica', 'Visita comercial'].map(t => (
-                               <button
-                                   type="button"
-                                   key={t}
-                                   onClick={() => handleChange('tipoServicio', t)}
-                                   className={`btn-option ${formData.tipoServicio === t ? 'selected' : ''}`}
-                               >
-                                   {t}
-                               </button>
-                           ))}
-                        </div>
-                    </div>
-
-                    <div>
-                         <label className="input-label">Observación</label>
-                         <textarea
-                             className="input-field h-24 resize-y"
-                             value={formData.observacion}
-                             onChange={(e) => handleChange('observacion', e.target.value)}
-                         ></textarea>
-                    </div>
-
-                    <div>
-                        <label className="input-label">Prioridad Solicitud</label>
-                        <div className="flex">
-                           {['Baja', 'Media', 'Alta'].map(p => (
-                               <button
-                                   type="button"
-                                   key={p}
-                                   onClick={() => handleChange('prioridad', p)}
-                                   className={`btn-option ${formData.prioridad === p ? 'selected-red' : ''}`}
-                               >
-                                   {p}
-                               </button>
-                           ))}
-                        </div>
-                    </div>
-                 </div>
-
-                 {/* Sección 4: Adicionales Solicitud */}
-                 <h3 className="section-title">Adicionales Solicitud</h3>
-                 <div className="space-y-4">
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-100">
-                         <span className="text-sm text-gray-600 font-medium">Anexos de la solicitud: Foto, Archivo o Dibujo</span>
-                         <button className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100" onClick={()=>alert("Funcionalidad de adjuntos pendiente.")}>Nuevo</button>
-                     </div>
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-100">
-                         <span className="text-sm text-gray-600 font-medium">Activos asociados a la solicitud (QR)</span>
-                         <button className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100" onClick={()=>alert("Funcionalidad de activos pendiente.")}>Nuevo</button>
-                     </div>
-                 </div>
-
-           </div>
-         </div>
-       );
-     };
-
-     // --- CONFIGURATION VIEW ---
-     const ConfigurationView = ({ userContext, onForceSync, isSyncing, lastSync }) => {
-       return (
-         <div className="p-8 max-w-4xl mx-auto animate-fade-in">
-           <div className="flex justify-between items-center mb-2">
-               <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
-               <button onClick={onForceSync} disabled={isSyncing} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm">
-                   <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} /> {isSyncing ? 'Sincronizando...' : 'Forzar Sincronización'}
-               </button>
-           </div>
-         
-           <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
-               <Icon name="Info" size={16} className="text-yellow-600" />
-               <span>{lastSync ? <>Última actualización: <strong>{new Date(Number(lastSync)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</strong></> : "Aún no se ha realizado ninguna sincronización."}</span>
-           </div>
-
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Icon name="User" size={32} /></div>
-                  <div>
-                     <div className="text-xs uppercase font-bold text-gray-500">Cuenta Activa</div>
-                     <div className="text-lg font-bold text-gray-800">{userContext.email}</div>
-                     <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1"><Icon name="ShieldCheck" size={12} /> {userContext.role}</div>
-                  </div>
-                </div>
-             </div>
-             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between mb-4"><h3 className="font-bold text-gray-700">Clientes Asignados</h3><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">{userContext.allowedClientIds ? userContext.allowedClientIds.length : 0}</span></div>
-                <div className="max-h-64 overflow-y-auto border rounded border-gray-100 bg-gray-50">
-                    {userContext.allowedClientIds && userContext.allowedClientIds.length > 0 ? (
-                      <ul className="divide-y divide-gray-100">
-                        {userContext.allowedClientIds.map((clientId, idx) => (
-                          <li key={idx} className="px-4 py-3 bg-white flex items-center gap-3">
-                            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                            <div className="flex-1"><div className="text-xs font-bold text-gray-400 uppercase">{userContext.clientNames && userContext.clientNames[clientId] ? userContext.clientNames[clientId] : 'ID Cliente'}</div><div className="text-sm font-mono text-gray-700">{clientId}</div></div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : <div className="p-8 text-center text-gray-400 text-xs">Sin Clientes Asignados</div>}
-                </div>
+             <h3 className="section-title mt-0">Consecutivo Del Ticket</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"><div><label className="input-label">Ticket G4S *</label><input type="text" className="input-field bg-gray-50 text-gray-400" placeholder="Generado automáticamente" disabled /></div><div><label className="input-label">Ticket (Opcional)</label><input type="text" className="input-field" value={formData.ticketCliente} onChange={(e) => handleChange('ticketCliente', e.target.value)} /></div></div>
+             <h3 className="section-title">Sitio Solicitud</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"><div><label className="input-label">Sede *</label><select className="input-field" value={formData.idSede} onChange={(e) => handleChange('idSede', e.target.value)}><option value="">Seleccione Sede...</option>{userContext?.allowedClientIds?.map(id => (<option key={id} value={id}>{userContext.clientNames?.[id] || id}</option>))}</select></div><div><label className="input-label">Fecha creación *</label><div className="relative"><input type="text" className="input-field bg-gray-50 text-gray-600" value={currentDate} readOnly /><div className="absolute right-3 top-2.5 text-gray-400"><Icon name="Clock" size={16}/></div></div></div></div>
+             <h3 className="section-title">Motivo Del Servicio</h3>
+             <div className="space-y-4 mb-6">
+                <div><label className="input-label">Solicitud *</label><input type="text" className="input-field" value={formData.solicitud} onChange={(e) => handleChange('solicitud', e.target.value)} /></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="input-label">Clasificación</label><select className="input-field" value={formData.clasificacion} onChange={(e) => handleChange('clasificacion', e.target.value)}><option value="Hardware">Hardware</option><option value="Software">Software</option><option value="Redes">Redes</option><option value="Acceso">Acceso</option><option value="Otro">Otro</option></select></div><div><label className="input-label">Tipo Servicio</label><div className="flex">{['Visita técnica', 'Visita comercial'].map(t => (<button key={t} onClick={() => handleChange('tipoServicio', t)} className={`btn-option ${formData.tipoServicio === t ? 'selected' : ''}`}>{t}</button>))}</div></div></div>
+                <div><label className="input-label">Observación</label><textarea className="input-field h-24" value={formData.observacion} onChange={(e) => handleChange('observacion', e.target.value)}></textarea></div>
+                <div><label className="input-label">Prioridad</label><div className="flex">{['Baja', 'Media', 'Alta'].map(p => (<button key={p} onClick={() => handleChange('prioridad', p)} className={`btn-option ${formData.prioridad === p ? 'selected-red' : ''}`}>{p}</button>))}</div></div>
              </div>
            </div>
          </div>
        );
      };
 
-     // --- HOME DASHBOARD VIEW ---
-     const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
-       const stats = useMemo(() => {
-           const total = requests.length;
-           const pending = requests.filter(r => (r.Estado || '').trim() !== 'Cerrado').length;
-           const completed = requests.filter(r => (r.Estado || '').trim() === 'Cerrado').length;
-           return { total, pending, completed };
-       }, [requests]);
-
-       return (
-         <div className="p-8 max-w-6xl mx-auto animate-fade-in">
-           <div className="mb-8">
-               <div className="flex items-center gap-3">
-                   <h1 className="text-3xl font-bold text-gray-800">Hola, {userContext.email.split('@')[0]}</h1>
-                   {isSyncing && (
-                       <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                           <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                           <span className="text-xs font-bold text-blue-600">Sincronizando...</span>
-                       </div>
-                   )}
-               </div>
-               <p className="text-gray-500">Bienvenido al portal de Gestión de Tecnología.</p>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-               <div onClick={() => setView('history')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                   <div className="flex justify-between items-start mb-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span></div>
-                   <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
-                   <div className="text-sm text-gray-500">Solicitudes totales</div>
-               </div>
-               <div onClick={() => setView('process')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                   <div className="flex justify-between items-start mb-4"><div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span></div>
-                   <div className="text-3xl font-bold text-gray-800">{stats.pending}</div>
-                   <div className="text-sm text-gray-500">Tickets en curso (No Cerrados)</div>
-               </div>
-               <div onClick={() => setView('history')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                   <div className="flex justify-between items-start mb-4"><div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span></div>
-                   <div className="text-3xl font-bold text-gray-800">{stats.completed}</div>
-                   <div className="text-sm text-gray-500">Tickets finalizados</div>
-               </div>
-           </div>
-           <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <button onClick={() => setView('create')} className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1">
-                   <div className="bg-white/20 p-3 rounded-full"><Icon name="ClipboardList" size={32} /></div>
-                   <div><div className="text-lg font-bold">Crear nuevo Ticket</div><div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div></div>
-               </button>
-           </div>
-         </div>
-       );
-     };
-
-     // --- REQUEST DETAIL VIEW ---
      const RequestDetail = ({ requestId, onBack, preloadedData }) => {
        const [data, setData] = useState(preloadedData ? { header: preloadedData, services: [], history: [], docs: [] } : null);
        const [loading, setLoading] = useState(true);
@@ -620,11 +206,6 @@
 
        useEffect(() => {
          setLoading(true);
-         // Si preloadedData ya viene completo (cuando se pasa desde la lista), lo usamos.
-         if (preloadedData) {
-            // Ya tenemos datos en la lista, podemos mostrarlos inmediatamente
-         }
-
          runServer('getRequestDetail', { id: requestId }).then(res => {
              setData({ header: res.header || preloadedData, services: res.services||[], history: res.history||[], docs: res.documents||[] });
          }).catch(e=>!preloadedData && setError(e.message)).finally(() => setLoading(false));
@@ -634,68 +215,89 @@
        if(error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
 
        const isRelevantField = (key, value) => {
-           if (!value || value === '0' || value === 0) return false;
+           if (!value || value === '0') return false;
            const k = key.toLowerCase();
-           if (k.includes('precio') || k.includes('cobro') || k.includes('id_') || k.includes('related') || k.includes('_rownumber')) return false;
-           if (k==='estado'||k==='id solicitud') return false;
+           if (k.includes('id_') || k.includes('_row') || k === 'id solicitud' || k === 'id sede') return false;
            return true;
        };
 
-       const Card = ({ title, children, count }) => (
-         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden">
-           <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-700 text-sm uppercase flex justify-between"><span>{title}</span>{count !== undefined && <span className="bg-gray-100 text-gray-600 px-2 rounded-full text-xs flex items-center">{count}</span>}</div><div className="p-0">{children}</div>
-         </div>
-       );
+       const getDocUrl = (doc) => {
+           return doc.Url || doc.url || doc.Link || doc.link || doc.Archivo || doc.archivo || doc.File || doc.file;
+       };
+
+       const Card = ({ title, children, count }) => (<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden"><div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-700 text-sm uppercase flex justify-between"><span>{title}</span>{count !== undefined && <span className="bg-gray-100 text-gray-600 px-2 rounded-full text-xs flex items-center">{count}</span>}</div><div className="p-0">{children}</div></div>);
 
        return (
          <div className="p-6 max-w-7xl mx-auto animate-fade-in">
            <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm"><Icon name="ChevronRight" className="rotate-180" size={16}/> Volver</button>
            <div className="grid grid-cols-12 gap-6">
-             {/* COLUMNA IZQUIERDA */}
              <div className="col-span-12 md:col-span-8 space-y-4">
                <Card title="Detalle Técnico">
                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
                    {Object.entries(data.header).map(([key, value]) => {
                      if (!isRelevantField(key, value)) return null;
-                     return (
-                       <div key={key} className="border-b border-gray-50 pb-2 last:border-0">
-                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
-                         <div className="text-sm text-gray-700 break-words font-medium">{value}</div>
-                       </div>
-                     );
+                     return (<div key={key} className="border-b border-gray-50 pb-2 last:border-0"><div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key.replace(/([A-Z])/g, ' $1').trim()}</div><div className="text-sm text-gray-700 break-words font-medium">{value}</div></div>);
                    })}
                  </div>
                </Card>
              </div>
-
-             {/* COLUMNA DERECHA */}
              <div className="col-span-12 md:col-span-4 space-y-4">
                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
                  <div className="text-gray-400 text-xs font-bold mb-1">ESTADO TICKET</div>
                  <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header['Estado'])}`}>{data.header['Estado'] || 'Desconocido'}</div>
-                 <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">Ticket #: {data.header['Ticket G4S'] || data.header['ID Solicitud'] || 'N/A'}</div>
+                 <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">Ticket #: {data.header['Ticket G4S'] || data.header['ID Solicitud']}</div>
                </div>
-
+               
                {loading && <div className="text-xs text-blue-600 mb-2 flex items-center gap-2"><div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Actualizando detalles...</div>}
-             
+
+               {/* SECCIÓN OBSERVACIONES CORREGIDA */}
                <Card title="Observaciones" count={data.services.length}>
-                 {data.services.length > 0 ? (
-                   <ul className="divide-y divide-gray-100">
-                       {data.services.map((s,i) => (<li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50"><span className="font-medium text-gray-700">{s.Observacion || s.Nota || s.Detalle}</span><span className="text-[10px] text-gray-400">{s.Fecha || '-'}</span></li>))}
-                   </ul>
-                 ) : <div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>}
+                 <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                     {data.services.map((s,i) => (
+                        <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
+                            <span className="font-medium text-gray-700">
+                                {s.Observacion || s['Observación'] || s.Observaciones || s['Observaciones'] || s.Nota || s.Detalle || s.Comentario || s.Descripcion || "Sin contenido"}
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                                {s.Fecha || s.fecha || '-'}
+                            </span>
+                        </li>
+                     ))}
+                     {data.services.length===0 && <div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>}
+                 </ul>
                </Card>
 
                <Card title="Anexos" count={data.docs.length}>
-                   {data.docs.length > 0 ? (
-                       <ul className="divide-y divide-gray-100">
-                           {data.docs.map((doc, i) => (<li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50"><div className="text-red-500"><Icon name="FileText" size={16}/></div><div className="flex-1 overflow-hidden"><div className="text-gray-700 text-xs truncate font-medium">{doc.Nombre || doc.FileName || 'Documento'}</div><div className="text-[10px] text-gray-400">{doc.Tipo || 'Adjunto'}</div></div></li>))}
-                       </ul>
-                   ) : <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>}
+                   <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                       {data.docs.map((doc, i) => {
+                           const fileUrl = getDocUrl(doc);
+                           return (
+                               <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
+                                   <div className="text-red-500"><Icon name="FileText" size={16}/></div>
+                                   <div className="flex-1 overflow-hidden">
+                                       <div className="text-gray-700 text-xs truncate font-medium">{doc.Nombre || doc.FileName || doc.Archivo}</div>
+                                   </div>
+                                   {fileUrl && (
+                                       <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-600 transition p-1 rounded hover:bg-blue-50" title="Descargar">
+                                           <Icon name="Download" size={16}/>
+                                       </a>
+                                   )}
+                               </li>
+                           );
+                       })}
+                       {data.docs.length===0 && <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>}
+                   </ul>
                </Card>
                <Card title="Historial" count={data.history.length}>
                    <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                       {data.history.map((h, i) => (<li key={i} className="px-4 py-2 hover:bg-gray-50"><div className="text-xs font-bold text-gray-700">{h.Estado || 'Cambio de Estado'}</div><div className="text-[10px] text-gray-400">{h.Fecha || h.FechaCambio}</div>{h.Comentario && <div className="text-[10px] text-gray-500 italic mt-1">"{h.Comentario}"</div>}</li>))}
+                       {data.history.map((h, i) => (
+                         <li key={i} className="px-4 py-2 hover:bg-gray-50">
+                           <div className="text-xs font-bold text-gray-700">{h['Estado actual'] || h.Estado}</div>
+                           <div className="text-[10px] text-gray-400">{h['Fecha Actualización'] || h.Fecha}</div>
+                           <div className="text-[9px] text-gray-500 italic mt-1">{h['Usuario Actualización']}</div>
+                         </li>
+                       ))}
+                       {data.history.length===0 && <div className="p-4 text-center text-xs text-gray-400 italic">Sin historial reciente.</div>}
                    </ul>
                </Card>
              </div>
@@ -704,67 +306,64 @@
        );
      };
 
-     // --- REQUEST LIST VIEW ---
      const RequestList = ({ setView, setSelectedRequest, initialData, onRefresh, refreshing }) => {
        const [filter, setFilter] = useState('Todo');
        const [search, setSearch] = useState('');
        const [requests, setRequests] = useState(initialData?.data || []);
-       const [filteredRequests, setFilteredRequests] = useState([]);
-       const [page, setPage] = useState(1);
-     
+       const [filtered, setFiltered] = useState([]);
+       
        useEffect(() => { if(initialData) setRequests(initialData.data || []); }, [initialData]);
-
        useEffect(() => {
-           let result = requests;
-           // Filtros actualizados
-           if (filter === 'Abierto') result = result.filter(req => (req['Estado'] || '').trim() !== 'Cerrado');
-           if (filter === 'Cerrado') result = result.filter(req => (req['Estado'] || '').trim() === 'Cerrado');
-          
-           if (search) {
-               const q = search.toLowerCase();
-               // Búsqueda por ID, Estado o Clasificación
-               result = result.filter(req => (String(req['Ticket G4S'])+String(req['ID Solicitud'])+String(req['Estado'])+String(req['Clasificación'])).toLowerCase().includes(q));
-           }
-           setFilteredRequests(result);
-           setPage(1);
+           let r = requests;
+           if (filter === 'Abierto') r = r.filter(req => (req['Estado'] || '').trim() !== 'Cerrado');
+           if (filter === 'Cerrado') r = r.filter(req => (req['Estado'] || '').trim() === 'Cerrado');
+           if (search) { const q = search.toLowerCase(); r = r.filter(req => JSON.stringify(req).toLowerCase().includes(q)); }
+           setFiltered(r);
        }, [requests, filter, search]);
-
-       const paginatedData = filteredRequests.slice((page - 1) * 50, page * 50);
-       const totalPages = Math.ceil(filteredRequests.length / 50);
 
        return (
          <div className="p-6 h-full flex flex-col">
-           <div className="flex justify-between items-center mb-4">
-              <div className="relative w-64"><div className="absolute left-3 top-2.5 text-gray-400"><Icon name="Search" size={16}/></div><input type="text" className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue" placeholder="Buscar ticket..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
-              <div className="flex items-center gap-2">
-                <button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white" title="Actualizar Datos"><Icon name="RefreshCw" size={18} className={refreshing ? "animate-spin text-blue-600" : ""} /></button>
-                <span className="text-xs font-bold text-gray-500">Total: {filteredRequests.length}</span>
-              </div>
-           </div>
-           <div className="flex gap-2 mb-4">
-               {['Todo', 'Abierto', 'Cerrado'].map(f=><button key={f} onClick={()=>setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter===f?'bg-gray-800 text-white':'bg-white border text-gray-600'}`}>{f}</button>)}
-           </div>
+           <div className="flex justify-between items-center mb-4"><div className="relative w-64"><div className="absolute left-3 top-2.5 text-gray-400"><Icon name="Search" size={16}/></div><input type="text" className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue" placeholder="Buscar ticket..." value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="flex items-center gap-2"><button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white"><Icon name="RefreshCw" size={18} className={refreshing?"animate-spin text-blue-600":""}/></button><span className="text-xs font-bold text-gray-500">Total: {filtered.length}</span></div></div>
+           <div className="flex gap-2 mb-4">{['Todo', 'Abierto', 'Cerrado'].map(f=><button key={f} onClick={()=>setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter===f?'bg-gray-800 text-white':'bg-white border text-gray-600'}`}>{f}</button>)}</div>
            <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex-1 flex flex-col">
-              <div className="grid grid-cols-12 gap-2 p-3 border-b bg-gray-50 text-xs font-bold text-gray-400 uppercase"><div className="col-span-2">Ticket G4S</div><div className="col-span-2">Fecha</div><div className="col-span-3">Solicitante</div><div className="col-span-3">Clasificación</div><div className="col-span-2 text-right">Estado</div></div>
+              <div className="grid grid-cols-12 gap-2 p-3 border-b bg-gray-50 text-xs font-bold text-gray-400 uppercase"><div className="col-span-2">Ticket</div><div className="col-span-2">Fecha</div><div className="col-span-3">Clasificación</div><div className="col-span-3">Solicitud</div><div className="col-span-2 text-right">Estado</div></div>
               <div className="overflow-y-auto flex-1">
-                {paginatedData.length === 0 ? <div className="p-10 text-center text-gray-400 italic">No hay tickets coincidentes.</div> :
-                  paginatedData.map((req, i) => (
+                  {filtered.length===0 && <div className="p-10 text-center text-gray-400 italic">No hay tickets.</div>}
+                  {filtered.map((req, i) => (
                     <div key={i} onClick={() => { setSelectedRequest(req); setView('detail'); }} className="grid grid-cols-12 gap-2 p-3 border-b hover:bg-gray-50 cursor-pointer text-sm items-center transition-colors">
-                      <div className="col-span-2 font-bold text-blue-600 truncate">{req['Ticket G4S'] || req['ID Solicitud'] || 'N/A'}</div>
-                      <div className="col-span-2 text-xs text-gray-500">{req['Fecha creación cliente'] ? new Date(req['Fecha creación cliente']).toLocaleDateString() : '-'}</div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req['Usuario Actualización'] || req['Responsable'] || 'Desconocido'}</span></div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req['Clasificación'] || 'General'}</span><span className="text-[10px] text-gray-400 uppercase">{req['Prioridad Solicitud'] || '-'}</span></div>
-                      <div className="col-span-2 text-right"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req['Estado'])}`}>{req['Estado'] || 'Desconocido'}</span></div>
+                      <div className="col-span-2 font-bold text-blue-600 truncate">{req['Ticket G4S'] || req['ID Solicitud']}</div>
+                      <div className="col-span-2 text-xs text-gray-500">{req['Fecha creación cliente']?.split('T')[0] || '-'}</div>
+                      <div className="col-span-3 text-xs">{req['Clasificación']}</div>
+                      <div className="col-span-3 truncate font-medium">{req['Solicitud']}</div>
+                      <div className="col-span-2 text-right"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req['Estado'])}`}>{req['Estado']}</span></div>
                     </div>
-                ))}
+                  ))}
               </div>
-              {totalPages > 1 && <div className="p-2 border-t flex justify-between bg-gray-50 items-center"><button onClick={()=>setPage(p=>Math.max(1, p-1))} disabled={page===1} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Anterior</button><span className="text-xs font-bold text-gray-600">Pág {page} de {totalPages}</span><button onClick={()=>setPage(p=>Math.min(totalPages, p+1))} disabled={page>=totalPages} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Siguiente</button></div>}
            </div>
          </div>
        );
      };
 
-     // --- MAIN APP ---
+     const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
+        const stats = { total: requests.length, open: requests.filter(r=>(r.Estado||'').trim()!=='Cerrado').length, closed: requests.filter(r=>(r.Estado||'').trim()==='Cerrado').length };
+        return (
+            <div className="p-8 max-w-6xl mx-auto animate-fade-in">
+                <div className="mb-8"><div className="flex items-center gap-3"><h1 className="text-3xl font-bold text-gray-800">Hola, {userContext.email.split('@')[0]}</h1>{isSyncing && <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><span className="text-xs font-bold text-blue-600">Sincronizando...</span></div>}</div><p className="text-gray-500">Bienvenido al portal de Gestión.</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div onClick={()=>setView('history')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1"><div className="flex justify-between items-start mb-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span></div><div className="text-3xl font-bold text-gray-800">{stats.total}</div></div>
+                    <div onClick={()=>setView('process')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1"><div className="flex justify-between items-start mb-4"><div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span></div><div className="text-3xl font-bold text-gray-800">{stats.open}</div></div>
+                    <div onClick={()=>setView('history')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1"><div className="flex justify-between items-start mb-4"><div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span></div><div className="text-3xl font-bold text-gray-800">{stats.closed}</div></div>
+                </div>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><button onClick={() => setView('create')} className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1"><div className="bg-white/20 p-3 rounded-full"><Icon name="ClipboardList" size={32} /></div><div><div className="text-lg font-bold">Crear nuevo Ticket</div><div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div></div></button></div>
+            </div>
+        );
+     };
+
+     const ConfigurationView = ({ userContext, onForceSync, isSyncing }) => (
+        <div className="p-8"><h2 className="text-2xl font-bold mb-4">Configuración</h2><div className="bg-white p-6 rounded shadow"><p><strong>Usuario:</strong> {userContext.email}</p><p><strong>Rol:</strong> {userContext.role}</p><button onClick={onForceSync} disabled={isSyncing} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">{isSyncing?"Sincronizando...":"Actualizar Datos"}</button></div></div>
+     );
+
      const App = () => {
        const [userCtx, setUserCtx] = useState(null);
        const [initialData, setInitialData] = useState(null);
@@ -772,154 +371,47 @@
        const [selectedRequest, setSelectedRequest] = useState(null);
        const [isSyncing, setIsSyncing] = useState(false);
        const [lastSync, setLastSync] = useState(null);
-       const [toast, setToast] = useState(null);
        const [isCheckingCache, setIsCheckingCache] = useState(true);
 
-       const showToast = (msg) => setToast(msg);
-
-       // --- MANEJO DEL CACHÉ LOCAL ---
-       const loadFromCache = (email) => {
-           if (!email) return null;
-           const safeEmail = email.toLowerCase();
-           const cached = localStorage.getItem(`cache_data_it_${safeEmail}`);
-           if (cached) {
-               try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(`cache_data_it_${safeEmail}`); }
-           }
-           return null;
-       };
-
-       const saveToCache = (email, data) => {
-           if (!email) return null;
-           const safeEmail = email.toLowerCase();
-           const timestamp = Date.now();
-           try {
-               localStorage.setItem(`cache_data_it_${safeEmail}`, JSON.stringify({ data, timestamp }));
-               return timestamp;
-           } catch(e) { console.error("Full Cache", e); return null; }
-       };
-
-       const loadContextFromCache = (email) => {
-           if (!email) return null;
-           try { return JSON.parse(localStorage.getItem(`cache_context_it_${email.toLowerCase()}`)); } catch(e) { return null; }
-       };
-
-       // --- SINCRONIZACIÓN DE DATOS (Background) ---
-       const refreshData = async (manual = false, emailOverride = null) => {
-           const emailToUse = emailOverride || (userCtx ? userCtx.email : null);
-           if (!emailToUse || isSyncing) return;
-         
-           setIsSyncing(true);
-           if (manual) showToast("Buscando actualizaciones...");
-         
-           try {
-               const newData = await runServer('getRequests', {});
-               setInitialData(newData);
-               const ts = saveToCache(emailToUse, newData);
-               if (ts) setLastSync(ts);
-               if (manual) showToast("Datos actualizados.");
-           } catch (e) {
-               console.error("Sync Error", e);
-               if (manual) showToast("Error de conexión: " + e.message);
-           } finally { setIsSyncing(false); }
-       };
-
-       // --- LOGIN & INICIALIZACIÓN ---
-       const handleLoginAttempt = async (email) => {
-           let targetEmail = email ? email.toLowerCase() : localStorage.getItem('last_active_email_it');
-         
-           // 2. Intentar carga inmediata desde caché (OPTIMISTIC UI)
-           let cacheUsed = false;
-           if (targetEmail) {
-               const cachedCtx = loadContextFromCache(targetEmail);
-               const cachedContent = loadFromCache(targetEmail);
-             
-               if (cachedCtx && cachedContent?.data) {
-                   console.log(`⚡ Instant Load: ${targetEmail}`);
-                   setUserCtx(cachedCtx);
-                   setInitialData(cachedContent.data);
-                   if (cachedContent.timestamp) setLastSync(Number(cachedContent.timestamp));
-                   setView('home');
-                   cacheUsed = true;
-               }
-           }
-         
-           setIsCheckingCache(false);
-
-           if (!cacheUsed) setIsSyncing(true);
-
-           try {
-               // Obtenemos identidad real del servidor
-               const serverCtx = await runServer('getUserContext', {});
-               const realEmail = serverCtx.email.toLowerCase();
-
-               // NUEVA VALIDACIÓN: Si el usuario no es válido
-               if (!serverCtx.isValidUser) {
-                  throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
-               }
-
-               // Si cargamos caché de un usuario, pero el servidor dice que somos otro -> RECARGAR
-               if (cacheUsed && userCtx && userCtx.email.toLowerCase() !== realEmail) {
-                  console.warn("Cambio de usuario detectado. Limpiando...");
-                  localStorage.setItem('last_active_email_it', realEmail);
-                  window.location.reload();
-                  return;
-               }
-
-               localStorage.setItem('last_active_email_it', realEmail);
-               localStorage.setItem(`cache_context_it_${realEmail}`, JSON.stringify(serverCtx));
-               setUserCtx(serverCtx);
-
-               if (!cacheUsed) {
-                   const reqs = await runServer('getRequests', {});
-                   setInitialData(reqs);
-                   const ts = saveToCache(realEmail, reqs);
-                   setLastSync(ts);
-                   setView(serverCtx.isValidUser ? 'home' : 'config');
-               } else {
-                   refreshData(false, realEmail);
-               }
-
-           } catch (e) {
-               console.error("Login Error", e);
-               if (!cacheUsed) {
-                   // Re-lanzamos el error para que el componente LoginView lo capture y muestre
-                   throw e;
-               } else {
-                   alert("Error de conexión: " + e.message);
-               }
-           } finally {
-               setIsSyncing(false);
-           }
+       // CACHE & SYNC
+       const loadFromCache = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+       const refreshData = async (manual = false) => {
+           if (!userCtx) return; setIsSyncing(true);
+           try { const d = await runServer('getRequests', {}); setInitialData(d); setLastSync(Date.now()); localStorage.setItem(`data_${userCtx.email}`, JSON.stringify(d)); } 
+           catch (e) { console.error(e); } finally { setIsSyncing(false); }
        };
 
        useEffect(() => {
-           const lastEmail = localStorage.getItem('last_active_email_it');
-           if (lastEmail) {
-               handleLoginAttempt(null);
-           } else {
-               setIsCheckingCache(false);
-           }
+           const init = async () => {
+               const lastEmail = localStorage.getItem('last_email');
+               if (lastEmail) {
+                   const c = loadFromCache(`ctx_${lastEmail}`);
+                   const d = loadFromCache(`data_${lastEmail}`);
+                   if (c && d) { setUserCtx(c); setInitialData(d); setView('home'); }
+               }
+               try {
+                   const ctx = await runServer('getUserContext', {});
+                   if (!ctx.isValidUser) throw new Error("Sin permisos");
+                   setUserCtx(ctx); localStorage.setItem('last_email', ctx.email); localStorage.setItem(`ctx_${ctx.email}`, JSON.stringify(ctx));
+                   const d = await runServer('getRequests', {}); setInitialData(d); localStorage.setItem(`data_${ctx.email}`, JSON.stringify(d));
+                   if (!lastEmail) setView('home');
+               } catch (e) { console.error(e); } finally { setIsCheckingCache(false); }
+           };
+           init();
        }, []);
 
-       useEffect(() => {
-           if (!userCtx) return;
-           const timer = setInterval(() => refreshData(false), 300000);
-           return () => clearInterval(timer);
-       }, [userCtx]);
-
-       if (!userCtx) return <LoginView onSuccess={() => handleLoginAttempt(null)} isCheckingCache={isCheckingCache} />;
+       if (!userCtx) return <LoginView onSuccess={() => window.location.reload()} isCheckingCache={isCheckingCache} />;
 
        return (
          <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
-           <Sidebar currentView={view} setView={setView} onLogout={() => { setUserCtx(null); localStorage.removeItem('last_active_email_it'); }} userContext={userCtx} lastSync={lastSync} isSyncing={isSyncing} />
+           <Sidebar currentView={view} setView={setView} onLogout={() => { localStorage.clear(); window.location.reload(); }} userContext={userCtx} lastSync={lastSync} isSyncing={isSyncing} />
            <div className="flex-1 ml-64 overflow-y-auto">
-             {view === 'home' ? <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} /> :
+             {view === 'home' ? <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} /> :
               view === 'detail' && selectedRequest ? <RequestDetail requestId={selectedRequest['ID Solicitud']} preloadedData={selectedRequest} onBack={() => setView('history')} /> :
               view === 'create' ? <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} /> :
-              view === 'config' ? <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} lastSync={lastSync} /> :
+              view === 'config' ? <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} /> :
               <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />}
            </div>
-           {toast && <Toast message={toast} onClose={() => setToast(null)} />}
          </div>
        );
      };

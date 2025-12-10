@@ -4,25 +4,25 @@
  * ------------------------------------------------------------------
  */
 
-// ⚠️ REEMPLAZA ESTOS IDs CON LOS TUYOS:
-const MAIN_SPREADSHEET_ID = '1MC76eZZt7qiso2M8LMz777_xJnzrl_ZpZptDZBnPlDo';
+// IDs de los spreadsheets
+const MAIN_SPREADSHEET_ID       = '1MC76eZZt7qiso2M8LMz777_xJnzrl_ZpZptDZBnPlDo';
 const PERMISSIONS_SPREADSHEET_ID = '1zcZZGe_93ytWXtCF1kmk_Y8zc5b5cL1xH34i7v1w01k';
-const CLIENTS_SPREADSHEET_ID = '1hHWPJF9KSC0opplpCNgHRNkW6CLf7StXG2Y31m6yUpo';
-const SEDES_SPREADSHEET_ID = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM';
+const CLIENTS_SPREADSHEET_ID    = '1hHWPJF9KSC0opplpCNgHRNkW6CLf7StXG2Y31m6yUpo';
+const SEDES_SPREADSHEET_ID      = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM';
 
 // Datos de la app AppSheet (para construir la URL del archivo)
-const APPSHEET_APP_NAME = 'AppSolicitudes-5916254';
+const APPSHEET_APP_NAME    = 'AppSolicitudes-5916254';
 const APPSHEET_ATTACH_TABLE = 'Solicitudes anexos';
 
 const SHEET_CONFIG = {
-  'Solicitudes': MAIN_SPREADSHEET_ID,
-  'Estados historico': MAIN_SPREADSHEET_ID,
+  'Solicitudes'            : MAIN_SPREADSHEET_ID,
+  'Estados historico'      : MAIN_SPREADSHEET_ID,
   'Observaciones historico': MAIN_SPREADSHEET_ID,
-  'Solicitudes anexos': MAIN_SPREADSHEET_ID,
-  'Permisos': PERMISSIONS_SPREADSHEET_ID,
-  'Usuarios filtro': PERMISSIONS_SPREADSHEET_ID,
-  'Clientes': CLIENTS_SPREADSHEET_ID,
-  'Sedes': SEDES_SPREADSHEET_ID
+  'Solicitudes anexos'     : MAIN_SPREADSHEET_ID,
+  'Permisos'               : PERMISSIONS_SPREADSHEET_ID,
+  'Usuarios filtro'        : PERMISSIONS_SPREADSHEET_ID,
+  'Clientes'               : CLIENTS_SPREADSHEET_ID,
+  'Sedes'                  : SEDES_SPREADSHEET_ID
 };
 
 function doGet(e) {
@@ -33,10 +33,15 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+/**
+ * Handler genérico para llamadas desde el front.
+ */
 function apiHandler(request) {
   const userEmail = Session.getActiveUser().getEmail();
-  const { endpoint, payload } = request;
-  console.log(`🔒 [API] ${endpoint} | User: ${userEmail}`);
+  const endpoint  = request && request.endpoint;
+  const payload   = request && request.payload;
+
+  console.log("🔒 [API]", endpoint, "| User:", userEmail);
 
   try {
     if (!userEmail) throw new Error("Usuario no identificado.");
@@ -51,10 +56,10 @@ function apiHandler(request) {
       case 'createRequest':
         return createRequest(userEmail, payload);
       default:
-        throw new Error(`Endpoint desconocido: ${endpoint}`);
+        throw new Error("Endpoint desconocido: " + endpoint);
     }
   } catch (err) {
-    console.error(`❌ Error: ${err.message}`);
+    console.error("❌ Error API:", err);
     return { error: true, message: err.message };
   }
 }
@@ -65,9 +70,9 @@ function apiHandler(request) {
 
 function getDataFromSheet(sheetName) {
   const spreadsheetId = SHEET_CONFIG[sheetName];
-  if (!spreadsheetId) throw new Error(`Configuración faltante: ${sheetName}`);
+  if (!spreadsheetId) throw new Error("Configuración faltante: " + sheetName);
 
-  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const ss    = SpreadsheetApp.openById(spreadsheetId);
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
 
@@ -75,14 +80,14 @@ function getDataFromSheet(sheetName) {
   const lastCol = sheet.getLastColumn();
   if (lastRow < 2 || lastCol < 1) return [];
 
-  const values = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
-  const headers = values[0].map(h => h.toString().trim());
-  const data = values.slice(1);
+  const values  = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
+  const headers = values[0].map(function (h) { return String(h).trim(); });
+  const data    = values.slice(1);
 
-  return data.map(row => {
+  return data.map(function (row) {
     const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = row[index] === undefined ? "" : row[index];
+    headers.forEach(function (header, index) {
+      obj[header] = (row[index] === undefined ? "" : row[index]);
     });
     return obj;
   });
@@ -90,13 +95,15 @@ function getDataFromSheet(sheetName) {
 
 function appendDataToSheet(sheetName, objectData) {
   const spreadsheetId = SHEET_CONFIG[sheetName];
-  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const ss    = SpreadsheetApp.openById(spreadsheetId);
   const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) throw new Error(`Hoja ${sheetName} no encontrada.`);
+  if (!sheet) throw new Error("Hoja " + sheetName + " no encontrada.");
 
   const lastCol = sheet.getLastColumn();
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const rowArray = headers.map(header => objectData[header] || "");
+  const rowArray = headers.map(function (header) {
+    return objectData[header] || "";
+  });
 
   sheet.appendRow(rowArray);
   return { success: true };
@@ -106,76 +113,116 @@ function appendDataToSheet(sheetName, objectData) {
 // ARCHIVOS / ANEXOS
 // ------------------------------------------------------------------
 
-// A partir de un registro de "Solicitudes anexos" busca la columna Archivo
-// y genera una URL lista para usar en el front.
+/**
+ * A partir de un registro de "Solicitudes anexos" busca la columna
+ * donde está la ruta del archivo y genera una URL lista para el front.
+ *
+ * Se buscan estas columnas (en orden):
+ *  - Archivo
+ *  - Foto
+ *  - Dibujo
+ *  - Image / Imagen / Picture / Photo (defensivo)
+ */
 function buildAttachmentUrlFromRecord(record) {
   if (!record) return "";
 
-  // Por ahora priorizamos la columna "Archivo"
-  const archivoKey = Object.keys(record).find(function (k) {
-    return String(k).trim().toLowerCase() === "archivo";
-  });
+  var possibleKeys = [
+    "Archivo",
+    "Foto",
+    "Dibujo",
+    "Image",
+    "Imagen",
+    "Picture",
+    "Photo"
+  ];
 
-  if (!archivoKey) return "";
+  var rawPath = "";
+  for (var i = 0; i < possibleKeys.length; i++) {
+    var key = possibleKeys[i];
+    if (record.hasOwnProperty(key) && record[key]) {
+      rawPath = String(record[key]).trim();
+      if (rawPath) break;
+    }
+  }
 
-  const rawPath = record[archivoKey];
+  if (!rawPath) return "";
+
   return getAttachmentUrlFromPath(rawPath);
 }
 
 /**
- * Convierte el valor de la columna Archivo (ruta AppSheet o nombre) en una URL
- * PRIORIDAD:
- * 1) Si es una ruta AppSheet (/Info/Clientes/...), construimos gettablefileurl.
- * 2) Si es solo un nombre de archivo, intentamos buscar en Drive y generar URL de Drive.
- * 3) Si ya viene una URL http(s), se devuelve tal cual.
+ * Convierte la ruta almacenada en la hoja en una URL usable.
  *
- * NOTA IMPORTANTE:
- * Para que la URL de AppSheet funcione sin parámetro "signature",
- * normalmente hay que desactivar en la app:
+ * PRIORIDAD:
+ * 1) Si la ruta parece ser la ruta relativa de AppSheet
+ *    (ej: "/Info/Clientes/..." o "..._Images/..."), usamos
+ *    https://www.appsheet.com/template/gettablefileurl
+ * 2) En caso contrario, intentamos buscar el archivo en Drive por nombre.
+ * 3) Si ya es una URL http(s), se devuelve tal cual.
+ *
+ * IMPORTANTE:
+ * Para que funcione sin parámetro "signature", normalmente hay que
+ * desactivar en AppSheet:
  *   Security → Options → "Require Image and File URL Signing".
  */
 function getAttachmentUrlFromPath(path) {
   path = String(path || "").trim();
   if (!path) return "";
 
-  // Si ya es una URL completa (AppSheet, Drive, etc.)
+  // Si ya es URL completa
   if (/^https?:\/\//i.test(path)) return path;
 
-  const cache = CacheService.getScriptCache();
-  const cacheKey = "att_v2_" + Utilities.base64Encode(path);
-  const cached = cache.get(cacheKey);
+  var cache    = CacheService.getScriptCache();
+  var cacheKey = "att_v3_" + Utilities.base64Encode(path);
+  var cached   = cache.get(cacheKey);
   if (cached) return cached;
 
   try {
-    // --- CASO 1: ruta típica de AppSheet (relativa) ---
-    // Ejemplo: /Info/Clientes//Anexos/d9ae3f49.Archivo.153136.pdf
-    if (path.indexOf("/Info/") === 0 || path.indexOf("Info/Clientes") !== -1) {
-      const base = "https://www.appsheet.com/template/gettablefileurl";
-      const appName = encodeURIComponent(APPSHEET_APP_NAME);
-      const tableName = encodeURIComponent(APPSHEET_ATTACH_TABLE);
-      const fileName = encodeURIComponent(path);
+    var normalizedPath = path;
 
-      const url =
+    // CASO 1: Ruta AppSheet: Info/Clientes, o carpetas *_Images
+    if (
+      normalizedPath.indexOf("/Info/") === 0 ||
+      normalizedPath.indexOf("Info/Clientes") !== -1 ||
+      normalizedPath.indexOf("_Images/") !== -1
+    ) {
+      if (normalizedPath.charAt(0) !== "/") {
+        normalizedPath = "/" + normalizedPath;
+      }
+
+      var base     = "https://www.appsheet.com/template/gettablefileurl";
+      var appName  = encodeURIComponent(APPSHEET_APP_NAME);
+      var table    = encodeURIComponent(APPSHEET_ATTACH_TABLE);
+      var fileName = encodeURIComponent(normalizedPath);
+
+      var url =
         base +
-        "?appName=" + appName +
-        "&tableName=" + tableName +
-        "&fileName=" + fileName;
+        "?appName=" +
+        appName +
+        "&tableName=" +
+        table +
+        "&fileName=" +
+        fileName;
 
       cache.put(cacheKey, url, 21600); // 6 horas
       return url;
     }
 
-    // --- CASO 2: Fallback → buscar en Drive por nombre de archivo ---
-    const parts = path.split("/");
-    const fileName = parts[parts.length - 1];
-    if (fileName) {
-      const files = DriveApp.getFilesByName(fileName);
+    // CASO 2: Fallback → buscar en Drive por nombre de archivo
+    var parts        = normalizedPath.split("/");
+    var fileNameOnly = parts[parts.length - 1];
+    if (fileNameOnly) {
+      var files = DriveApp.getFilesByName(fileNameOnly);
       if (files.hasNext()) {
-        const file = files.next();
-        const fileId = file.getId();
-        const url = "https://drive.google.com/file/d/" + fileId + "/view?usp=drivesdk";
-        cache.put(cacheKey, url, 21600);
-        return url;
+        var file    = files.next();
+        var fileId  = file.getId();
+        var driveUrl =
+          "https://drive.google.com/file/d/" +
+          fileId +
+          "/view?usp=drivesdk";
+
+        cache.put(cacheKey, driveUrl, 21600);
+        return driveUrl;
       }
     }
   } catch (e) {
@@ -190,58 +237,60 @@ function getAttachmentUrlFromPath(path) {
 // ------------------------------------------------------------------
 
 function getUserContext(email) {
-  const cache = CacheService.getScriptCache();
-  const cacheKey = `ctx_v6_${Utilities.base64Encode(email)}`;
-  const cachedData = cache.get(cacheKey);
-  if (cachedData) return JSON.parse(cachedData);
+  var cache    = CacheService.getScriptCache();
+  var cacheKey = "ctx_v6_" + Utilities.base64Encode(email);
+  var cached   = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
 
   try {
-    const context = {
-      email: email,
-      role: 'Usuario',
+    var context = {
+      email          : email,
+      role           : "Usuario",
       allowedClientIds: [],
-      clientNames: {},
-      isValidUser: false,
-      isAdmin: false
+      clientNames    : {},
+      isValidUser    : false,
+      isAdmin        : false
     };
 
-    const allPermissions = getDataFromSheet('Permisos');
-    const userData = allPermissions.find(row =>
-      String(row['Correo']).trim().toLowerCase() === email.toLowerCase()
-    );
+    var allPermissions = getDataFromSheet("Permisos");
+    var userData = allPermissions.find(function (row) {
+      return String(row["Correo"]).trim().toLowerCase() === email.toLowerCase();
+    });
 
     if (userData) {
       context.isValidUser = true;
-      if ((userData['Rol_Asignado'] || '').trim().toLowerCase() === 'administrador') {
-        context.role = 'Administrador';
+      if (String(userData["Rol_Asignado"] || "")
+        .trim()
+        .toLowerCase() === "administrador") {
+        context.role  = "Administrador";
         context.isAdmin = true;
       }
     }
 
     if (context.isValidUser) {
-      const allRelations = getDataFromSheet('Usuarios filtro');
-      const myRelations = allRelations.filter(row =>
-        String(row['Usuario']).trim().toLowerCase() === email.toLowerCase()
-      );
+      var allRelations = getDataFromSheet("Usuarios filtro");
+      var myRelations = allRelations.filter(function (row) {
+        return String(row["Usuario"]).trim().toLowerCase() === email.toLowerCase();
+      });
 
-      const assignedClientIds = [];
-      myRelations.forEach(row => {
-        if (row['Cliente']) assignedClientIds.push(String(row['Cliente']));
+      var assignedClientIds = [];
+      myRelations.forEach(function (row) {
+        if (row["Cliente"]) assignedClientIds.push(String(row["Cliente"]));
       });
 
       if (assignedClientIds.length > 0) {
-        const allSedes = getDataFromSheet('Sedes');
-        const mySedes = allSedes.filter(sede =>
-          assignedClientIds.includes(String(sede['ID Cliente']))
-        );
+        var allSedes = getDataFromSheet("Sedes");
+        var mySedes = allSedes.filter(function (sede) {
+          return assignedClientIds.indexOf(String(sede["ID Cliente"])) !== -1;
+        });
 
-        mySedes.forEach(sede => {
-          const idSede = String(sede['ID Sede']);
-          const nombreSede =
-            sede['Nombre'] ||
-            sede['Nombre_Sede'] ||
-            sede['Sede'] ||
-            sede['Nombre Sede'] ||
+        mySedes.forEach(function (sede) {
+          var idSede = String(sede["ID Sede"]);
+          var nombreSede =
+            sede["Nombre"] ||
+            sede["Nombre_Sede"] ||
+            sede["Sede"] ||
+            sede["Nombre Sede"] ||
             idSede;
 
           if (idSede) {
@@ -252,7 +301,7 @@ function getUserContext(email) {
       }
     }
 
-    cache.put(cacheKey, JSON.stringify(context), 600);
+    cache.put(cacheKey, JSON.stringify(context), 600); // 10 min
     return context;
   } catch (e) {
     console.error("Error Context", e);
@@ -261,12 +310,12 @@ function getUserContext(email) {
 }
 
 function getRequests(email) {
-  const context = getUserContext(email);
+  var context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
   try {
-    const allRows = getDataFromSheet('Solicitudes');
-    let filteredRows = [];
+    var allRows = getDataFromSheet("Solicitudes");
+    var filteredRows = [];
 
     if (context.isAdmin) {
       filteredRows = allRows;
@@ -274,14 +323,16 @@ function getRequests(email) {
       if (context.allowedClientIds.length === 0) {
         return { data: [], total: 0 };
       }
-      filteredRows = allRows.filter(row =>
-        context.allowedClientIds.includes(String(row['ID Sede']))
-      );
+      filteredRows = allRows.filter(function (row) {
+        return (
+          context.allowedClientIds.indexOf(String(row["ID Sede"])) !== -1
+        );
+      });
     }
 
-    filteredRows.sort((a, b) => {
-      const dateA = new Date(a['Fecha creación cliente']).getTime() || 0;
-      const dateB = new Date(b['Fecha creación cliente']).getTime() || 0;
+    filteredRows.sort(function (a, b) {
+      var dateA = new Date(a["Fecha creación cliente"]).getTime() || 0;
+      var dateB = new Date(b["Fecha creación cliente"]).getTime() || 0;
       return dateB - dateA;
     });
 
@@ -293,66 +344,71 @@ function getRequests(email) {
 }
 
 function getRequestDetail(email, params) {
-  const id = params && params.id;
-  const context = getUserContext(email);
+  var id = params && params.id;
+  var context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado");
 
   try {
-    const allRequests = getDataFromSheet('Solicitudes');
-    const header = allRequests.find(row =>
-      String(row['ID Solicitud']).trim() === String(id).trim() ||
-      String(row['Ticket G4S']).trim() === String(id).trim()
-    );
+    var allRequests = getDataFromSheet("Solicitudes");
+    var header = allRequests.find(function (row) {
+      return (
+        String(row["ID Solicitud"]).trim() === String(id).trim() ||
+        String(row["Ticket G4S"]).trim() === String(id).trim()
+      );
+    });
 
     if (!header) throw new Error("Ticket no encontrado.");
 
-    const realUuid = String(header['ID Solicitud']).trim();
-    const ticketG4S = String(header['Ticket G4S']).trim();
+    var realUuid  = String(header["ID Solicitud"]).trim();
+    var ticketG4S = String(header["Ticket G4S"]).trim();
 
     if (!context.isAdmin) {
-      const recordClientId = String(header['ID Sede']);
-      if (recordClientId && !context.allowedClientIds.includes(recordClientId)) {
+      var recordClientId = String(header["ID Sede"]);
+      if (
+        recordClientId &&
+        context.allowedClientIds.indexOf(recordClientId) === -1
+      ) {
         throw new Error("No tiene permisos.");
       }
     }
 
-    // --- BÚSQUEDA INTELIGENTE DE RELACIONES (PLURAL O SINGULAR) ---
-    const getChildren = function (sheetName) {
-      const allChildren = getDataFromSheet(sheetName);
+    // Búsqueda de hijos (observaciones, historial, anexos)
+    var getChildren = function (sheetName) {
+      var allChildren = getDataFromSheet(sheetName);
       if (allChildren.length === 0) return [];
 
-      const keys = Object.keys(allChildren[0]);
-      const foreignKey = keys.find(function (k) {
+      var keys = Object.keys(allChildren[0]);
+      var foreignKey = keys.find(function (k) {
         return (
-          k === 'ID Solicitudes' ||
-          k === 'ID Solicitud' ||
-          k === 'Id Solicitud' ||
-          k === 'Solicitud'
+          k === "ID Solicitudes" ||
+          k === "ID Solicitud" ||
+          k === "Id Solicitud" ||
+          k === "Solicitud"
         );
       });
 
       if (!foreignKey) return [];
 
       return allChildren.filter(function (row) {
-        const val = String(row[foreignKey]).trim();
+        var val = String(row[foreignKey]).trim();
         return val === realUuid || val === ticketG4S;
       });
     };
 
-    const docsRaw = getChildren('Solicitudes anexos');
-    const docsWithUrl = docsRaw.map(function (doc) {
-      const url = buildAttachmentUrlFromRecord(doc);
+    var docsRaw = getChildren("Solicitudes anexos");
+    var docsWithUrl = docsRaw.map(function (doc) {
+      var url = buildAttachmentUrlFromRecord(doc);
       if (url) {
-        // Campo que usa el front (RequestDetail -> getDocUrl)
+        // campo que usa el front (RequestDetail -> getDocUrl)
         doc.Url = url;
       }
       return doc;
     });
 
     return {
-      header: header,
-      services: getChildren('Observaciones historico'),
-      history: getChildren('Estados historico'),
+      header   : header,
+      services : getChildren("Observaciones historico"),
+      history  : getChildren("Estados historico"),
       documents: docsWithUrl
     };
   } catch (e) {
@@ -362,10 +418,10 @@ function getRequestDetail(email, params) {
 }
 
 function createRequest(email, payload) {
-  const context = getUserContext(email);
+  var context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
-  const lock = LockService.getScriptLock();
+  var lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
   } catch (e) {
@@ -373,56 +429,56 @@ function createRequest(email, payload) {
   }
 
   try {
-    const now = new Date();
-    const uuid = Utilities.getUuid();
-    let letraInicial = "G";
+    var now  = new Date();
+    var uuid = Utilities.getUuid();
+    var letraInicial = "G";
 
-    const allSedes = getDataFromSheet('Sedes');
-    const sedeInfo = allSedes.find(s =>
-      String(s['ID Sede']) === String(payload.idSede)
-    );
+    var allSedes  = getDataFromSheet("Sedes");
+    var sedeInfo = allSedes.find(function (s) {
+      return String(s["ID Sede"]) === String(payload.idSede);
+    });
 
     if (sedeInfo) {
-      const idCliente = sedeInfo['ID Cliente'];
-      const allClientes = getDataFromSheet('Clientes');
-      const clienteInfo = allClientes.find(c =>
-        String(c['ID Cliente']) === String(idCliente)
-      );
+      var idCliente   = sedeInfo["ID Cliente"];
+      var allClientes = getDataFromSheet("Clientes");
+      var clienteInfo = allClientes.find(function (c) {
+        return String(c["ID Cliente"]) === String(idCliente);
+      });
 
       if (clienteInfo) {
-        const nombre =
-          clienteInfo['Nombre corto'] ||
-          clienteInfo['RazonSocial'] ||
+        var nombre =
+          clienteInfo["Nombre corto"] ||
+          clienteInfo["RazonSocial"] ||
           "G";
-        letraInicial = nombre.toString().trim().charAt(0).toUpperCase();
+        letraInicial = String(nombre).trim().charAt(0).toUpperCase();
       }
     }
 
-    const ss = SpreadsheetApp.openById(MAIN_SPREADSHEET_ID);
-    const sheet = ss.getSheetByName('Solicitudes');
-    const nextRow = sheet.getLastRow() + 1;
-    const rand = Math.floor(Math.random() * 90) + 10;
-    const ticketG4S = `${letraInicial}${1000000 + nextRow}${rand}`;
+    var ss    = SpreadsheetApp.openById(MAIN_SPREADSHEET_ID);
+    var sheet = ss.getSheetByName("Solicitudes");
+    var nextRow = sheet.getLastRow() + 1;
+    var rand    = Math.floor(Math.random() * 90) + 10;
+    var ticketG4S = letraInicial + (1000000 + nextRow) + String(rand);
 
-    const newRow = {
-      "ID Solicitud": uuid,
-      "Ticket G4S": ticketG4S,
+    var newRow = {
+      "ID Solicitud"          : uuid,
+      "Ticket G4S"            : ticketG4S,
       "Fecha creación cliente": now,
-      "Estado": "Creado",
-      "ID Sede": payload.idSede,
-      "Ticket Cliente": payload.ticketCliente || "",
-      "Clasificación": payload.clasificacion,
-      "Prioridad Solicitud": payload.prioridad,
-      "Solicitud": payload.solicitud,
-      "Observación": payload.observacion,
-      "Usuario Actualización": email
+      "Estado"                : "Creado",
+      "ID Sede"               : payload.idSede,
+      "Ticket Cliente"        : payload.ticketCliente || "",
+      "Clasificación"         : payload.clasificacion,
+      "Prioridad Solicitud"   : payload.prioridad,
+      "Solicitud"             : payload.solicitud,
+      "Observación"           : payload.observacion,
+      "Usuario Actualización" : email
     };
 
-    appendDataToSheet('Solicitudes', newRow);
+    appendDataToSheet("Solicitudes", newRow);
 
     return {
-      Rows: [newRow],
-      Status: "Success",
+      Rows          : [newRow],
+      Status        : "Success",
       GeneratedTicket: ticketG4S
     };
   } catch (e) {

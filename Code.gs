@@ -232,10 +232,13 @@ function getRequestDetail(email, { id }) {
       }
     }
 
-    // RELACIÓN: Las tablas dependientes se filtran por 'ID Solicitud'
+    // ✅ AJUSTE: Las tablas dependientes se filtran por 'ID Solicitud' o 'ID Solicitudes'
     const getChildren = (sheetName) => {
       const allChildren = getDataFromSheet(sheetName);
-      return allChildren.filter(row => row['ID Solicitud'] == id);
+      return allChildren.filter(row => {
+        const childId = row['ID Solicitud'] ?? row['ID Solicitudes'];
+        return childId == id;
+      });
     };
 
     return {

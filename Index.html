@@ -615,6 +615,127 @@
        const [loading, setLoading] = useState(true);
        const [error, setError] = useState(null);
 
+// ✅ Abrir anexos en otra pestaña (con fallback a URL estilo AppSheet)
+const [downloadingId, setDownloadingId] = useState(null);
+
+// 👇 Ajusta solo si cambian en tu AppSheet (son los que tú compartiste)
+const APPSHEET_APP_NAME = 'AppSolicitudes-5916254';
+const APPSHEET_TABLE_NAME = 'Solicitudes anexos';
+const APPSHEET_APP_VERSION = '1.000737';
+
+// pick "tolerante": soporta headers con espacios (ej: "Archivo ")
+const pickAny = (obj, keys) => {
+  if (!obj) return '';
+  const objKeys = Object.keys(obj);
+  for (const k of keys) {
+    const direct = obj?.[k];
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
+
+    const altKey = objKeys.find(x => String(x).trim() === String(k).trim());
+    const alt = altKey ? obj?.[altKey] : '';
+    if (alt !== undefined && alt !== null && String(alt).trim() !== '') return alt;
+  }
+  return '';
+};
+
+const openUrlInNewTab = (url) => {
+  if (!url) return;
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
+
+const openFromBase64 = (base64, mimeType, fileName) => {
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+
+  const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
+  // abrir en nueva pestaña (no “download”)
+  openUrlInNewTab(url);
+
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+};
+
+const buildAppSheetFileUrl = (filePathOrUrl) => {
+  const p = String(filePathOrUrl || '').trim();
+  if (!p) return '';
+
+  // Si ya viene como URL (ej: gettablefileurl, Drive, etc.), úsala tal cual
+  if (/^https?:\/\//i.test(p)) return p;
+
+  // Construcción estilo AppSheet (sin signature; si tu entorno la exige, usa columna URL firmada)
+  const params = new URLSearchParams();
+  params.set('appName', APPSHEET_APP_NAME);
+  params.set('tableName', APPSHEET_TABLE_NAME);
+  params.set('fileName', p);           // URLSearchParams se encarga de %2F etc.
+  params.set('appVersion', APPSHEET_APP_VERSION);
+
+  return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
+};
+
+const openAnexo = async (doc, openKey) => {
+  // 1) Si el row ya trae una URL lista (ideal si guardas la URL firmada de AppSheet)
+  const directUrl = String(pickAny(doc, ['URL', 'Url', 'Enlace', 'Link', 'FileUrl', 'Archivo URL']) || '').trim();
+  if (/^https?:\/\//i.test(directUrl)) {
+    openUrlInNewTab(directUrl);
+    return;
+  }
+
+  // 2) Intentamos por el endpoint del backend (valida permisos y devuelve base64 o url)
+  const anexoId = String(
+    pickAny(doc, ['ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos ']) || ''
+  ).trim();
+
+  // 3) Fallback: usar la ruta almacenada en la tabla (Foto / Archivo / Dibujo / QR)
+  const pathValue = String(
+    pickAny(doc, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || ''
+  ).trim();
+
+  try {
+    setDownloadingId(openKey);
+
+    if (anexoId) {
+      try {
+        const res = await runServer('getAnexoDownload', { anexoId });
+
+        if (res?.mode === 'base64') {
+          openFromBase64(res.base64, res.mimeType, res.fileName);
+          return;
+        }
+
+        if (res?.mode === 'url' && res.url) {
+          openUrlInNewTab(res.url);
+          return;
+        }
+      } catch (serverErr) {
+        // Si el backend falla (tu caso actual), seguimos con fallback AppSheet
+        console.warn("Backend getAnexoDownload falló, usando fallback AppSheet:", serverErr);
+      }
+    }
+
+    const fallbackUrl = buildAppSheetFileUrl(pathValue);
+    if (fallbackUrl) {
+      openUrlInNewTab(fallbackUrl);
+      return;
+    }
+
+    throw new Error("No se pudo determinar la ruta/URL del anexo.");
+  } catch (e) {
+    console.error(e);
+    alert("❌ No fue posible abrir el anexo: " + (e.message || e));
+  } finally {
+    setDownloadingId(null);
+  }
+};
+
+
        useEffect(() => {
          setLoading(true);
          if (preloadedData) {
@@ -717,26 +838,54 @@
                </Card>
 
                {/* ✅ Solicitudes anexos */}
-               <Card title="Anexos" count={data.docs.length}>
-                   {data.docs.length > 0 ? (
-                       <ul className="divide-y divide-gray-100">
-                           {data.docs.map((doc, i) => {
-                             const nombre = pick(doc, ['Nombre']);
-                             const tipo = pick(doc, ['Tipo anexo']);
-                             const fecha = pick(doc, ['Fecha Actualización','Fecha Actualizacion']);
-                             return (
-                               <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
-                                 <div className="text-red-500"><Icon name="FileText" size={16}/></div>
-                                 <div className="flex-1 overflow-hidden">
-                                   <div className="text-gray-700 text-xs truncate font-medium">{nombre || 'Documento'}</div>
-                                   <div className="text-[10px] text-gray-400">{tipo || 'Adjunto'} · {fmtDate(fecha)}</div>
-                                 </div>
-                               </li>
-                             );
-                           })}
-                       </ul>
-                   ) : <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>}
-               </Card>
+<Card title="Anexos" count={data.docs.length}>
+  {data.docs.length > 0 ? (
+    <ul className="divide-y divide-gray-100">
+      {data.docs.map((doc, i) => {
+        const nombre = pick(doc, ['Nombre']);
+        const tipo = pick(doc, ['Tipo anexo']);
+        const fecha = pick(doc, ['Fecha Actualización', 'Fecha Actualizacion']);
+
+const anexoId = String(pickAny(doc, ['ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos ']) || '').trim();
+const pathValue = String(pickAny(doc, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR', 'URL', 'Url', 'Enlace', 'Link', 'FileUrl', 'Archivo URL']) || '').trim();
+
+const openKey = anexoId || `row_${i}`;
+const isDownloading = openKey && downloadingId === openKey;
+const canOpen = Boolean(anexoId || pathValue);
+
+        return (
+          <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
+            <div className="text-red-500"><Icon name="FileText" size={16} /></div>
+
+            <div className="flex-1 overflow-hidden">
+              <div className="text-gray-700 text-xs truncate font-medium">{nombre || 'Documento'}</div>
+              <div className="text-[10px] text-gray-400">{tipo || 'Adjunto'} · {fmtDate(fecha)}</div>
+            </div>
+
+<button
+  type="button"
+  onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc, openKey); }}
+  disabled={!canOpen || isDownloading}
+  title={!canOpen ? "Sin ruta/ID para abrir" : "Abrir en otra pestaña"}
+  className={`ml-2 px-2 py-1 text-[10px] font-bold rounded border transition flex items-center gap-1
+    ${(!canOpen || isDownloading) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-appBlue border-gray-200 hover:bg-blue-50'}`}
+>
+  {isDownloading
+    ? <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+    : <Icon name="Download" size={12} />
+  }
+  Abrir
+</button>
+
+          </li>
+        );
+      })}
+    </ul>
+  ) : (
+    <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>
+  )}
+</Card>
+
 
                {/* ✅ Estados historico */}
                <Card title="Historial" count={data.history.length}>

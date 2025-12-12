@@ -1,7 +1,4 @@
-Perfecto, vamos a dejar ese repo bien guapo 😄
-Aquí tienes un `README.md` completo en Markdown, listo para copiar-pegar:
 
----
 
 ````markdown
 # G4S Ticket Tracker – Web App (Apps Script + React)

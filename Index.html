@@ -1,1125 +1,1769 @@
 <!DOCTYPE html>
 <html>
- <head>
-   <base target="_top">
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>G4S Ticket Tracker</title>
- 
-   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-   <script src="https://cdn.tailwindcss.com"></script>
- 
-   <script>
-     tailwind.config = {
-       theme: {
-         extend: { colors: { appBlue: '#0033A0', appRed: '#D32F2F', appGray: '#F5F5F5' } }
-       }
-     }
-   </script>
-   <style>
-     ::-webkit-scrollbar { width: 8px; }
-     ::-webkit-scrollbar-track { background: #f1f1f1; }
-     ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-     body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; }
-     .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-     .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
-     @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-     .toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; font-size: 14px; animation: slideUp 0.3s ease-out; }
-     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-     .sync-indicator { font-size: 10px; color: #666; display: flex; align-items: center; gap: 4px; }
-     .spin-slow { animation: spin 2s linear infinite; }
-     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-     
-     /* Estilos específicos para inputs al estilo Material/AppSheet */
-     .input-label { font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-bottom: 0.25rem; display: block; }
-     .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.5rem; font-size: 0.875rem; transition: all 0.2s; outline: none; }
-     .input-field:focus { border-color: #D32F2F; ring: 1px solid #D32F2F; }
-     .section-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin-bottom: 1rem; margin-top: 1.5rem; }
-     .btn-option { border: 1px solid #d1d5db; padding: 0.5rem 1rem; font-size: 0.875rem; color: #4b5563; background: white; transition: all 0.2s; }
-     .btn-option:first-child { border-top-left-radius: 0.25rem; border-bottom-left-radius: 0.25rem; }
-     .btn-option:last-child { border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; }
-     .btn-option.selected { background-color: #f3f4f6; border-color: #9ca3af; font-weight: 600; color: #111827; }
-     .btn-option.selected-red { background-color: #D32F2F; border-color: #D32F2F; color: white; }
-   </style>
- </head>
- <body>
-   <div id="root"></div>
+  <head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>G4S Ticket Tracker</title>
 
-   <script type="text/babel">
-     const { useState, useEffect, useMemo, useRef, useCallback } = React;
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-     // --- COMUNICACIÓN CON APPS SCRIPT (LIMPIA) ---
-     const runServer = (endpoint, payload = {}) => {
-       return new Promise((resolve, reject) => {
-         if (typeof google === 'undefined' || !google.script) {
-            reject(new Error("Error: Debes ejecutar esta aplicación desde Google Apps Script."));
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { appBlue: "#0033A0", appRed: "#D32F2F", appGray: "#F5F5F5" },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: #f1f1f1; }
+      ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+      body { font-family: Roboto, system-ui, -apple-system, Segoe UI, sans-serif; background-color: #f3f4f6; }
+      .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+      @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      .toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; font-size: 14px; animation: slideUp 0.3s ease-out; }
+      @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      .sync-indicator { font-size: 10px; color: #666; display: flex; align-items: center; gap: 4px; }
+      .spin-slow { animation: spin 2s linear infinite; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+      /* Inputs estilo Material/AppSheet */
+      .input-label { font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-bottom: 0.25rem; display: block; }
+      .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.5rem; font-size: 0.875rem; transition: all 0.2s; outline: none; background: white; }
+      .input-field:focus { border-color: #D32F2F; box-shadow: 0 0 0 1px #D32F2F; }
+      .section-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin-bottom: 1rem; margin-top: 1.5rem; }
+      .btn-option { border: 1px solid #d1d5db; padding: 0.5rem 1rem; font-size: 0.875rem; color: #4b5563; background: white; transition: all 0.2s; }
+      .btn-option:first-child { border-top-left-radius: 0.25rem; border-bottom-left-radius: 0.25rem; }
+      .btn-option:last-child { border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; }
+      .btn-option.selected { background-color: #f3f4f6; border-color: #9ca3af; font-weight: 600; color: #111827; }
+      .btn-option.selected-red { background-color: #D32F2F; border-color: #D32F2F; color: white; }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+      // --- COMUNICACIÓN CON APPS SCRIPT ---
+      const runServer = (endpoint, payload = {}) => {
+        return new Promise((resolve, reject) => {
+          if (typeof google === "undefined" || !google.script) {
+            reject(new Error("Debes ejecutar esta aplicación desde Google Apps Script (WebApp)."));
             return;
-         }
-         google.script.run
-           .withSuccessHandler((res) => {
-               if (res && res.error) {
-                   reject(new Error(res.message));
-               } else {
-                   resolve(res);
-               }
-           })
-           .withFailureHandler((err) => reject(err))
-           .apiHandler({ endpoint, payload });
-       });
-     };
+          }
+          google.script.run
+            .withSuccessHandler((res) => {
+              if (res && res.error) reject(new Error(res.message || "Error del servidor."));
+              else resolve(res);
+            })
+            .withFailureHandler((err) => reject(err))
+            .apiHandler({ endpoint, payload });
+        });
+      };
 
-     // --- COMPONENTES UI E ICONOS ---
-     const Icon = ({ name, size = 20, className = "" }) => {
-       const icons = {
-         Home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
-         ClipboardList: <><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>,
-         MessageCircleWarning: <><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M12 8v4"/><path d="M12 16h.01"/></>,
-         FileSignature: <><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V11"/><path d="M18 5.675V9H14.675L18 5.675Z"/><path d="M18 11l-2.293 2.293a1 1 0 0 0 0 1.414l1.586 1.586a1 1 0 0 0 1.414 0L21 14"/><path d="M12 15l-3 3 .707 2.293 2.293-2.293 3-3"/></>,
-         History: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/><path d="M12 7v5l4 2"/></>,
-         FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>,
-         ChevronRight: <path d="m9 18 6-6-6-6"/>,
-         User: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
-         AlertTriangle: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
-         Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>,
-         Settings: <><path d="M12.22 2h-.44a2 2 0 0 1-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.09a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.09a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
-         ShieldCheck: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>,
-         LogIn: <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></>,
-         Search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
-         Lock: <><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
-         RefreshCw: <><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></>,
-         Info: <><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="8"/><line x1="12" x2="12.01" y2="16"/></>,
-         CheckCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
-         Clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
-         CloudLightning: <><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></>,
-         Monitor: <><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>,
-         Server: <><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></>,
-         Plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
-         X: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
-         CheckBig: <><polyline points="20 6 9 17 4 12"/></>
-       };
-       return (
-         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-           {icons[name] || <circle cx="12" cy="12" r="10"/>}
-         </svg>
-       );
-     };
-
-     const Toast = ({ message, onClose }) => {
-       useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
-       return (
-           <div className="toast flex items-center gap-2">
-               <Icon name="Info" className="text-blue-400" />
-               <span>{message}</span>
-           </div>
-       );
-     };
-
-     // --- MODAL DE ÉXITO MODERNO ---
-     const SuccessModal = ({ onClose }) => {
+      // --- ICONOS ---
+      const Icon = ({ name, size = 20, className = "" }) => {
+        const icons = {
+          Home: (<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
+          ClipboardList: (<><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>),
+          History: (<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/><path d="M12 7v5l4 2"/></>),
+          FileText: (<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>),
+          ChevronRight: (<path d="m9 18 6-6-6-6" />),
+          User: (<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>),
+          AlertTriangle: (<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>),
+          Download: (<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>),
+          Settings: (<><path d="M12.22 2h-.44a2 2 0 0 1-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.09a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.09a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>),
+          ShieldCheck: (<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>),
+          LogIn: (<><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></>),
+          Search: (<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>),
+          RefreshCw: (<><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></>),
+          Info: (<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="8"/><line x1="12" x2="12.01" y2="16"/></>),
+          CheckCircle: (<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>),
+          Clock: (<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>),
+          CloudLightning: (<><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></>),
+          Monitor: (<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>),
+          X: (<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>),
+          CheckBig: (<><polyline points="20 6 9 17 4 12"/></>)
+        };
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 relative flex flex-col items-center text-center transform transition-all scale-100">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
-                        <Icon name="X" size={20} />
-                    </button>
-                    
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 relative">
-                        <div className="absolute inset-0 bg-green-200 rounded-full animate-ping opacity-25"></div>
-                        <Icon name="CheckBig" size={40} className="text-green-600" />
-                    </div>
-                    
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">¡Solicitud Creada!</h3>
-                    <p className="text-gray-500 text-sm mb-6">Tu ticket ha sido registrado correctamente y se ha enviado al equipo de soporte.</p>
-                    
-                    <button 
-                        onClick={onClose}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-green-600/30"
-                    >
-                        Entendido
-                    </button>
-                </div>
-            </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+               className={className}>
+            {icons[name] || <circle cx="12" cy="12" r="10" />}
+          </svg>
         );
-     };
+      };
 
-     const getStatusTextColor = (status) => {
-       if (!status) return 'text-gray-600';
-       const s = status.toString().toLowerCase();
-       if (s === 'cerrado' || s.includes('resuelto')) return 'text-green-600';
-       if (s.includes('abierto') || s.includes('soporte') || s.includes('proceso')) return 'text-blue-600';
-       if (s.includes('cancelado') || s.includes('rechazado')) return 'text-red-600';
-       return 'text-yellow-600';
-     };
+      const Toast = ({ message, onClose }) => {
+        useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
+        return (
+          <div className="toast flex items-center gap-2">
+            <Icon name="Info" className="text-blue-400" />
+            <span>{message}</span>
+          </div>
+        );
+      };
 
-     const getStatusBadgeColor = (status) => {
-         if (!status) return 'bg-gray-100 text-gray-600';
-         const s = status.toString().toLowerCase();
-         if (s === 'cerrado' || s.includes('resuelto')) return 'bg-green-100 text-green-700';
-         if (s.includes('abierto') || s.includes('soporte') || s.includes('proceso')) return 'bg-blue-100 text-blue-700';
-         if (s.includes('cancelado') || s.includes('rechazado')) return 'bg-red-100 text-red-700';
-         return 'bg-yellow-100 text-yellow-700';
-     };
+      const SuccessModal = ({ onClose }) => {
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 relative flex flex-col items-center text-center">
+              <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
+                <Icon name="X" size={20} />
+              </button>
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 relative">
+                <div className="absolute inset-0 bg-green-200 rounded-full animate-ping opacity-25"></div>
+                <Icon name="CheckBig" size={40} className="text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">¡Solicitud Creada!</h3>
+              <p className="text-gray-500 text-sm mb-6">Tu ticket ha sido registrado correctamente.</p>
+              <button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-green-600/30">
+                Entendido
+              </button>
+            </div>
+          </div>
+        );
+      };
 
-     // --- LOGIN VIEW ---
-     const LoginView = ({ onSuccess, isCheckingCache }) => {
-           if (isCheckingCache) {
-               return (
-                   <div className="flex h-screen items-center justify-center bg-gray-100">
-                       <div className="flex flex-col items-center">
-                           <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-16 w-auto mb-4 opacity-50 grayscale" />
-                       </div>
-                   </div>
-               );
-           }
+      const getStatusTextColor = (status) => {
+        if (!status) return "text-gray-600";
+        const s = status.toString().toLowerCase();
+        if (s === "cerrado" || s.includes("resuelto")) return "text-green-600";
+        if (s.includes("abierto") || s.includes("soporte") || s.includes("proceso")) return "text-blue-600";
+        if (s.includes("cancelado") || s.includes("rechazado")) return "text-red-600";
+        return "text-yellow-600";
+      };
 
-           const [loading, setLoading] = useState(false);
-           const [errorMsg, setErrorMsg] = useState(null);
+      const getStatusBadgeColor = (status) => {
+        if (!status) return "bg-gray-100 text-gray-600";
+        const s = status.toString().toLowerCase();
+        if (s === "cerrado" || s.includes("resuelto")) return "bg-green-100 text-green-700";
+        if (s.includes("abierto") || s.includes("soporte") || s.includes("proceso")) return "bg-blue-100 text-blue-700";
+        if (s.includes("cancelado") || s.includes("rechazado")) return "bg-red-100 text-red-700";
+        return "bg-yellow-100 text-yellow-700";
+      };
 
-           const login = async () => {
-               setLoading(true);
-               setErrorMsg(null);
-               try {
-                   await onSuccess(null);
-               } catch (e) {
-                   console.error(e);
-                   setLoading(false);
-                   setErrorMsg(e.message || "Error desconocido al iniciar sesión.");
-               }
-           };
-
-           return (
-               <div className="flex flex-col h-screen bg-gray-100">
-                   <div className="bg-appRed h-2 w-full"></div>
-                   <div className="flex-1 flex items-center justify-center p-4">
-                       <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-                           <div className="flex justify-center mb-6">
-                               <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-20 w-auto object-contain" />
-                           </div>
-                           <h1 className="text-2xl font-bold text-gray-800 mb-2">Ticket Tracker</h1>
-                           <p className="text-gray-500 mb-8 text-sm">Gestión de Tecnología & Servicios</p>
-                          
-                           {errorMsg && (
-                               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-left animate-fade-in">
-                                   <Icon name="AlertTriangle" className="text-red-600 flex-shrink-0" size={20} />
-                                   <div>
-                                       <h4 className="text-sm font-bold text-red-700">Acceso Denegado</h4>
-                                       <p className="text-xs text-red-600 mt-1">{errorMsg}</p>
-                                   </div>
-                               </div>
-                           )}
-
-                           {loading ? (
-                               <div className="py-6"><div className="w-10 h-10 border-4 border-appRed border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p className="text-xs text-gray-400">Autenticando...</p></div>
-                           ) : (
-                               <div className="space-y-3">
-                                   <button onClick={login} className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded flex items-center justify-center gap-2 transition shadow-sm"><Icon name="User" size={18} /> Ingresar con Google</button>
-                               </div>
-                           )}
-                           <div className="mt-8 text-[10px] text-gray-400">© 2025 G4S Secure Solutions.</div>
-                       </div>
-                   </div>
-               </div>
-           );
-     };
-
-     // --- SIDEBAR ---
-     const Sidebar = ({ currentView, setView, onLogout, userContext, lastSync, isSyncing }) => {
-       const menuItems = [
-         { id: 'home', icon: 'Home', title: 'Inicio' },
-         { id: 'create', icon: 'ClipboardList', title: 'Nueva Solicitud' },
-         { id: 'process', icon: 'Monitor', title: 'Tickets Activos' },
-         { id: 'history', icon: 'History', title: 'Historial Tickets' },
-       ];
-     
-       return (
-         <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-lg z-10 fixed">
-           <div className="p-6 border-b border-gray-100 flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
-              <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-8 w-auto object-contain" />
-              <span className="font-bold text-gray-800 text-lg">Ticket Tracker</span>
-           </div>
-           <div className="flex-1 overflow-y-auto py-4">
-             {menuItems.map((item) => (
-               <div key={item.id} onClick={() => setView(item.id)} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === item.id ? 'bg-red-50 border-appRed' : 'border-transparent hover:bg-gray-50'}`}>
-                 <div className="flex items-center gap-3">
-                   <Icon name={item.icon} className={`${currentView === item.id ? 'text-appRed' : 'text-gray-400'}`} size={20} />
-                   <div className={`font-medium text-sm ${currentView === item.id ? 'text-appRed font-bold' : 'text-gray-600'}`}>{item.title}</div>
-                 </div>
-               </div>
-             ))}
-             <div className="my-2 border-t border-gray-100"></div>
-             <div onClick={() => setView('config')} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === 'config' ? 'bg-blue-50 border-appBlue' : 'border-transparent hover:bg-gray-50'}`}>
-               <div className="flex items-start gap-3">
-                 <Icon name="Settings" className={`${currentView === 'config' ? 'text-appBlue' : 'text-gray-400'}`} size={20} />
-                 <div className={`font-medium text-sm ${currentView === 'config' ? 'text-appBlue font-bold' : 'text-gray-600'}`}>Configuración</div>
-               </div>
-             </div>
-           </div>
-           <div className="p-4 border-t bg-gray-50">
-              <div className="flex flex-col gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                   <div className="p-2 rounded-full bg-gray-200"><Icon name="User" size={16} className="text-gray-600" /></div>
-                   <div className="overflow-hidden flex-1">
-                       <div className="text-[10px] uppercase font-bold text-gray-500">Usuario</div>
-                       <div className="text-xs font-bold text-gray-800 truncate w-full" title={userContext?.email}>{userContext?.email || '...'}</div>
-                   </div>
-                </div>
-                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">
-                   {isSyncing ? (
-                        <div className="sync-indicator text-blue-600 font-bold"><Icon name="RefreshCw" size={10} className="spin-slow" /> Actualizando...</div>
-                   ) : (
-                        <div className="sync-indicator"><Icon name="CloudLightning" size={10} /> Al día</div>
-                   )}
-                   {lastSync && <span className="text-[9px] text-gray-400">{new Date(Number(lastSync)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>}
+      // --- ERROR BOUNDARY (para que no quede en blanco) ---
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { hasError: false, message: "" };
+        }
+        static getDerivedStateFromError(error) {
+          return { hasError: true, message: error?.message || String(error) };
+        }
+        componentDidCatch(error, info) {
+          console.error("UI Crash:", error, info);
+        }
+        render() {
+          if (this.state.hasError) {
+            return (
+              <div className="p-8 max-w-3xl mx-auto">
+                <div className="bg-white border border-red-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Icon name="AlertTriangle" className="text-red-600" />
+                    <h2 className="text-lg font-bold text-gray-800">La interfaz se cayó (pero ya la atrapamos 😅)</h2>
+                  </div>
+                  <p className="text-sm text-gray-600">Detalle:</p>
+                  <pre className="mt-2 text-xs bg-gray-50 border rounded p-3 overflow-auto">{this.state.message}</pre>
+                  <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700">
+                    Recargar
+                  </button>
                 </div>
               </div>
-              <button onClick={onLogout} className="w-full py-2 px-3 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2">
-                <Icon name="LogIn" size={14} className="rotate-180"/> Salir
-              </button>
-           </div>
-         </div>
-       );
-     };
+            );
+          }
+          return this.props.children;
+        }
+      }
 
-     // --- CREATE REQUEST VIEW (UNIFICADA & REAL) ---
-     const CreateRequest = ({ userContext, setView, onRefresh }) => {
-       const [formData, setFormData] = useState({
-           idSede: '',
-           ticketCliente: '',
-           clasificacion: 'Hardware',
-           tipoServicio: 'Visita técnica', // Nuevo visual
-           prioridad: 'Media',
-           solicitud: '',
-           observacion: ''
-       });
-       const [submitting, setSubmitting] = useState(false);
-       const [showSuccess, setShowSuccess] = useState(false); // Estado para el modal
+      // --- LOGIN VIEW (✅ hooks NO condicionales) ---
+      const LoginView = ({ onSuccess, isCheckingCache }) => {
+        const [loading, setLoading] = useState(false);
+        const [errorMsg, setErrorMsg] = useState(null);
 
-       // Fecha actual formateada
-       const currentDate = useMemo(() => new Date().toLocaleString(), []);
+        if (isCheckingCache) {
+          return (
+            <div className="flex h-screen items-center justify-center bg-gray-100">
+              <div className="flex flex-col items-center">
+                <img
+                  src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
+                  alt="G4S"
+                  className="h-16 w-auto mb-4 opacity-50 grayscale"
+                />
+              </div>
+            </div>
+          );
+        }
 
-       const handleChange = (field, value) => {
-           setFormData(prev => ({ ...prev, [field]: value }));
-       };
+        const login = async () => {
+          setLoading(true);
+          setErrorMsg(null);
+          try {
+            await onSuccess(null);
+          } catch (e) {
+            console.error(e);
+            setLoading(false);
+            setErrorMsg(e.message || "Error desconocido al iniciar sesión.");
+          }
+        };
 
-       const handleSubmit = () => {
-           if (!formData.idSede || !formData.solicitud || !formData.observacion) {
-               alert("Por favor completa los campos obligatorios.");
-               return;
-           }
+        return (
+          <div className="flex flex-col h-screen bg-gray-100">
+            <div className="bg-appRed h-2 w-full"></div>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+                <div className="flex justify-center mb-6">
+                  <img
+                    src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
+                    alt="G4S Logo"
+                    className="h-20 w-auto object-contain"
+                  />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">Ticket Tracker</h1>
+                <p className="text-gray-500 mb-8 text-sm">Gestión de Tecnología & Servicios</p>
 
-           setSubmitting(true);
-           
-           // Preparamos payload, concatenando info extra en observación si es necesario
-           const payload = {
-             ...formData,
-             // Concatenamos el tipo de servicio a la observación para no perder el dato en el backend actual
-             observacion: `[Tipo: ${formData.tipoServicio}] ${formData.observacion}`
-           };
-
-           runServer('createRequest', payload)
-             .then(() => {
-                 // REEMPLAZADO: alert por el modal de éxito
-                 setShowSuccess(true);
-             })
-             .catch(err => {
-                 console.error(err);
-                 alert("❌ Error al crear ticket: " + err.message);
-                 setSubmitting(false); // Solo desbloqueamos si hubo error
-             });
-       };
-       
-       const handleSuccessClose = () => {
-          setShowSuccess(false);
-          setSubmitting(false);
-          if(onRefresh) onRefresh(true);
-          setView('home');
-       };
-
-       return (
-         <div className="p-8 max-w-4xl mx-auto animate-fade-in relative">
-           {showSuccess && <SuccessModal onClose={handleSuccessClose} />}
-         
-           {/* Header Flotante / Superior */}
-           <div className="flex justify-between items-center mb-6">
-             <h2 className="text-xl font-medium text-gray-800">Crear Solicitud</h2>
-             <div className="flex gap-2">
-                <button
-                     type="button"
-                     onClick={() => setView('home')}
-                     disabled={submitting}
-                     className="px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-medium hover:bg-red-50 transition"
-                 >
-                     Cancelar
-                </button>
-                <button
-                     type="button"
-                     onClick={handleSubmit}
-                     disabled={submitting || !formData.idSede || !formData.solicitud || !formData.observacion}
-                     className="bg-appRed text-white px-6 py-2 rounded shadow hover:bg-red-700 font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                 >
-                     {submitting ? (
-                         <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Guardando...</>
-                     ) : (
-                         "Guardar"
-                     )}
-                 </button>
-             </div>
-           </div>
-
-           <div className="bg-white p-8 rounded shadow-sm border border-gray-200">
-                 {/* Sección 1: Consecutivo Del Ticket */}
-                 <h3 className="section-title mt-0">Consecutivo Del Ticket</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                   <div>
-                       <label className="input-label">Ticket G4S *</label>
-                       <input
-                           type="text"
-                           className="input-field bg-gray-50 text-gray-400 cursor-not-allowed"
-                           placeholder="Generado automáticamente"
-                           disabled
-                           readOnly
-                       />
-                   </div>
-                   <div>
-                       <label className="input-label">Ticket (Opcional)</label>
-                       <input
-                           type="text"
-                           className="input-field"
-                           value={formData.ticketCliente}
-                           onChange={(e) => handleChange('ticketCliente', e.target.value)}
-                       />
-                   </div>
-                 </div>
-
-                 {/* Sección 2: Sitio Solicitud */}
-                 <h3 className="section-title">Sitio Solicitud</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                   <div>
-                       <label className="input-label">Sede *</label>
-                       <select
-                           className="input-field"
-                           value={formData.idSede}
-                           onChange={(e) => handleChange('idSede', e.target.value)}
-                       >
-                           <option value="">Seleccione Sede...</option>
-                           {userContext && userContext.allowedClientIds && userContext.allowedClientIds.map(id => (
-                               <option key={id} value={id}>{userContext.clientNames && userContext.clientNames[id] ? userContext.clientNames[id] : id}</option>
-                           ))}
-                       </select>
-                   </div>
-                   <div>
-                       <label className="input-label">Fecha creación cliente *</label>
-                       <div className="relative">
-                         <input
-                             type="text"
-                             className="input-field bg-gray-50 text-gray-600"
-                             value={currentDate}
-                             readOnly
-                         />
-                         <div className="absolute right-3 top-2.5 text-gray-400"><Icon name="Clock" size={16}/></div>
-                       </div>
-                   </div>
-                 </div>
-
-                 {/* Sección 3: Motivo Del Servicio */}
-                 <h3 className="section-title">Motivo Del Servicio</h3>
-                 <div className="space-y-4 mb-6">
+                {errorMsg && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-left animate-fade-in">
+                    <Icon name="AlertTriangle" className="text-red-600 flex-shrink-0" size={20} />
                     <div>
-                         <label className="input-label">Solicitud *</label>
-                         <input
-                             type="text"
-                             className="input-field"
-                             value={formData.solicitud}
-                             onChange={(e) => handleChange('solicitud', e.target.value)}
-                         />
+                      <h4 className="text-sm font-bold text-red-700">Acceso Denegado</h4>
+                      <p className="text-xs text-red-600 mt-1">{errorMsg}</p>
                     </div>
-                    
-                    <div>
-                       <label className="input-label">Clasificación Solicitud</label>
-                       <select
-                           className="input-field"
-                           value={formData.clasificacion}
-                           onChange={(e) => handleChange('clasificacion', e.target.value)}
-                       >
-                           <option value="Hardware">Hardware</option>
-                           <option value="Software">Software</option>
-                           <option value="Redes">Redes</option>
-                           <option value="Acceso">Acceso</option>
-                           <option value="Otro">Otro</option>
-                       </select>
+                  </div>
+                )}
+
+                {loading ? (
+                  <div className="py-6">
+                    <div className="w-10 h-10 border-4 border-appRed border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-xs text-gray-400">Autenticando...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <button
+                      onClick={login}
+                      className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded flex items-center justify-center gap-2 transition shadow-sm"
+                    >
+                      <Icon name="User" size={18} /> Ingresar con Google
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-8 text-[10px] text-gray-400">© 2025 G4S Secure Solutions.</div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- SIDEBAR ---
+      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSync, isSyncing }) => {
+        const menuItems = [
+          { id: "home", icon: "Home", title: "Inicio" },
+          { id: "create", icon: "ClipboardList", title: "Nueva Solicitud" },
+          { id: "process", icon: "Monitor", title: "Tickets Activos" },
+          { id: "history", icon: "History", title: "Historial Tickets" },
+        ];
+
+        return (
+          <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-lg z-10 fixed">
+            <div className="p-6 border-b border-gray-100 flex items-center gap-3 cursor-pointer" onClick={() => setView("home")}>
+              <img
+                src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
+                alt="G4S Logo"
+                className="h-8 w-auto object-contain"
+              />
+              <span className="font-bold text-gray-800 text-lg">Ticket Tracker</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4">
+              {menuItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setView(item.id)}
+                  className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${
+                    currentView === item.id ? "bg-red-50 border-appRed" : "border-transparent hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon name={item.icon} className={`${currentView === item.id ? "text-appRed" : "text-gray-400"}`} size={20} />
+                    <div className={`font-medium text-sm ${currentView === item.id ? "text-appRed font-bold" : "text-gray-600"}`}>
+                      {item.title}
                     </div>
-
-                    <div>
-                        <label className="input-label">Clasificación *</label>
-                        <div className="flex">
-                           {['Visita técnica', 'Visita comercial'].map(t => (
-                               <button
-                                   type="button"
-                                   key={t}
-                                   onClick={() => handleChange('tipoServicio', t)}
-                                   className={`btn-option ${formData.tipoServicio === t ? 'selected' : ''}`}
-                               >
-                                   {t}
-                               </button>
-                           ))}
-                        </div>
-                    </div>
-
-                    <div>
-                         <label className="input-label">Observación</label>
-                         <textarea
-                             className="input-field h-24 resize-y"
-                             value={formData.observacion}
-                             onChange={(e) => handleChange('observacion', e.target.value)}
-                         ></textarea>
-                    </div>
-
-                    <div>
-                        <label className="input-label">Prioridad Solicitud</label>
-                        <div className="flex">
-                           {['Baja', 'Media', 'Alta'].map(p => (
-                               <button
-                                   type="button"
-                                   key={p}
-                                   onClick={() => handleChange('prioridad', p)}
-                                   className={`btn-option ${formData.prioridad === p ? 'selected-red' : ''}`}
-                               >
-                                   {p}
-                               </button>
-                           ))}
-                        </div>
-                    </div>
-                 </div>
-
-                 {/* Sección 4: Adicionales Solicitud */}
-                 <h3 className="section-title">Adicionales Solicitud</h3>
-                 <div className="space-y-4">
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-100">
-                         <span className="text-sm text-gray-600 font-medium">Anexos de la solicitud: Foto, Archivo o Dibujo</span>
-                         <button className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100" onClick={()=>alert("Funcionalidad de adjuntos pendiente.")}>Nuevo</button>
-                     </div>
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-100">
-                         <span className="text-sm text-gray-600 font-medium">Activos asociados a la solicitud (QR)</span>
-                         <button className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100" onClick={()=>alert("Funcionalidad de activos pendiente.")}>Nuevo</button>
-                     </div>
-                 </div>
-           </div>
-         </div>
-       );
-     };
-
-     // --- CONFIGURATION VIEW ---
-     const ConfigurationView = ({ userContext, onForceSync, isSyncing, lastSync }) => {
-       return (
-         <div className="p-8 max-w-4xl mx-auto animate-fade-in">
-           <div className="flex justify-between items-center mb-2">
-               <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
-               <button onClick={onForceSync} disabled={isSyncing} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm">
-                   <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} /> {isSyncing ? 'Sincronizando...' : 'Forzar Sincronización'}
-               </button>
-           </div>
-         
-           <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
-               <Icon name="Info" size={16} className="text-yellow-600" />
-               <span>{lastSync ? <>Última actualización: <strong>{new Date(Number(lastSync)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</strong></> : "Aún no se ha realizado ninguna sincronización."}</span>
-           </div>
-
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Icon name="User" size={32} /></div>
-                  <div>
-                     <div className="text-xs uppercase font-bold text-gray-500">Cuenta Activa</div>
-                     <div className="text-lg font-bold text-gray-800">{userContext.email}</div>
-                     <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1"><Icon name="ShieldCheck" size={12} /> {userContext.role}</div>
                   </div>
                 </div>
-             </div>
-             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between mb-4"><h3 className="font-bold text-gray-700">Clientes Asignados</h3><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">{userContext.allowedClientIds ? userContext.allowedClientIds.length : 0}</span></div>
-                <div className="max-h-64 overflow-y-auto border rounded border-gray-100 bg-gray-50">
-                    {userContext.allowedClientIds && userContext.allowedClientIds.length > 0 ? (
-                      <ul className="divide-y divide-gray-100">
-                        {userContext.allowedClientIds.map((clientId, idx) => (
-                          <li key={idx} className="px-4 py-3 bg-white flex items-center gap-3">
-                            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                            <div className="flex-1"><div className="text-xs font-bold text-gray-400 uppercase">{userContext.clientNames && userContext.clientNames[clientId] ? userContext.clientNames[clientId] : 'ID Cliente'}</div><div className="text-sm font-mono text-gray-700">{clientId}</div></div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : <div className="p-8 text-center text-gray-400 text-xs">Sin Clientes Asignados</div>}
+              ))}
+
+              <div className="my-2 border-t border-gray-100"></div>
+
+              <div
+                onClick={() => setView("config")}
+                className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${
+                  currentView === "config" ? "bg-blue-50 border-appBlue" : "border-transparent hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <Icon name="Settings" className={`${currentView === "config" ? "text-appBlue" : "text-gray-400"}`} size={20} />
+                  <div className={`font-medium text-sm ${currentView === "config" ? "text-appBlue font-bold" : "text-gray-600"}`}>
+                    Configuración
+                  </div>
                 </div>
-             </div>
-           </div>
-         </div>
-       );
-     };
-
-     // --- HOME DASHBOARD VIEW ---
-     const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
-       const stats = useMemo(() => {
-           const total = requests.length;
-           const pending = requests.filter(r => (r.Estado || '').trim() !== 'Cerrado').length;
-           const completed = requests.filter(r => (r.Estado || '').trim() === 'Cerrado').length;
-           return { total, pending, completed };
-       }, [requests]);
-
-       return (
-         <div className="p-8 max-w-6xl mx-auto animate-fade-in">
-           <div className="mb-8">
-               <div className="flex items-center gap-3">
-                   <h1 className="text-3xl font-bold text-gray-800">Hola, {userContext.email.split('@')[0]}</h1>
-                   {isSyncing && (
-                       <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                           <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                           <span className="text-xs font-bold text-blue-600">Sincronizando...</span>
-                       </div>
-                   )}
-               </div>
-               <p className="text-gray-500">Bienvenido al portal de Gestión de Tecnología.</p>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-               <div onClick={() => setView('history')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                   <div className="flex justify-between items-start mb-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span></div>
-                   <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
-                   <div className="text-sm text-gray-500">Solicitudes totales</div>
-               </div>
-               <div onClick={() => setView('process')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                   <div className="flex justify-between items-start mb-4"><div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span></div>
-                   <div className="text-3xl font-bold text-gray-800">{stats.pending}</div>
-                   <div className="text-sm text-gray-500">Tickets en curso (No Cerrados)</div>
-               </div>
-               <div onClick={() => setView('history')} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                   <div className="flex justify-between items-start mb-4"><div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span></div>
-                   <div className="text-3xl font-bold text-gray-800">{stats.completed}</div>
-                   <div className="text-sm text-gray-500">Tickets finalizados</div>
-               </div>
-           </div>
-           <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <button onClick={() => setView('create')} className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1">
-                   <div className="bg-white/20 p-3 rounded-full"><Icon name="ClipboardList" size={32} /></div>
-                   <div><div className="text-lg font-bold">Crear nuevo Ticket</div><div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div></div>
-               </button>
-           </div>
-         </div>
-       );
-     };
-
-     // --- REQUEST DETAIL VIEW ---
-     const RequestDetail = ({ requestId, onBack, preloadedData }) => {
-       const [data, setData] = useState(preloadedData ? { header: preloadedData, services: [], history: [], docs: [] } : null);
-       const [loading, setLoading] = useState(true);
-       const [error, setError] = useState(null);
-
-// ✅ Abrir anexos en otra pestaña (con fallback a URL estilo AppSheet)
-const [downloadingId, setDownloadingId] = useState(null);
-
-// 👇 Ajusta solo si cambian en tu AppSheet (son los que tú compartiste)
-const APPSHEET_APP_NAME = 'AppSolicitudes-5916254';
-const APPSHEET_TABLE_NAME = 'Solicitudes anexos';
-const APPSHEET_APP_VERSION = '1.000737';
-
-// pick "tolerante": soporta headers con espacios (ej: "Archivo ")
-const pickAny = (obj, keys) => {
-  if (!obj) return '';
-  const objKeys = Object.keys(obj);
-  for (const k of keys) {
-    const direct = obj?.[k];
-    if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
-
-    const altKey = objKeys.find(x => String(x).trim() === String(k).trim());
-    const alt = altKey ? obj?.[altKey] : '';
-    if (alt !== undefined && alt !== null && String(alt).trim() !== '') return alt;
-  }
-  return '';
-};
-
-const openUrlInNewTab = (url) => {
-  if (!url) return;
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-};
-
-const openFromBase64 = (base64, mimeType, fileName) => {
-  const byteChars = atob(base64);
-  const byteNumbers = new Array(byteChars.length);
-  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
-
-  const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-
-  // abrir en nueva pestaña (no “download”)
-  openUrlInNewTab(url);
-
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
-};
-
-const buildAppSheetFileUrl = (filePathOrUrl) => {
-  const p = String(filePathOrUrl || '').trim();
-  if (!p) return '';
-
-  // Si ya viene como URL (ej: gettablefileurl, Drive, etc.), úsala tal cual
-  if (/^https?:\/\//i.test(p)) return p;
-
-  // Construcción estilo AppSheet (sin signature; si tu entorno la exige, usa columna URL firmada)
-  const params = new URLSearchParams();
-  params.set('appName', APPSHEET_APP_NAME);
-  params.set('tableName', APPSHEET_TABLE_NAME);
-  params.set('fileName', p);           // URLSearchParams se encarga de %2F etc.
-  params.set('appVersion', APPSHEET_APP_VERSION);
-
-  return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
-};
-
-const openAnexo = async (doc, openKey) => {
-  // 1) Si el row ya trae una URL lista (ideal si guardas la URL firmada de AppSheet)
-  const directUrl = String(pickAny(doc, ['URL', 'Url', 'Enlace', 'Link', 'FileUrl', 'Archivo URL']) || '').trim();
-  if (/^https?:\/\//i.test(directUrl)) {
-    openUrlInNewTab(directUrl);
-    return;
-  }
-
-  // 2) Intentamos por el endpoint del backend (valida permisos y devuelve base64 o url)
-  const anexoId = String(
-    pickAny(doc, ['ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos ']) || ''
-  ).trim();
-
-  // 3) Fallback: usar la ruta almacenada en la tabla (Foto / Archivo / Dibujo / QR)
-  const pathValue = String(
-    pickAny(doc, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || ''
-  ).trim();
-
-  try {
-    setDownloadingId(openKey);
-
-    if (anexoId) {
-      try {
-        const res = await runServer('getAnexoDownload', { anexoId });
-
-        if (res?.mode === 'base64') {
-          openFromBase64(res.base64, res.mimeType, res.fileName);
-          return;
-        }
-
-        if (res?.mode === 'url' && res.url) {
-          openUrlInNewTab(res.url);
-          return;
-        }
-      } catch (serverErr) {
-        // Si el backend falla (tu caso actual), seguimos con fallback AppSheet
-        console.warn("Backend getAnexoDownload falló, usando fallback AppSheet:", serverErr);
-      }
-    }
-
-    const fallbackUrl = buildAppSheetFileUrl(pathValue);
-    if (fallbackUrl) {
-      openUrlInNewTab(fallbackUrl);
-      return;
-    }
-
-    throw new Error("No se pudo determinar la ruta/URL del anexo.");
-  } catch (e) {
-    console.error(e);
-    alert("❌ No fue posible abrir el anexo: " + (e.message || e));
-  } finally {
-    setDownloadingId(null);
-  }
-};
-
-
-       useEffect(() => {
-         setLoading(true);
-         if (preloadedData) {
-            // Ya tenemos datos en la lista, podemos mostrarlos inmediatamente
-         }
-
-         runServer('getRequestDetail', { id: requestId }).then(res => {
-             setData({ header: res.header || preloadedData, services: res.services||[], history: res.history||[], docs: res.documents||[] });
-         }).catch(e=>!preloadedData && setError(e.message)).finally(() => setLoading(false));
-       }, [requestId]);
-     
-       if(!data && loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
-       if(error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
-
-       const isRelevantField = (key, value) => {
-           if (!value || value === '0' || value === 0) return false;
-           const k = key.toLowerCase();
-           if (k.includes('precio') || k.includes('cobro') || k.includes('id_') || k.includes('related') || k.includes('_rownumber')) return false;
-           if (k==='estado'||k==='id solicitud') return false;
-           return true;
-       };
-
-       // ✅ AJUSTE: Helpers para leer encabezados exactos de tus hojas hijas
-       const pick = (obj, keys) => {
-         for (const k of keys) {
-           const v = obj?.[k];
-           if (v !== undefined && v !== null && String(v).trim() !== '') return v;
-         }
-         return '';
-       };
-
-       const fmtDate = (v) => {
-         if (!v) return '-';
-         const d = new Date(v);
-         return isNaN(d) ? String(v) : d.toLocaleString();
-       };
-
-       const Card = ({ title, children, count }) => (
-         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden">
-           <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-700 text-sm uppercase flex justify-between">
-             <span>{title}</span>
-             {count !== undefined && <span className="bg-gray-100 text-gray-600 px-2 rounded-full text-xs flex items-center">{count}</span>}
-           </div>
-           <div className="p-0">{children}</div>
-         </div>
-       );
-
-       return (
-         <div className="p-6 max-w-7xl mx-auto animate-fade-in">
-           <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm">
-             <Icon name="ChevronRight" className="rotate-180" size={16}/> Volver
-           </button>
-
-           <div className="grid grid-cols-12 gap-6">
-             {/* COLUMNA IZQUIERDA */}
-             <div className="col-span-12 md:col-span-8 space-y-4">
-               <Card title="Detalle Técnico">
-                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
-                   {Object.entries(data.header).map(([key, value]) => {
-                     if (!isRelevantField(key, value)) return null;
-                     return (
-                       <div key={key} className="border-b border-gray-50 pb-2 last:border-0">
-                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
-                         <div className="text-sm text-gray-700 break-words font-medium">{value}</div>
-                       </div>
-                     );
-                   })}
-                 </div>
-               </Card>
-             </div>
-
-             {/* COLUMNA DERECHA */}
-             <div className="col-span-12 md:col-span-4 space-y-4">
-               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
-                 <div className="text-gray-400 text-xs font-bold mb-1">ESTADO TICKET</div>
-                 <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header['Estado'])}`}>{data.header['Estado'] || 'Desconocido'}</div>
-                 <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">
-                   Ticket #: {data.header['Ticket G4S'] || data.header['ID Solicitud'] || 'N/A'}
-                 </div>
-               </div>
-
-               {loading && <div className="text-xs text-blue-600 mb-2 flex items-center gap-2"><div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Actualizando detalles...</div>}
-             
-               {/* ✅ Observaciones historico */}
-               <Card title="Observaciones" count={data.services.length}>
-                 {data.services.length > 0 ? (
-                   <ul className="divide-y divide-gray-100">
-                       {data.services.map((s,i) => {
-                         const txt = pick(s, ['Observación','Observacion']);
-                         const fecha = pick(s, ['Fecha Actualización','Fecha Actualizacion']);
-                         return (
-                           <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
-                             <span className="font-medium text-gray-700">{txt || '(Sin detalle)'}</span>
-                             <span className="text-[10px] text-gray-400">{fmtDate(fecha)}</span>
-                           </li>
-                         );
-                       })}
-                   </ul>
-                 ) : <div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>}
-               </Card>
-
-               {/* ✅ Solicitudes anexos */}
-<Card title="Anexos" count={data.docs.length}>
-  {data.docs.length > 0 ? (
-    <ul className="divide-y divide-gray-100">
-      {data.docs.map((doc, i) => {
-        const nombre = pick(doc, ['Nombre']);
-        const tipo = pick(doc, ['Tipo anexo']);
-        const fecha = pick(doc, ['Fecha Actualización', 'Fecha Actualizacion']);
-
-const anexoId = String(pickAny(doc, ['ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos ']) || '').trim();
-const pathValue = String(pickAny(doc, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR', 'URL', 'Url', 'Enlace', 'Link', 'FileUrl', 'Archivo URL']) || '').trim();
-
-const openKey = anexoId || `row_${i}`;
-const isDownloading = openKey && downloadingId === openKey;
-const canOpen = Boolean(anexoId || pathValue);
-
-        return (
-          <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
-            <div className="text-red-500"><Icon name="FileText" size={16} /></div>
-
-            <div className="flex-1 overflow-hidden">
-              <div className="text-gray-700 text-xs truncate font-medium">{nombre || 'Documento'}</div>
-              <div className="text-[10px] text-gray-400">{tipo || 'Adjunto'} · {fmtDate(fecha)}</div>
+              </div>
             </div>
 
-<button
-  type="button"
-  onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc, openKey); }}
-  disabled={!canOpen || isDownloading}
-  title={!canOpen ? "Sin ruta/ID para abrir" : "Abrir en otra pestaña"}
-  className={`ml-2 px-2 py-1 text-[10px] font-bold rounded border transition flex items-center gap-1
-    ${(!canOpen || isDownloading) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-appBlue border-gray-200 hover:bg-blue-50'}`}
->
-  {isDownloading
-    ? <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-    : <Icon name="Download" size={12} />
-  }
-  Abrir
-</button>
+            <div className="p-4 border-t bg-gray-50">
+              <div className="flex flex-col gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-full bg-gray-200">
+                    <Icon name="User" size={16} className="text-gray-600" />
+                  </div>
+                  <div className="overflow-hidden flex-1">
+                    <div className="text-[10px] uppercase font-bold text-gray-500">Usuario</div>
+                    <div className="text-xs font-bold text-gray-800 truncate w-full" title={userContext?.email}>
+                      {userContext?.email || "..."}
+                    </div>
+                  </div>
+                </div>
 
-          </li>
+                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">
+                  {isSyncing ? (
+                    <div className="sync-indicator text-blue-600 font-bold">
+                      <Icon name="RefreshCw" size={10} className="spin-slow" /> Actualizando...
+                    </div>
+                  ) : (
+                    <div className="sync-indicator">
+                      <Icon name="CloudLightning" size={10} /> Al día
+                    </div>
+                  )}
+                  {lastSync && (
+                    <span className="text-[9px] text-gray-400">
+                      {new Date(Number(lastSync)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={onLogout}
+                className="w-full py-2 px-3 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2"
+              >
+                <Icon name="LogIn" size={14} className="rotate-180" /> Salir
+              </button>
+            </div>
+          </div>
         );
-      })}
-    </ul>
-  ) : (
-    <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>
-  )}
-</Card>
+      };
 
+      // --- CREATE REQUEST VIEW ---
+      // ✅ ACTUALIZADO: módulo Activos por QR (con modal + lista + vínculo al guardar)
+      const CreateRequest = ({ userContext, setView, onRefresh, showToast }) => {
+        const [formData, setFormData] = useState({
+          idSede: "",
+          ticketCliente: "",
+          clasificacion: "Hardware",
+          tipoServicio: "Visita técnica",
+          prioridad: "Media",
+          solicitud: "",
+          observacion: "",
+        });
 
-               {/* ✅ Estados historico */}
-               <Card title="Historial" count={data.history.length}>
-                   <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                       {data.history.map((h, i) => {
-                         const estado = pick(h, ['Estado actual']);
-                         const fecha = pick(h, ['Fecha Actualización','Fecha Actualizacion']);
-                         return (
-                           <li key={i} className="px-4 py-2 hover:bg-gray-50">
-                             <div className="text-xs font-bold text-gray-700">{estado || 'Cambio de Estado'}</div>
-                             <div className="text-[10px] text-gray-400">{fmtDate(fecha)}</div>
-                           </li>
-                         );
-                       })}
-                   </ul>
-               </Card>
-             </div>
-           </div>
-         </div>
-       );
-     };
+        const [submitting, setSubmitting] = useState(false);
+        const [showSuccess, setShowSuccess] = useState(false);
 
-     // --- REQUEST LIST VIEW ---
-     const RequestList = ({ setView, setSelectedRequest, initialData, onRefresh, refreshing }) => {
-       const [filter, setFilter] = useState('Todo');
-       const [search, setSearch] = useState('');
-       const [requests, setRequests] = useState(initialData?.data || []);
-       const [filteredRequests, setFilteredRequests] = useState([]);
-       const [page, setPage] = useState(1);
-     
-       useEffect(() => { if(initialData) setRequests(initialData.data || []); }, [initialData]);
+        // --- ANEXOS ---
+        const fileInputRef = useRef(null);
+        const [attachments, setAttachments] = useState([]); // { id, file, tipo, status, error }
+        const [uploadInfo, setUploadInfo] = useState({ total: 0, done: 0 });
+        const MAX_MB = 8;
 
-       useEffect(() => {
-           let result = requests;
-           if (filter === 'Abierto') result = result.filter(req => (req['Estado'] || '').trim() !== 'Cerrado');
-           if (filter === 'Cerrado') result = result.filter(req => (req['Estado'] || '').trim() === 'Cerrado');
-          
-           if (search) {
-               const q = search.toLowerCase();
-               result = result.filter(req => (String(req['Ticket G4S'])+String(req['ID Solicitud'])+String(req['Estado'])+String(req['Clasificación'])).toLowerCase().includes(q));
-           }
-           setFilteredRequests(result);
-           setPage(1);
-       }, [requests, filter, search]);
+        // --- ACTIVOS (QR) ---
+        const [activos, setActivos] = useState([]); // {idActivo, nombreActivo, qrSerial, nombreUbicacion, estadoActivo, funcionamiento}
+        const [showActivosModal, setShowActivosModal] = useState(false);
 
-       const paginatedData = filteredRequests.slice((page - 1) * 50, page * 50);
-       const totalPages = Math.ceil(filteredRequests.length / 50);
+        const normalize = (v) => String(v ?? "").trim();
 
-       return (
-         <div className="p-6 h-full flex flex-col">
-           <div className="flex justify-between items-center mb-4">
-              <div className="relative w-64"><div className="absolute left-3 top-2.5 text-gray-400"><Icon name="Search" size={16}/></div><input type="text" className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue" placeholder="Buscar ticket..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
+        const addActivoUnique = (a) => {
+          const item = {
+            idActivo: normalize(a?.idActivo),
+            nombreActivo: normalize(a?.nombreActivo),
+            qrSerial: normalize(a?.qrSerial),
+            nombreUbicacion: normalize(a?.nombreUbicacion),
+            estadoActivo: normalize(a?.estadoActivo),
+            funcionamiento: normalize(a?.funcionamiento),
+            novedades: normalize(a?.novedades),
+            idPiso: normalize(a?.idPiso),
+            idDispositivo: normalize(a?.idDispositivo),
+          };
+
+          const key = item.qrSerial || item.idActivo;
+          if (!key) return;
+
+          setActivos((prev) => {
+            const exists = prev.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key);
+            if (exists) return prev;
+            return [...prev, item];
+          });
+        };
+
+        const removeActivo = (key) => {
+          setActivos((prev) => prev.filter((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) !== key));
+        };
+
+        const linkActivosToSolicitud = async (solicitudId) => {
+          if (!activos.length) return;
+
+          // Intento simple y compatible: crear 1 registro por activo.
+          // Endpoint esperado en backend: "createSolicitudActivo"
+          // Payload: { solicitudId, qrSerial, idActivo, nombreActivo, nombreUbicacion, estadoActivo, funcionamiento }
+          let anyOk = false;
+          let anyErr = false;
+
+          for (const a of activos) {
+            try {
+              await runServer("createSolicitudActivo", {
+                solicitudId: String(solicitudId).trim(),
+                qrSerial: a.qrSerial,
+                idActivo: a.idActivo,
+                nombreActivo: a.nombreActivo,
+                nombreUbicacion: a.nombreUbicacion,
+                estadoActivo: a.estadoActivo,
+                funcionamiento: a.funcionamiento,
+              });
+              anyOk = true;
+            } catch (e) {
+              console.warn("No se pudo vincular activo:", a, e);
+              anyErr = true;
+            }
+          }
+
+          if (anyOk && !anyErr) showToast?.("Activos vinculados al ticket.");
+          if (anyErr) showToast?.("Ticket creado. Algunos activos no se pudieron vincular.");
+        };
+
+        const fileToBase64 = (file) =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = String(reader.result || "");
+              const idx = result.indexOf("base64,");
+              if (idx === -1) return reject(new Error("No se pudo leer el archivo."));
+              resolve({ base64: result.substring(idx + 7), mimeType: file.type || "application/octet-stream" });
+            };
+            reader.onerror = () => reject(new Error("Error leyendo el archivo."));
+            reader.readAsDataURL(file);
+          });
+
+        const prettySize = (bytes) => {
+          const mb = bytes / (1024 * 1024);
+          return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+        };
+
+        const addFiles = (fileList) => {
+          const files = Array.from(fileList || []);
+          const mapped = files.map((f) => {
+            const mb = f.size / (1024 * 1024);
+            const tipoDefault = (f.type || "").startsWith("image/") ? "Foto" : "Archivo";
+            return {
+              id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+              file: f,
+              tipo: tipoDefault,
+              status: mb > MAX_MB ? "error" : "ready",
+              error: mb > MAX_MB ? `Supera ${MAX_MB}MB` : "",
+            };
+          });
+          setAttachments((prev) => [...prev, ...mapped]);
+        };
+
+        const removeAttachment = (id) => setAttachments((prev) => prev.filter((a) => a.id !== id));
+        const updateTipo = (id, tipo) => setAttachments((prev) => prev.map((a) => (a.id === id ? { ...a, tipo } : a)));
+
+        const uploadAttachments = async (solicitudId) => {
+          const valid = attachments.filter((a) => a.status === "ready");
+          if (valid.length === 0) return;
+
+          setUploadInfo({ total: valid.length, done: 0 });
+
+          for (let i = 0; i < valid.length; i++) {
+            const att = valid[i];
+            try {
+              setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "uploading" } : a)));
+              const { base64, mimeType } = await fileToBase64(att.file);
+              await runServer("uploadAnexo", { solicitudId, tipoAnexo: att.tipo, fileName: att.file.name, mimeType, base64 });
+              setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "done" } : a)));
+            } catch (e) {
+              setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "error", error: e.message || String(e) } : a)));
+            } finally {
+              setUploadInfo((prev) => ({ ...prev, done: prev.done + 1 }));
+            }
+          }
+        };
+
+        const currentDate = useMemo(() => new Date().toLocaleString(), []);
+        const handleChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
+
+        // --- MODAL ACTIVOS ---
+        const ActivosModal = ({ onClose }) => {
+          const [qr, setQr] = useState("");
+          const [finding, setFinding] = useState(false);
+          const [error, setError] = useState(null);
+
+          const [catalog, setCatalog] = useState([]);
+          const [catalogLoading, setCatalogLoading] = useState(false);
+          const [filter, setFilter] = useState("");
+
+          const close = () => {
+            setQr("");
+            setError(null);
+            onClose?.();
+          };
+
+          const loadCatalog = async () => {
+            setCatalogLoading(true);
+            try {
+              const res = await runServer("getActivosCatalog", {});
+              const list = res?.data || [];
+              setCatalog(list);
+            } catch (e) {
+              // No bloqueamos el QR por no tener catálogo
+              console.warn("Catálogo no disponible:", e);
+              setCatalog([]);
+            } finally {
+              setCatalogLoading(false);
+            }
+          };
+
+          useEffect(() => { loadCatalog(); }, []);
+
+          const findByQr = async () => {
+            const q = String(qr || "").trim();
+            if (!q) { setError("Ingresa un QR."); return; }
+
+            setFinding(true);
+            setError(null);
+            try {
+              const res = await runServer("getActivoByQr", { qr: q });
+              if (!res?.found || !res?.activo) {
+                setError("No se encontró un activo con ese QR.");
+                return;
+              }
+              addActivoUnique(res.activo);
+              showToast?.("Activo agregado.");
+              setQr("");
+            } catch (e) {
+              setError(e.message || String(e));
+            } finally {
+              setFinding(false);
+            }
+          };
+
+          const filteredCatalog = useMemo(() => {
+            const q = String(filter || "").toLowerCase().trim();
+            if (!q) return catalog.slice(0, 50);
+            const f = catalog.filter((a) => {
+              const hay = `${a?.qrSerial || ""} ${a?.idActivo || ""} ${a?.nombreActivo || ""} ${a?.nombreUbicacion || ""}`.toLowerCase();
+              return hay.includes(q);
+            });
+            return f.slice(0, 50);
+          }, [catalog, filter]);
+
+          const alreadyAdded = (a) => {
+            const key = normalize(a?.qrSerial) || normalize(a?.idActivo);
+            if (!key) return false;
+            return activos.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key);
+          };
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
+                <div className="px-6 py-4 border-b flex items-center justify-between">
+                  <div>
+                    <div className="text-xs uppercase font-bold text-gray-400">Activos asociados</div>
+                    <div className="text-lg font-bold text-gray-800">Agregar activo por QR</div>
+                  </div>
+                  <button onClick={close} className="p-2 rounded hover:bg-gray-50 text-gray-500">
+                    <Icon name="X" size={18} />
+                  </button>
+                </div>
+
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <div className="text-sm font-bold text-gray-700 mb-2">Buscar por QR Serial</div>
+                    <div className="flex gap-2">
+                      <input
+                        className="input-field"
+                        placeholder="Pega o escribe el QR Serial..."
+                        value={qr}
+                        onChange={(e) => setQr(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") findByQr(); }}
+                      />
+                      <button
+                        type="button"
+                        onClick={findByQr}
+                        disabled={finding}
+                        className="px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {finding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Icon name="Search" size={16} />}
+                        Buscar
+                      </button>
+                    </div>
+
+                    {error && (
+                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700 flex gap-2">
+                        <Icon name="AlertTriangle" size={16} className="text-red-600" />
+                        <div>{error}</div>
+                      </div>
+                    )}
+
+                    <div className="mt-6">
+                      <div className="text-sm font-bold text-gray-700 mb-2">Seleccionados ({activos.length})</div>
+                      {activos.length ? (
+                        <div className="border rounded overflow-hidden">
+                          <div className="divide-y max-h-72 overflow-y-auto">
+                            {activos.map((a, idx) => {
+                              const key = normalize(a.qrSerial) || normalize(a.idActivo) || String(idx);
+                              return (
+                                <div key={key} className="p-3 bg-white flex items-start gap-3">
+                                  <div className="mt-0.5 text-gray-400"><Icon name="Monitor" size={16} /></div>
+                                  <div className="flex-1 overflow-hidden">
+                                    <div className="text-xs font-bold text-gray-800 truncate">{a.nombreActivo || "Activo"}</div>
+                                    <div className="text-[10px] text-gray-500 truncate">
+                                      QR: <span className="font-mono">{a.qrSerial || "-"}</span> · Ubicación: {a.nombreUbicacion || "-"}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 truncate">
+                                      Estado: {a.estadoActivo || "-"} · Funcionamiento: {a.funcionamiento || "-"}
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeActivo(key)}
+                                    className="p-2 border rounded hover:bg-gray-50"
+                                    title="Quitar"
+                                  >
+                                    <Icon name="X" size={14} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-gray-400 italic">Aún no has agregado activos.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-bold text-gray-700">Catálogo (opcional)</div>
+                      {catalogLoading ? (
+                        <div className="text-[10px] text-blue-600 font-bold flex items-center gap-2">
+                          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando...
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-gray-400">{catalog.length ? `${catalog.length} activos` : "No disponible"}</div>
+                      )}
+                    </div>
+
+                    <input
+                      className="input-field"
+                      placeholder="Filtrar por nombre, QR, ubicación..."
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value)}
+                      disabled={!catalog.length}
+                    />
+
+                    <div className="mt-3 border rounded overflow-hidden bg-white">
+                      <div className="divide-y max-h-96 overflow-y-auto">
+                        {filteredCatalog.length ? (
+                          filteredCatalog.map((a, i) => {
+                            const key = normalize(a?.qrSerial) || normalize(a?.idActivo) || `c_${i}`;
+                            const disabled = alreadyAdded(a);
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => { if (!disabled) { addActivoUnique(a); showToast?.("Activo agregado."); } }}
+                                disabled={disabled}
+                                className={`w-full text-left p-3 hover:bg-gray-50 transition flex items-start gap-3 ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                              >
+                                <div className="mt-0.5 text-gray-400"><Icon name="FileText" size={16} /></div>
+                                <div className="flex-1 overflow-hidden">
+                                  <div className="text-xs font-bold text-gray-800 truncate">{a?.nombreActivo || "Activo"}</div>
+                                  <div className="text-[10px] text-gray-500 truncate">
+                                    QR: <span className="font-mono">{a?.qrSerial || "-"}</span> · Ubicación: {a?.nombreUbicacion || "-"}
+                                  </div>
+                                  <div className="text-[10px] text-gray-400 truncate">
+                                    Estado: {a?.estadoActivo || "-"} · Funcionamiento: {a?.funcionamiento || "-"}
+                                  </div>
+                                </div>
+                                {disabled && (
+                                  <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded">Agregado</span>
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="p-6 text-center text-xs text-gray-400 italic">
+                            {catalogLoading ? "Cargando catálogo..." : "No hay resultados."}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex justify-end gap-2">
+                      <button onClick={close} className="px-4 py-2 border rounded text-sm font-bold text-gray-700 hover:bg-gray-50">
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const handleSubmit = async () => {
+          if (!formData.idSede || !formData.solicitud || !formData.observacion) {
+            alert("Por favor completa los campos obligatorios.");
+            return;
+          }
+
+          setSubmitting(true);
+
+          const payload = { ...formData, observacion: `[Tipo: ${formData.tipoServicio}] ${formData.observacion}` };
+
+          try {
+            const res = await runServer('createRequest', payload);
+
+            const solicitudId = String(
+              res?.solicitudId ||
+              res?.idSolicitud ||
+              res?.row?.['ID Solicitud'] ||
+              res?.row?.['ID Solicitud '] ||
+              res?.Rows?.[0]?.['ID Solicitud'] ||
+              res?.Rows?.[0]?.['ID Solicitud '] ||
+              ''
+            ).trim();
+
+            if (!solicitudId) {
+              console.log("Respuesta createRequest:", res);
+              throw new Error("No se pudo obtener el ID de la solicitud creada.");
+            }
+
+            // ✅ Vincular activos (no bloquea la creación si falla)
+            try {
+              await linkActivosToSolicitud(solicitudId);
+            } catch (e) {
+              console.warn("Vincular activos falló:", e);
+            }
+
+            await uploadAttachments(String(solicitudId).trim());
+            setShowSuccess(true);
+          } catch (err) {
+            console.error(err);
+            alert("❌ Error al crear ticket: " + (err.message || err));
+            setSubmitting(false);
+          }
+        };
+
+        const handleSuccessClose = () => {
+          setShowSuccess(false);
+          setSubmitting(false);
+          if (onRefresh) onRefresh(true);
+          setView("home");
+        };
+
+        return (
+          <div className="p-8 max-w-4xl mx-auto animate-fade-in relative">
+            {showSuccess && <SuccessModal onClose={handleSuccessClose} />}
+            {showActivosModal && <ActivosModal onClose={() => setShowActivosModal(false)} />}
+
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-medium text-gray-800">Crear Solicitud</h2>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setView("home")}
+                  disabled={submitting}
+                  className="px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-medium hover:bg-red-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting || !formData.idSede || !formData.solicitud || !formData.observacion}
+                  className="bg-appRed text-white px-6 py-2 rounded shadow hover:bg-red-700 font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Guardando...
+                    </>
+                  ) : (
+                    "Guardar"
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white p-8 rounded shadow-sm border border-gray-200">
+              <h3 className="section-title mt-0">Consecutivo Del Ticket</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="input-label">Ticket G4S *</label>
+                  <input type="text" className="input-field bg-gray-50 text-gray-400 cursor-not-allowed" placeholder="Generado automáticamente" disabled readOnly />
+                </div>
+                <div>
+                  <label className="input-label">Ticket (Opcional)</label>
+                  <input type="text" className="input-field" value={formData.ticketCliente} onChange={(e) => handleChange("ticketCliente", e.target.value)} />
+                </div>
+              </div>
+
+              <h3 className="section-title">Sitio Solicitud</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="input-label">Sede *</label>
+                  <select className="input-field" value={formData.idSede} onChange={(e) => handleChange("idSede", e.target.value)}>
+                    <option value="">Seleccione Sede...</option>
+                    {userContext?.allowedClientIds?.map((id) => (
+                      <option key={id} value={id}>
+                        {userContext?.clientNames?.[id] ? userContext.clientNames[id] : id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Fecha creación cliente *</label>
+                  <div className="relative">
+                    <input type="text" className="input-field bg-gray-50 text-gray-600" value={currentDate} readOnly />
+                    <div className="absolute right-3 top-2.5 text-gray-400">
+                      <Icon name="Clock" size={16} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="section-title">Motivo Del Servicio</h3>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="input-label">Solicitud *</label>
+                  <input type="text" className="input-field" value={formData.solicitud} onChange={(e) => handleChange("solicitud", e.target.value)} />
+                </div>
+
+                <div>
+                  <label className="input-label">Clasificación Solicitud</label>
+                  <select className="input-field" value={formData.clasificacion} onChange={(e) => handleChange("clasificacion", e.target.value)}>
+                    <option value="Hardware">Hardware</option>
+                    <option value="Software">Software</option>
+                    <option value="Redes">Redes</option>
+                    <option value="Acceso">Acceso</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="input-label">Clasificación *</label>
+                  <div className="flex">
+                    {["Visita técnica", "Visita comercial"].map((t) => (
+                      <button
+                        type="button"
+                        key={t}
+                        onClick={() => handleChange("tipoServicio", t)}
+                        className={`btn-option ${formData.tipoServicio === t ? "selected" : ""}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="input-label">Observación</label>
+                  <textarea className="input-field h-24 resize-y" value={formData.observacion} onChange={(e) => handleChange("observacion", e.target.value)}></textarea>
+                </div>
+
+                <div>
+                  <label className="input-label">Prioridad Solicitud</label>
+                  <div className="flex">
+                    {["Baja", "Media", "Alta"].map((p) => (
+                      <button
+                        type="button"
+                        key={p}
+                        onClick={() => handleChange("prioridad", p)}
+                        className={`btn-option ${formData.prioridad === p ? "selected-red" : ""}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="section-title">Adicionales Solicitud</h3>
+
+              <div className="space-y-3">
+                {/* ANEXOS */}
+                <div className="p-3 bg-gray-50 rounded border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">Anexos de la solicitud: Foto, Archivo o Dibujo</span>
+
+                    <div className="flex items-center gap-2">
+                      {uploadInfo.total > 0 && (
+                        <span className="text-[10px] font-bold text-gray-500">
+                          Subiendo {uploadInfo.done}/{uploadInfo.total}
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={submitting}
+                        className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100 disabled:opacity-50"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Nuevo
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      addFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+
+                  {attachments.length > 0 ? (
+                    <div className="mt-3 bg-white border rounded">
+                      <div className="divide-y">
+                        {attachments.map((a) => (
+                          <div key={a.id} className="p-2 flex items-center gap-2">
+                            <div className="text-gray-500">
+                              <Icon name="FileText" size={16} />
+                            </div>
+
+                            <div className="flex-1 overflow-hidden">
+                              <div className="text-xs font-bold text-gray-700 truncate">{a.file.name}</div>
+                              <div className="text-[10px] text-gray-400">{prettySize(a.file.size)}</div>
+                              {a.status === "error" && <div className="text-[10px] text-red-600 font-bold">{a.error}</div>}
+                              {a.status === "uploading" && <div className="text-[10px] text-blue-600 font-bold">Subiendo...</div>}
+                              {a.status === "done" && <div className="text-[10px] text-green-600 font-bold">OK</div>}
+                            </div>
+
+                            <select
+                              className="text-[10px] border rounded px-2 py-1 bg-white"
+                              value={a.tipo}
+                              disabled={submitting || a.status === "uploading" || a.status === "done"}
+                              onChange={(e) => updateTipo(a.id, e.target.value)}
+                            >
+                              <option value="Archivo">Archivo</option>
+                              <option value="Foto">Foto</option>
+                              <option value="Dibujo">Dibujo</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              disabled={submitting || a.status === "uploading"}
+                              onClick={() => removeAttachment(a.id)}
+                              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-50"
+                              title="Quitar"
+                            >
+                              <Icon name="X" size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-[10px] text-gray-400 italic">Puedes agregar varios archivos (máx {MAX_MB}MB c/u).</div>
+                  )}
+                </div>
+
+                {/* QR ACTIVOS (✅ actualizado) */}
+                <div className="p-3 bg-gray-50 rounded border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-600 font-medium">Activos asociados a la solicitud (QR)</span>
+                      <span className="text-[10px] text-gray-400">{activos.length ? `${activos.length} activo(s) agregado(s)` : "Sin activos aún."}</span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100 disabled:opacity-50"
+                      onClick={() => setShowActivosModal(true)}
+                    >
+                      Nuevo
+                    </button>
+                  </div>
+
+                  {activos.length > 0 && (
+                    <div className="mt-3 bg-white border rounded overflow-hidden">
+                      <div className="divide-y">
+                        {activos.map((a, idx) => {
+                          const key = normalize(a.qrSerial) || normalize(a.idActivo) || String(idx);
+                          return (
+                            <div key={key} className="p-2 flex items-center gap-2">
+                              <div className="text-gray-500">
+                                <Icon name="Monitor" size={16} />
+                              </div>
+                              <div className="flex-1 overflow-hidden">
+                                <div className="text-xs font-bold text-gray-700 truncate">{a.nombreActivo || "Activo"}</div>
+                                <div className="text-[10px] text-gray-400 truncate">
+                                  QR: <span className="font-mono">{a.qrSerial || "-"}</span> · Ubicación: {a.nombreUbicacion || "-"}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={() => removeActivo(key)}
+                                className="p-1 border rounded hover:bg-gray-50 disabled:opacity-50"
+                                title="Quitar"
+                              >
+                                <Icon name="X" size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- CONFIG VIEW ---
+      const ConfigurationView = ({ userContext, onForceSync, isSyncing, lastSync }) => {
+        return (
+          <div className="p-8 max-w-4xl mx-auto animate-fade-in">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
+              <button
+                onClick={onForceSync}
+                disabled={isSyncing}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm"
+              >
+                <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} />
+                {isSyncing ? "Sincronizando..." : "Forzar Sincronización"}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <Icon name="Info" size={16} className="text-yellow-600" />
+              <span>
+                {lastSync ? (
+                  <>
+                    Última actualización: <strong>{new Date(Number(lastSync)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
+                  </>
+                ) : (
+                  "Aún no se ha realizado ninguna sincronización."
+                )}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                    <Icon name="User" size={32} />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase font-bold text-gray-500">Cuenta Activa</div>
+                    <div className="text-lg font-bold text-gray-800">{userContext?.email}</div>
+                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1">
+                      <Icon name="ShieldCheck" size={12} /> {userContext?.role}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-700">Clientes Asignados</h3>
+                  <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">
+                    {userContext?.allowedClientIds ? userContext.allowedClientIds.length : 0}
+                  </span>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto border rounded border-gray-100 bg-gray-50">
+                  {userContext?.allowedClientIds?.length > 0 ? (
+                    <ul className="divide-y divide-gray-100">
+                      {userContext.allowedClientIds.map((clientId, idx) => (
+                        <li key={idx} className="px-4 py-3 bg-white flex items-center gap-3">
+                          <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                          <div className="flex-1">
+                            <div className="text-xs font-bold text-gray-400 uppercase">
+                              {userContext?.clientNames?.[clientId] ? userContext.clientNames[clientId] : "ID Cliente"}
+                            </div>
+                            <div className="text-sm font-mono text-gray-700">{clientId}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="p-8 text-center text-gray-400 text-xs">Sin Clientes Asignados</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- HOME ---
+      const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
+        const stats = useMemo(() => {
+          const total = requests.length;
+          const pending = requests.filter((r) => (r.Estado || "").trim() !== "Cerrado").length;
+          const completed = requests.filter((r) => (r.Estado || "").trim() === "Cerrado").length;
+          return { total, pending, completed };
+        }, [requests]);
+
+        return (
+          <div className="p-8 max-w-6xl mx-auto animate-fade-in">
+            <div className="mb-8">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-800">Hola, {userContext.email.split("@")[0]}</h1>
+                {isSyncing && (
+                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-xs font-bold text-blue-600">Sincronizando...</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-gray-500">Bienvenido al portal de Gestión de Tecnología.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <div onClick={() => setView("history")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span>
+                </div>
+                <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
+                <div className="text-sm text-gray-500">Solicitudes totales</div>
+              </div>
+
+              <div onClick={() => setView("process")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span>
+                </div>
+                <div className="text-3xl font-bold text-gray-800">{stats.pending}</div>
+                <div className="text-sm text-gray-500">Tickets en curso (No Cerrados)</div>
+              </div>
+
+              <div onClick={() => setView("history")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span>
+                </div>
+                <div className="text-3xl font-bold text-gray-800">{stats.completed}</div>
+                <div className="text-sm text-gray-500">Tickets finalizados</div>
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                onClick={() => setView("create")}
+                className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1"
+              >
+                <div className="bg-white/20 p-3 rounded-full"><Icon name="ClipboardList" size={32} /></div>
+                <div>
+                  <div className="text-lg font-bold">Crear nuevo Ticket</div>
+                  <div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // --- REQUEST DETAIL ---
+      const RequestDetail = ({ requestId, onBack, preloadedData }) => {
+        const [data, setData] = useState(preloadedData ? { header: preloadedData, services: [], history: [], docs: [] } : null);
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
+
+        const [downloadingId, setDownloadingId] = useState(null);
+
+        const pickAny = (obj, keys) => {
+          if (!obj) return "";
+          const objKeys = Object.keys(obj);
+          for (const k of keys) {
+            const direct = obj?.[k];
+            if (direct !== undefined && direct !== null && String(direct).trim() !== "") return direct;
+            const altKey = objKeys.find((x) => String(x).trim() === String(k).trim());
+            const alt = altKey ? obj?.[altKey] : "";
+            if (alt !== undefined && alt !== null && String(alt).trim() !== "") return alt;
+          }
+          return "";
+        };
+
+        const openUrlInNewTab = (url) => {
+          if (!url) return;
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        };
+
+        const openFromBase64 = (base64, mimeType, tabRef) => {
+          const byteChars = atob(base64);
+          const byteNumbers = new Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+          const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+
+          if (tabRef && !tabRef.closed) tabRef.location.href = url;
+          else openUrlInNewTab(url);
+
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+        };
+
+        // (si usas AppSheet como fallback)
+        const APPSHEET_APP_NAME = "AppSolicitudes-5916254";
+        const APPSHEET_TABLE_NAME = "Solicitudes anexos";
+        const APPSHEET_APP_VERSION = "1.000737";
+
+        const buildAppSheetFileUrl = (filePathOrUrl) => {
+          const p = String(filePathOrUrl || "").trim();
+          if (!p) return "";
+          if (/^https?:\/\//i.test(p)) return p;
+
+          const params = new URLSearchParams();
+          params.set("appName", APPSHEET_APP_NAME);
+          params.set("tableName", APPSHEET_TABLE_NAME);
+          params.set("fileName", p);
+          params.set("appVersion", APPSHEET_APP_VERSION);
+
+          return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
+        };
+
+        const openAnexo = async (doc, openKey) => {
+          // 👇 abrir pestaña “ya” (para evitar bloqueo por await)
+          let tab = null;
+          try { tab = window.open("", "_blank", "noopener"); } catch (e) { tab = null; }
+
+          const directUrl = String(pickAny(doc, ["URL","Url","Enlace","Link","FileUrl","Archivo URL"]) || "").trim();
+          if (/^https?:\/\//i.test(directUrl)) {
+            if (tab && !tab.closed) tab.location.href = directUrl;
+            else openUrlInNewTab(directUrl);
+            return;
+          }
+
+          const anexoId = String(pickAny(doc, ["ID Solicitudes anexos","ID Solicitud anexos","ID Anexo","ID","ID Solicitudes anexos "]) || "").trim();
+          const pathValue = String(pickAny(doc, ["Archivo","Archivo ","Foto","Dibujo","QR"]) || "").trim();
+
+          try {
+            setDownloadingId(openKey);
+
+            if (anexoId) {
+              try {
+                const res = await runServer("getAnexoDownload", { anexoId });
+
+                if (res?.mode === "base64") {
+                  openFromBase64(res.base64, res.mimeType, tab);
+                  return;
+                }
+
+                if (res?.mode === "url" && res.url) {
+                  if (tab && !tab.closed) tab.location.href = res.url;
+                  else openUrlInNewTab(res.url);
+                  return;
+                }
+              } catch (serverErr) {
+                console.warn("Backend getAnexoDownload falló, usando fallback AppSheet:", serverErr);
+              }
+            }
+
+            const fallbackUrl = buildAppSheetFileUrl(pathValue);
+            if (fallbackUrl) {
+              if (tab && !tab.closed) tab.location.href = fallbackUrl;
+              else openUrlInNewTab(fallbackUrl);
+              return;
+            }
+
+            throw new Error("No se pudo determinar la ruta/URL del anexo.");
+          } catch (e) {
+            console.error(e);
+            if (tab && !tab.closed) tab.close();
+            alert("❌ No fue posible abrir el anexo: " + (e.message || e));
+          } finally {
+            setDownloadingId(null);
+          }
+        };
+
+        useEffect(() => {
+          setLoading(true);
+          runServer("getRequestDetail", { id: requestId })
+            .then((res) => {
+              setData({
+                header: res.header || preloadedData,
+                services: res.services || [],
+                history: res.history || [],
+                docs: res.documents || [],
+              });
+            })
+            .catch((e) => !preloadedData && setError(e.message))
+            .finally(() => setLoading(false));
+        }, [requestId]);
+
+        if (!data && loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
+        if (error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
+
+        const isRelevantField = (key, value) => {
+          if (!value || value === "0" || value === 0) return false;
+          const k = key.toLowerCase();
+          if (k.includes("precio") || k.includes("cobro") || k.includes("id_") || k.includes("related") || k.includes("_rownumber")) return false;
+          if (k === "estado" || k === "id solicitud") return false;
+          return true;
+        };
+
+        const pick = (obj, keys) => {
+          for (const k of keys) {
+            const v = obj?.[k];
+            if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+          }
+          return "";
+        };
+
+        const fmtDate = (v) => {
+          if (!v) return "-";
+          const d = new Date(v);
+          return isNaN(d) ? String(v) : d.toLocaleString();
+        };
+
+        const Card = ({ title, children, count }) => (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-700 text-sm uppercase flex justify-between">
+              <span>{title}</span>
+              {count !== undefined && <span className="bg-gray-100 text-gray-600 px-2 rounded-full text-xs flex items-center">{count}</span>}
+            </div>
+            <div className="p-0">{children}</div>
+          </div>
+        );
+
+        return (
+          <div className="p-6 max-w-7xl mx-auto animate-fade-in">
+            <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm">
+              <Icon name="ChevronRight" className="rotate-180" size={16} /> Volver
+            </button>
+
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 md:col-span-8 space-y-4">
+                <Card title="Detalle Técnico">
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
+                    {Object.entries(data.header || {}).map(([key, value]) => {
+                      if (!isRelevantField(key, value)) return null;
+                      return (
+                        <div key={key} className="border-b border-gray-50 pb-2 last:border-0">
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key.replace(/([A-Z])/g, " $1").trim()}</div>
+                          <div className="text-sm text-gray-700 break-words font-medium">{value}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              </div>
+
+              <div className="col-span-12 md:col-span-4 space-y-4">
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
+                  <div className="text-gray-400 text-xs font-bold mb-1">ESTADO TICKET</div>
+                  <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header?.["Estado"])}`}>
+                    {data.header?.["Estado"] || "Desconocido"}
+                  </div>
+                  <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">
+                    Ticket #: {data.header?.["Ticket G4S"] || data.header?.["ID Solicitud"] || "N/A"}
+                  </div>
+                </div>
+
+                {loading && (
+                  <div className="text-xs text-blue-600 mb-2 flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Actualizando detalles...
+                  </div>
+                )}
+
+                <Card title="Observaciones" count={data.services.length}>
+                  {data.services.length > 0 ? (
+                    <ul className="divide-y divide-gray-100">
+                      {data.services.map((s, i) => {
+                        const txt = pick(s, ["Observación", "Observacion"]);
+                        const fecha = pick(s, ["Fecha Actualización", "Fecha Actualizacion"]);
+                        return (
+                          <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
+                            <span className="font-medium text-gray-700">{txt || "(Sin detalle)"}</span>
+                            <span className="text-[10px] text-gray-400">{fmtDate(fecha)}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>
+                  )}
+                </Card>
+
+                <Card title="Anexos" count={data.docs.length}>
+                  {data.docs.length > 0 ? (
+                    <ul className="divide-y divide-gray-100">
+                      {data.docs.map((doc, i) => {
+                        const nombre = pick(doc, ["Nombre"]);
+                        const tipo = pick(doc, ["Tipo anexo"]);
+                        const fecha = pick(doc, ["Fecha Actualización", "Fecha Actualizacion"]);
+
+                        const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID", "ID Solicitudes anexos "]) || "").trim();
+                        const pathValue = String(pickAny(doc, ["Archivo", "Archivo ", "Foto", "Dibujo", "QR", "URL", "Url", "Enlace", "Link", "FileUrl", "Archivo URL"]) || "").trim();
+
+                        const openKey = anexoId || `row_${i}`;
+                        const isDownloading = openKey && downloadingId === openKey;
+                        const canOpen = Boolean(anexoId || pathValue);
+
+                        return (
+                          <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
+                            <div className="text-red-500"><Icon name="FileText" size={16} /></div>
+
+                            <div className="flex-1 overflow-hidden">
+                              <div className="text-gray-700 text-xs truncate font-medium">{nombre || "Documento"}</div>
+                              <div className="text-[10px] text-gray-400">{tipo || "Adjunto"} · {fmtDate(fecha)}</div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc, openKey); }}
+                              disabled={!canOpen || isDownloading}
+                              title={!canOpen ? "Sin ruta/ID para abrir" : "Abrir en otra pestaña"}
+                              className={`ml-2 px-2 py-1 text-[10px] font-bold rounded border transition flex items-center gap-1 ${
+                                (!canOpen || isDownloading)
+                                  ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                                  : "bg-white text-appBlue border-gray-200 hover:bg-blue-50"
+                              }`}
+                            >
+                              {isDownloading ? (
+                                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <Icon name="Download" size={12} />
+                              )}
+                              Abrir
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>
+                  )}
+                </Card>
+
+                <Card title="Historial" count={data.history.length}>
+                  <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                    {data.history.map((h, i) => {
+                      const estado = pick(h, ["Estado actual"]);
+                      const fecha = pick(h, ["Fecha Actualización", "Fecha Actualizacion"]);
+                      return (
+                        <li key={i} className="px-4 py-2 hover:bg-gray-50">
+                          <div className="text-xs font-bold text-gray-700">{estado || "Cambio de Estado"}</div>
+                          <div className="text-[10px] text-gray-400">{fmtDate(fecha)}</div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Card>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- REQUEST LIST ---
+      const RequestList = ({ setView, setSelectedRequest, initialData, onRefresh, refreshing }) => {
+        const [filter, setFilter] = useState("Todo");
+        const [search, setSearch] = useState("");
+        const [requests, setRequests] = useState(initialData?.data || []);
+        const [filteredRequests, setFilteredRequests] = useState([]);
+        const [page, setPage] = useState(1);
+
+        useEffect(() => { if (initialData) setRequests(initialData.data || []); }, [initialData]);
+
+        useEffect(() => {
+          let result = requests;
+          if (filter === "Abierto") result = result.filter((req) => (req["Estado"] || "").trim() !== "Cerrado");
+          if (filter === "Cerrado") result = result.filter((req) => (req["Estado"] || "").trim() === "Cerrado");
+
+          if (search) {
+            const q = search.toLowerCase();
+            result = result.filter((req) =>
+              (String(req["Ticket G4S"]) + String(req["ID Solicitud"]) + String(req["Estado"]) + String(req["Clasificación"]))
+                .toLowerCase()
+                .includes(q)
+            );
+          }
+          setFilteredRequests(result);
+          setPage(1);
+        }, [requests, filter, search]);
+
+        const paginatedData = filteredRequests.slice((page - 1) * 50, page * 50);
+        const totalPages = Math.ceil(filteredRequests.length / 50);
+
+        return (
+          <div className="p-6 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <div className="relative w-64">
+                <div className="absolute left-3 top-2.5 text-gray-400"><Icon name="Search" size={16} /></div>
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue"
+                  placeholder="Buscar ticket..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
               <div className="flex items-center gap-2">
-                <button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white" title="Actualizar Datos"><Icon name="RefreshCw" size={18} className={refreshing ? "animate-spin text-blue-600" : ""} /></button>
+                <button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white" title="Actualizar Datos">
+                  <Icon name="RefreshCw" size={18} className={refreshing ? "animate-spin text-blue-600" : ""} />
+                </button>
                 <span className="text-xs font-bold text-gray-500">Total: {filteredRequests.length}</span>
               </div>
-           </div>
-           <div className="flex gap-2 mb-4">
-               {['Todo', 'Abierto', 'Cerrado'].map(f=><button key={f} onClick={()=>setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter===f?'bg-gray-800 text-white':'bg-white border text-gray-600'}`}>{f}</button>)}
-           </div>
-           <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex-1 flex flex-col">
-              <div className="grid grid-cols-12 gap-2 p-3 border-b bg-gray-50 text-xs font-bold text-gray-400 uppercase"><div className="col-span-2">Ticket G4S</div><div className="col-span-2">Fecha</div><div className="col-span-3">Solicitante</div><div className="col-span-3">Clasificación</div><div className="col-span-2 text-right">Estado</div></div>
-              <div className="overflow-y-auto flex-1">
-                {paginatedData.length === 0 ? <div className="p-10 text-center text-gray-400 italic">No hay tickets coincidentes.</div> :
-                  paginatedData.map((req, i) => (
-                    <div key={i} onClick={() => { setSelectedRequest(req); setView('detail'); }} className="grid grid-cols-12 gap-2 p-3 border-b hover:bg-gray-50 cursor-pointer text-sm items-center transition-colors">
-                      <div className="col-span-2 font-bold text-blue-600 truncate">{req['Ticket G4S'] || req['ID Solicitud'] || 'N/A'}</div>
-                      <div className="col-span-2 text-xs text-gray-500">{req['Fecha creación cliente'] ? new Date(req['Fecha creación cliente']).toLocaleDateString() : '-'}</div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req['Usuario Actualización'] || req['Responsable'] || 'Desconocido'}</span></div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req['Clasificación'] || 'General'}</span><span className="text-[10px] text-gray-400 uppercase">{req['Prioridad Solicitud'] || '-'}</span></div>
-                      <div className="col-span-2 text-right"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req['Estado'])}`}>{req['Estado'] || 'Desconocido'}</span></div>
-                    </div>
-                ))}
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              {["Todo", "Abierto", "Cerrado"].map((f) => (
+                <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter === f ? "bg-gray-800 text-white" : "bg-white border text-gray-600"}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex-1 flex flex-col">
+              <div className="grid grid-cols-12 gap-2 p-3 border-b bg-gray-50 text-xs font-bold text-gray-400 uppercase">
+                <div className="col-span-2">Ticket G4S</div>
+                <div className="col-span-2">Fecha</div>
+                <div className="col-span-3">Solicitante</div>
+                <div className="col-span-3">Clasificación</div>
+                <div className="col-span-2 text-right">Estado</div>
               </div>
-              {totalPages > 1 && <div className="p-2 border-t flex justify-between bg-gray-50 items-center"><button onClick={()=>setPage(p=>Math.max(1, p-1))} disabled={page===1} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Anterior</button><span className="text-xs font-bold text-gray-600">Pág {page} de {totalPages}</span><button onClick={()=>setPage(p=>Math.min(totalPages, p+1))} disabled={page>=totalPages} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Siguiente</button></div>}
-           </div>
-         </div>
-       );
-     };
 
-     // --- MAIN APP ---
-     const App = () => {
-       const [userCtx, setUserCtx] = useState(null);
-       const [initialData, setInitialData] = useState(null);
-       const [view, setView] = useState('create');
-       const [selectedRequest, setSelectedRequest] = useState(null);
-       const [isSyncing, setIsSyncing] = useState(false);
-       const [lastSync, setLastSync] = useState(null);
-       const [toast, setToast] = useState(null);
-       const [isCheckingCache, setIsCheckingCache] = useState(true);
+              <div className="overflow-y-auto flex-1">
+                {paginatedData.length === 0 ? (
+                  <div className="p-10 text-center text-gray-400 italic">No hay tickets coincidentes.</div>
+                ) : (
+                  paginatedData.map((req, i) => (
+                    <div
+                      key={i}
+                      onClick={() => { setSelectedRequest(req); setView("detail"); }}
+                      className="grid grid-cols-12 gap-2 p-3 border-b hover:bg-gray-50 cursor-pointer text-sm items-center transition-colors"
+                    >
+                      <div className="col-span-2 font-bold text-blue-600 truncate">{req["Ticket G4S"] || req["ID Solicitud"] || "N/A"}</div>
+                      <div className="col-span-2 text-xs text-gray-500">{req["Fecha creación cliente"] ? new Date(req["Fecha creación cliente"]).toLocaleDateString() : "-"}</div>
+                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req["Usuario Actualización"] || req["Responsable"] || "Desconocido"}</span></div>
+                      <div className="col-span-3 flex flex-col">
+                        <span className="truncate font-medium">{req["Clasificación"] || "General"}</span>
+                        <span className="text-[10px] text-gray-400 uppercase">{req["Prioridad Solicitud"] || "-"}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req["Estado"])}`}>{req["Estado"] || "Desconocido"}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
 
-       const showToast = (msg) => setToast(msg);
+              {totalPages > 1 && (
+                <div className="p-2 border-t flex justify-between bg-gray-50 items-center">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">
+                    Anterior
+                  </button>
+                  <span className="text-xs font-bold text-gray-600">Pág {page} de {totalPages}</span>
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">
+                    Siguiente
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      };
 
-       const loadFromCache = (email) => {
-           if (!email) return null;
-           const safeEmail = email.toLowerCase();
-           const cached = localStorage.getItem(`cache_data_it_${safeEmail}`);
-           if (cached) {
-               try { return JSON.parse(cached); } catch(e) { localStorage.removeItem(`cache_data_it_${safeEmail}`); }
-           }
-           return null;
-       };
+      // --- MAIN APP ---
+      const App = () => {
+        const [userCtx, setUserCtx] = useState(null);
+        const [initialData, setInitialData] = useState(null);
+        const [view, setView] = useState("create");
+        const [selectedRequest, setSelectedRequest] = useState(null);
+        const [isSyncing, setIsSyncing] = useState(false);
+        const [lastSync, setLastSync] = useState(null);
+        const [toast, setToast] = useState(null);
+        const [isCheckingCache, setIsCheckingCache] = useState(true);
 
-       const saveToCache = (email, data) => {
-           if (!email) return null;
-           const safeEmail = email.toLowerCase();
-           const timestamp = Date.now();
-           try {
-               localStorage.setItem(`cache_data_it_${safeEmail}`, JSON.stringify({ data, timestamp }));
-               return timestamp;
-           } catch(e) { console.error("Full Cache", e); return null; }
-       };
+        const showToast = (msg) => setToast(msg);
 
-       const loadContextFromCache = (email) => {
-           if (!email) return null;
-           try { return JSON.parse(localStorage.getItem(`cache_context_it_${email.toLowerCase()}`)); } catch(e) { return null; }
-       };
+        const loadFromCache = (email) => {
+          if (!email) return null;
+          const safeEmail = email.toLowerCase();
+          const cached = localStorage.getItem(`cache_data_it_${safeEmail}`);
+          if (cached) {
+            try { return JSON.parse(cached); } catch (e) { localStorage.removeItem(`cache_data_it_${safeEmail}`); }
+          }
+          return null;
+        };
 
-       const refreshData = async (manual = false, emailOverride = null) => {
-           const emailToUse = emailOverride || (userCtx ? userCtx.email : null);
-           if (!emailToUse || isSyncing) return;
-         
-           setIsSyncing(true);
-           if (manual) showToast("Buscando actualizaciones...");
-         
-           try {
-               const newData = await runServer('getRequests', {});
-               setInitialData(newData);
-               const ts = saveToCache(emailToUse, newData);
-               if (ts) setLastSync(ts);
-               if (manual) showToast("Datos actualizados.");
-           } catch (e) {
-               console.error("Sync Error", e);
-               if (manual) showToast("Error de conexión: " + e.message);
-           } finally { setIsSyncing(false); }
-       };
+        const saveToCache = (email, data) => {
+          if (!email) return null;
+          const safeEmail = email.toLowerCase();
+          const timestamp = Date.now();
+          try {
+            localStorage.setItem(`cache_data_it_${safeEmail}`, JSON.stringify({ data, timestamp }));
+            return timestamp;
+          } catch (e) { console.error("Full Cache", e); return null; }
+        };
 
-       const handleLoginAttempt = async (email) => {
-           let targetEmail = email ? email.toLowerCase() : localStorage.getItem('last_active_email_it');
-         
-           let cacheUsed = false;
-           if (targetEmail) {
-               const cachedCtx = loadContextFromCache(targetEmail);
-               const cachedContent = loadFromCache(targetEmail);
-             
-               if (cachedCtx && cachedContent?.data) {
-                   console.log(`⚡ Instant Load: ${targetEmail}`);
-                   setUserCtx(cachedCtx);
-                   setInitialData(cachedContent.data);
-                   if (cachedContent.timestamp) setLastSync(Number(cachedContent.timestamp));
-                   setView('home');
-                   cacheUsed = true;
-               }
-           }
-         
-           setIsCheckingCache(false);
+        const loadContextFromCache = (email) => {
+          if (!email) return null;
+          try { return JSON.parse(localStorage.getItem(`cache_context_it_${email.toLowerCase()}`)); } catch (e) { return null; }
+        };
 
-           if (!cacheUsed) setIsSyncing(true);
+        const refreshData = async (manual = false, emailOverride = null) => {
+          const emailToUse = emailOverride || (userCtx ? userCtx.email : null);
+          if (!emailToUse || isSyncing) return;
 
-           try {
-               const serverCtx = await runServer('getUserContext', {});
-               const realEmail = serverCtx.email.toLowerCase();
+          setIsSyncing(true);
+          if (manual) showToast("Buscando actualizaciones...");
 
-               if (!serverCtx.isValidUser) {
-                  throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
-               }
+          try {
+            const newData = await runServer("getRequests", {});
+            setInitialData(newData);
+            const ts = saveToCache(emailToUse, newData);
+            if (ts) setLastSync(ts);
+            if (manual) showToast("Datos actualizados.");
+          } catch (e) {
+            console.error("Sync Error", e);
+            if (manual) showToast("Error de conexión: " + e.message);
+          } finally {
+            setIsSyncing(false);
+          }
+        };
 
-               if (cacheUsed && userCtx && userCtx.email.toLowerCase() !== realEmail) {
-                  console.warn("Cambio de usuario detectado. Limpiando...");
-                  localStorage.setItem('last_active_email_it', realEmail);
-                  window.location.reload();
-                  return;
-               }
+        const handleLoginAttempt = async (email) => {
+          let targetEmail = email ? email.toLowerCase() : localStorage.getItem("last_active_email_it");
 
-               localStorage.setItem('last_active_email_it', realEmail);
-               localStorage.setItem(`cache_context_it_${realEmail}`, JSON.stringify(serverCtx));
-               setUserCtx(serverCtx);
+          let cacheUsed = false;
+          if (targetEmail) {
+            const cachedCtx = loadContextFromCache(targetEmail);
+            const cachedContent = loadFromCache(targetEmail);
 
-               if (!cacheUsed) {
-                   const reqs = await runServer('getRequests', {});
-                   setInitialData(reqs);
-                   const ts = saveToCache(realEmail, reqs);
-                   setLastSync(ts);
-                   setView(serverCtx.isValidUser ? 'home' : 'config');
-               } else {
-                   refreshData(false, realEmail);
-               }
+            if (cachedCtx && cachedContent?.data) {
+              console.log(`⚡ Instant Load: ${targetEmail}`);
+              setUserCtx(cachedCtx);
+              setInitialData(cachedContent.data);
+              if (cachedContent.timestamp) setLastSync(Number(cachedContent.timestamp));
+              setView("home");
+              cacheUsed = true;
+            }
+          }
 
-           } catch (e) {
-               console.error("Login Error", e);
-               if (!cacheUsed) {
-                   throw e;
-               } else {
-                   alert("Error de conexión: " + e.message);
-               }
-           } finally {
-               setIsSyncing(false);
-           }
-       };
+          setIsCheckingCache(false);
+          if (!cacheUsed) setIsSyncing(true);
 
-       useEffect(() => {
-           const lastEmail = localStorage.getItem('last_active_email_it');
-           if (lastEmail) {
-               handleLoginAttempt(null);
-           } else {
-               setIsCheckingCache(false);
-           }
-       }, []);
+          try {
+            const serverCtx = await runServer("getUserContext", {});
+            const realEmail = (serverCtx.email || "").toLowerCase();
 
-       useEffect(() => {
-           if (!userCtx) return;
-           const timer = setInterval(() => refreshData(false), 300000);
-           return () => clearTimeout(timer);
-       }, [userCtx]);
+            if (!serverCtx.isValidUser) {
+              throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
+            }
 
-       if (!userCtx) return <LoginView onSuccess={() => handleLoginAttempt(null)} isCheckingCache={isCheckingCache} />;
+            localStorage.setItem("last_active_email_it", realEmail);
+            localStorage.setItem(`cache_context_it_${realEmail}`, JSON.stringify(serverCtx));
+            setUserCtx(serverCtx);
 
-       return (
-         <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
-           <Sidebar currentView={view} setView={setView} onLogout={() => { setUserCtx(null); localStorage.removeItem('last_active_email_it'); }} userContext={userCtx} lastSync={lastSync} isSyncing={isSyncing} />
-           <div className="flex-1 ml-64 overflow-y-auto">
-             {view === 'home' ? <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} /> :
-              view === 'detail' && selectedRequest ? <RequestDetail requestId={selectedRequest['ID Solicitud']} preloadedData={selectedRequest} onBack={() => setView('history')} /> :
-              view === 'create' ? <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} /> :
-              view === 'config' ? <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} lastSync={lastSync} /> :
-              <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />}
-           </div>
-           {toast && <Toast message={toast} onClose={() => setToast(null)} />}
-         </div>
-       );
-     };
-   
-     const root = ReactDOM.createRoot(document.getElementById('root'));
-     root.render(<App />);
-   </script>
- </body>
+            if (!cacheUsed) {
+              const reqs = await runServer("getRequests", {});
+              setInitialData(reqs);
+              const ts = saveToCache(realEmail, reqs);
+              setLastSync(ts);
+              setView("home");
+            } else {
+              refreshData(false, realEmail);
+            }
+          } catch (e) {
+            console.error("Login Error", e);
+            if (!cacheUsed) throw e;
+            alert("Error de conexión: " + e.message);
+          } finally {
+            setIsSyncing(false);
+          }
+        };
+
+        useEffect(() => {
+          const lastEmail = localStorage.getItem("last_active_email_it");
+          if (lastEmail) handleLoginAttempt(null);
+          else setIsCheckingCache(false);
+        }, []);
+
+        useEffect(() => {
+          if (!userCtx) return;
+          const timer = setInterval(() => refreshData(false), 300000);
+          return () => clearTimeout(timer);
+        }, [userCtx]);
+
+        if (!userCtx) return <LoginView onSuccess={() => handleLoginAttempt(null)} isCheckingCache={isCheckingCache} />;
+
+        return (
+          <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
+            <Sidebar
+              currentView={view}
+              setView={setView}
+              onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }}
+              userContext={userCtx}
+              lastSync={lastSync}
+              isSyncing={isSyncing}
+            />
+
+            <div className="flex-1 ml-64 overflow-y-auto">
+              {view === "home" ? (
+                <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} />
+              ) : view === "detail" && selectedRequest ? (
+                <RequestDetail requestId={selectedRequest["ID Solicitud"]} preloadedData={selectedRequest} onBack={() => setView("history")} />
+              ) : view === "create" ? (
+                <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />
+              ) : view === "config" ? (
+                <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} lastSync={lastSync} />
+              ) : (
+                <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />
+              )}
+            </div>
+
+            {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      );
+    </script>
+  </body>
 </html>

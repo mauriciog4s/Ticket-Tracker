@@ -26,7 +26,184 @@ const SHEET_CONFIG = {
 };
 
 /**
+ * ------------------------------------------------------------------
+ * OPTIMIZACIÓN: Reuso de Spreadsheet abiertos (memoria por ejecución)
+ * ------------------------------------------------------------------
+ */
+const __SS_MEMO = {}; // spreadsheetId -> Spreadsheet
+function _openSS(spreadsheetId) {
+  if (!__SS_MEMO[spreadsheetId]) __SS_MEMO[spreadsheetId] = SpreadsheetApp.openById(spreadsheetId);
+  return __SS_MEMO[spreadsheetId];
+}
+
+/**
+ * OPTIMIZACIÓN: memo de info de hoja por ejecución
+ */
+const __SHEET_INFO_MEMO = {}; // sheetName -> info
+function _normHeader(x) { return String(x || "").trim().toLowerCase(); }
+
+function _getSheetInfo(sheetName) {
+  if (__SHEET_INFO_MEMO[sheetName]) return __SHEET_INFO_MEMO[sheetName];
+
+  const spreadsheetId = SHEET_CONFIG[sheetName];
+  if (!spreadsheetId) throw new Error(`Configuración no encontrada para la tabla: ${sheetName}`);
+
+  const ss = _openSS(spreadsheetId);
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    const info = { sheet: null, headers: [], headersNorm: [], indexByNorm: {}, lastRow: 0, lastCol: 0 };
+    __SHEET_INFO_MEMO[sheetName] = info;
+    return info;
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+
+  if (lastRow < 1 || lastCol < 1) {
+    const info = { sheet, headers: [], headersNorm: [], indexByNorm: {}, lastRow, lastCol };
+    __SHEET_INFO_MEMO[sheetName] = info;
+    return info;
+  }
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0] || [];
+  const headersNorm = headers.map(_normHeader);
+  const indexByNorm = {};
+  headersNorm.forEach((h, i) => { if (h && indexByNorm[h] === undefined) indexByNorm[h] = i; });
+
+  const info = { sheet, headers, headersNorm, indexByNorm, lastRow, lastCol };
+  __SHEET_INFO_MEMO[sheetName] = info;
+  return info;
+}
+
+function _findColIndex(headersNorm, candidateNames) {
+  for (let i = 0; i < candidateNames.length; i++) {
+    const idx = headersNorm.indexOf(_normHeader(candidateNames[i]));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function _rowToObject(headers, row) {
+  const obj = {};
+  for (let i = 0; i < headers.length; i++) {
+    let v = row[i];
+    if (v instanceof Date) v = v.toISOString();
+    obj[headers[i]] = v;
+  }
+  return obj;
+}
+
+function _mergeRowRuns(rowNumsSorted) {
+  const runs = [];
+  if (!rowNumsSorted.length) return runs;
+  let s = rowNumsSorted[0], p = rowNumsSorted[0];
+  for (let i = 1; i < rowNumsSorted.length; i++) {
+    const cur = rowNumsSorted[i];
+    if (cur === p + 1) {
+      p = cur;
+    } else {
+      runs.push([s, p]);
+      s = p = cur;
+    }
+  }
+  runs.push([s, p]);
+  return runs;
+}
+
+function _fetchRowRuns(sheet, runs, lastCol) {
+  const rows = [];
+  runs.forEach(([start, end]) => {
+    const num = end - start + 1;
+    const block = sheet.getRange(start, 1, num, lastCol).getValues();
+    for (let i = 0; i < block.length; i++) rows.push(block[i]);
+  });
+  return rows;
+}
+
+/**
+ * Busca una fila por valor exacto en alguna columna candidata y devuelve {rowNum, obj}
+ */
+function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
+  const { sheet, headers, headersNorm, lastRow, lastCol } = _getSheetInfo(sheetName);
+  if (!sheet || lastRow < 2) return null;
+
+  const k = String(keyValue || "").trim();
+  if (!k) return null;
+
+  for (let c = 0; c < colCandidates.length; c++) {
+    const idx = _findColIndex(headersNorm, [colCandidates[c]]);
+    if (idx === -1) continue;
+
+    const colVals = sheet.getRange(2, idx + 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < colVals.length; i++) {
+      const v = String(colVals[i][0]).trim();
+      if (v === k) {
+        const rowNum = i + 2;
+        const row = sheet.getRange(rowNum, 1, 1, lastCol).getValues()[0];
+        return { rowNum, obj: _rowToObject(headers, row) };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Devuelve hijos filtrados por FK (sin leer toda la hoja completa)
+ */
+function _getChildrenFast(sheetName, parentKeys) {
+  const { sheet, headers, headersNorm, lastRow, lastCol } = _getSheetInfo(sheetName);
+  if (!sheet || lastRow < 2) return [];
+
+  const fkCandidates = ['ID Solicitudes', 'ID Solicitud', 'ID Solicitudes '];
+  const idxFk = _findColIndex(headersNorm, fkCandidates);
+  if (idxFk === -1) return [];
+
+  const idxDate = _findColIndex(headersNorm, ['Fecha Actualización', 'Fecha Actualizacion', 'Fecha', 'FechaCambio']);
+
+  const set = new Set((parentKeys || []).map(x => String(x || "").trim()).filter(Boolean));
+  if (!set.size) return [];
+
+  // Solo leemos la columna FK (barato)
+  const fkVals = sheet.getRange(2, idxFk + 1, lastRow - 1, 1).getValues();
+  const rowNums = [];
+  for (let i = 0; i < fkVals.length; i++) {
+    const fk = String(fkVals[i][0]).trim();
+    if (fk && set.has(fk)) rowNums.push(i + 2);
+  }
+  if (!rowNums.length) return [];
+
+  rowNums.sort((a, b) => a - b);
+  const runs = _mergeRowRuns(rowNums);
+
+  // Traemos solo filas necesarias (por bloques contiguos)
+  const rows = _fetchRowRuns(sheet, runs, lastCol);
+
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const obj = _rowToObject(headers, r);
+
+    let ts = 0;
+    if (idxDate !== -1) {
+      const dv = r[idxDate];
+      ts = (dv instanceof Date) ? dv.getTime() : (Date.parse(String(dv)) || 0);
+    }
+    obj.__ts = ts;
+    out.push(obj);
+  }
+
+  // Orden por fecha desc
+  out.sort((a, b) => (b.__ts || 0) - (a.__ts || 0));
+  out.forEach(o => delete o.__ts);
+
+  return out;
+}
+
+/**
+ * ------------------------------------------------------------------
  * Sirve el HTML principal (SPA)
+ * ------------------------------------------------------------------
  */
 function doGet(e) {
   return HtmlService.createTemplateFromFile('Index')
@@ -42,16 +219,12 @@ function doGet(e) {
  * ------------------------------------------------------------------
  */
 function _resolveCallerEmail(request) {
-  // 1) Lo ideal cuando el deploy está bien configurado
   const active = Session.getActiveUser().getEmail();
   if (active) return String(active).toLowerCase().trim();
 
-  // 2) Fallback: tu UI lo envía como __clientEmail
   const p = request?.payload || {};
   const fromClient = p.__clientEmail || p.clientEmail || request?.clientEmail || "";
   const email = String(fromClient).toLowerCase().trim();
-
-  // Puedes ajustar/relajar validación si aplica otro dominio
   if (email && email.includes("@")) return email;
 
   return "";
@@ -95,6 +268,21 @@ function apiHandler(request) {
 
 /**
  * ------------------------------------------------------------------
+ * ✅ CACHE SOLO PARA DETALLE
+ * ------------------------------------------------------------------
+ */
+const DETAIL_CACHE_VER = "v3"; // cambia versión para “barrer” cache viejo
+function _detailCacheKey(email, id) {
+  const e = String(email || "").toLowerCase().trim();
+  const rid = String(id || "").trim();
+  return `detail_${DETAIL_CACHE_VER}_${Utilities.base64Encode(e)}_${rid}`;
+}
+function _invalidateDetailCache(email, id) {
+  try { CacheService.getScriptCache().remove(_detailCacheKey(email, id)); } catch (e) {}
+}
+
+/**
+ * ------------------------------------------------------------------
  * SUBIR ANEXOS EN FORMULARIO SOLICITUD
  * ------------------------------------------------------------------
  */
@@ -120,16 +308,6 @@ function _ensurePathFromRoot(root, parts) {
   return current;
 }
 
-/**
- * payload esperado:
- * {
- *   solicitudId: "...",
- *   tipoAnexo: "Archivo"|"Foto"|"Dibujo",
- *   fileName: "xxx.pdf",
- *   mimeType: "application/pdf",
- *   base64: "....",
- * }
- */
 function uploadAnexo(email, payload) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
@@ -143,10 +321,10 @@ function uploadAnexo(email, payload) {
   if (!solicitudId) throw new Error("solicitudId requerido");
   if (!base64) throw new Error("base64 requerido");
 
-  // 1) Validar que la solicitud exista y permisos
-  const allRequests = getDataFromSheet('Solicitudes');
-  const header = allRequests.find(r => String(_getField(r, ['ID Solicitud', 'ID Solicitudes'])).trim() === solicitudId);
-  if (!header) throw new Error("Solicitud padre no encontrada.");
+  // ✅ header rápido (sin leer toda la hoja)
+  const headerFound = _findSolicitudHeaderFast(solicitudId);
+  if (!headerFound) throw new Error("Solicitud padre no encontrada.");
+  const header = headerFound.obj;
 
   if (!context.isAdmin) {
     const recordSedeId = String(_getField(header, ['ID Sede']));
@@ -155,12 +333,10 @@ function uploadAnexo(email, payload) {
     }
   }
 
-  // 2) Decodificar base64 y límites
   const maxBytes = 8 * 1024 * 1024; // 8MB
   const bytes = Utilities.base64Decode(base64);
   if (bytes.length > maxBytes) throw new Error("Archivo demasiado grande (máx 8MB).");
 
-  // 3) Guardar en Drive (ruta estilo AppSheet)
   const root = _getRootFolderForFiles();
   const folder = _ensurePathFromRoot(root, ['Info', 'Clientes', 'Anexos']);
 
@@ -178,7 +354,6 @@ function uploadAnexo(email, payload) {
 
   const storedPath = `/Info/Clientes/Anexos/${file.getName()}`;
 
-  // 4) Registrar fila en "Solicitudes anexos"
   const now = new Date();
   const anexoUuid = Utilities.getUuid();
 
@@ -187,11 +362,8 @@ function uploadAnexo(email, payload) {
     "ID Solicitudes": solicitudId,
     "Tipo anexo": tipoAnexo,
     "Nombre": safeBase || file.getName(),
-
-    // compat
     "Archivo": storedPath,
     "Archivo ": storedPath,
-
     "Usuario Actualización": email,
     "Usuario Actualizacion": email,
     "Fecha Actualización": now,
@@ -200,45 +372,30 @@ function uploadAnexo(email, payload) {
 
   appendDataToSheet('Solicitudes anexos', row);
 
+  _invalidateDetailCache(email, solicitudId);
   return { success: true, anexoId: anexoUuid, fileName: file.getName(), path: storedPath };
 }
 
 /**
  * ------------------------------------------------------------------
- * HELPERS GENÉRICOS
+ * HELPERS GENÉRICOS (se mantienen para compatibilidad)
  * ------------------------------------------------------------------
  */
 
 function getDataFromSheet(sheetName) {
-  const spreadsheetId = SHEET_CONFIG[sheetName];
-  if (!spreadsheetId) throw new Error(`Configuración no encontrada para la tabla: ${sheetName}`);
+  const { sheet, headers, lastRow, lastCol } = _getSheetInfo(sheetName);
+  if (!sheet || lastRow < 2 || lastCol < 1) return [];
 
-  const ss = SpreadsheetApp.openById(spreadsheetId);
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return [];
-
-  const dataRange = sheet.getDataRange();
-  const values = dataRange.getValues();
-
+  const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
   if (values.length < 2) return [];
 
-  const headers = values[0];
   const data = values.slice(1);
-
-  return data.map(row => {
-    let obj = {};
-    headers.forEach((header, index) => {
-      let value = row[index];
-      if (value instanceof Date) value = value.toISOString();
-      obj[header] = value;
-    });
-    return obj;
-  });
+  return data.map(row => _rowToObject(headers, row));
 }
 
 function appendDataToSheet(sheetName, objectData) {
   const spreadsheetId = SHEET_CONFIG[sheetName];
-  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const ss = _openSS(spreadsheetId);
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error(`Hoja ${sheetName} no encontrada.`);
 
@@ -246,22 +403,25 @@ function appendDataToSheet(sheetName, objectData) {
   if (lastCol === 0) throw new Error(`La hoja ${sheetName} está vacía (sin cabeceras).`);
 
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-
   const rowArray = headers.map(header => {
     const val = objectData[header];
     return val === undefined || val === null ? "" : val;
   });
 
   sheet.appendRow(rowArray);
+
+  // Invalida detalle si aplica
+  const possibleTicketId = objectData["ID Solicitud"] || objectData["ID Solicitudes"] || "";
+  if (possibleTicketId) _invalidateDetailCache(String(objectData["Usuario Actualización"] || ""), possibleTicketId);
+
   return { success: true };
 }
 
 /**
  * ------------------------------------------------------------------
- * HELPERS (NUEVOS) PARA EVITAR ERRORES POR ENCABEZADOS / RUTAS
+ * HELPERS ROBUSTOS (encabezados / rutas)
  * ------------------------------------------------------------------
  */
-
 function _getField(row, candidateNames) {
   if (!row) return "";
   const keys = Object.keys(row);
@@ -304,7 +464,6 @@ function _resolveDriveFileFromAppSheetPath(pathValue) {
   const parts = p.split('/').filter(Boolean);
   const filename = parts.pop();
 
-  // 1) Navegación por carpetas
   try {
     let current = root;
     parts.forEach(folderName => {
@@ -314,33 +473,29 @@ function _resolveDriveFileFromAppSheetPath(pathValue) {
     });
 
     const files = current.getFilesByName(filename);
-    if (files.hasNext()) {
-      return { kind: "file", file: files.next() };
-    }
+    if (files.hasNext()) return { kind: "file", file: files.next() };
+
   } catch (e) {
     // fallback
   }
 
-  // 2) Fallback por búsqueda
   const safeName = filename.replace(/"/g, '\\"');
   const q = `name = "${safeName}" and trashed = false`;
   const it2 = DriveApp.searchFiles(q);
-  if (it2.hasNext()) {
-    return { kind: "file", file: it2.next() };
-  }
+  if (it2.hasNext()) return { kind: "file", file: it2.next() };
 
   throw new Error(`Archivo no encontrado en Drive: ${filename}`);
 }
 
-function _findSolicitudHeaderByKey(allRequests, key) {
-  const k = String(key || "").trim();
-  if (!k) return null;
-
-  return allRequests.find(r =>
-    String(_getField(r, ['ID Solicitud', 'ID Solicitudes'])).trim() === k ||
-    String(_getField(r, ['Ticket G4S'])).trim() === k ||
-    String(_getField(r, ['Ticket Cliente', 'Ticket (Opcional)'])).trim() === k
-  ) || null;
+/**
+ * Header rápido de Solicitudes por: ID Solicitud / Ticket G4S / Ticket Cliente
+ */
+function _findSolicitudHeaderFast(key) {
+  return _findRowObjectByKey('Solicitudes', key, [
+    'ID Solicitud', 'ID Solicitudes',
+    'Ticket G4S',
+    'Ticket Cliente', 'Ticket (Opcional)'
+  ]);
 }
 
 /**
@@ -359,8 +514,8 @@ function getUserContext(email) {
     let context = {
       email: email,
       role: 'Usuario',
-      allowedClientIds: [],   // aquí realmente son sedes permitidas
-      clientNames: {},        // idSede -> nombreSede
+      allowedClientIds: [],
+      clientNames: {},
       isValidUser: false,
       isAdmin: false
     };
@@ -381,7 +536,6 @@ function getUserContext(email) {
 
     if (!context.isValidUser) return context;
 
-    // Relaciones usuario -> cliente(s)
     const allRelations = getDataFromSheet('Usuarios filtro');
     const myRelations = allRelations.filter(row => String(row['Usuario']).toLowerCase() === email.toLowerCase());
 
@@ -391,15 +545,12 @@ function getUserContext(email) {
       if (id) assignedClientIds.push(String(id));
     });
 
-    // Cargar sedes de esos clientes
     if (assignedClientIds.length > 0) {
       const allSedes = getDataFromSheet('Sedes');
       const mySedes = allSedes.filter(sede => assignedClientIds.includes(String(_getField(sede, ['ID Cliente', 'Id Cliente', 'Cliente']))));
 
       mySedes.forEach(sede => {
         const idSede = String(_getField(sede, ['ID Sede', 'Id Sede', 'Sede', 'IDSede'])).trim();
-
-        // ✅ LABEL robusto (Nombre sede)
         const nombreSede =
           _getField(sede, ['Nombre', 'Nombre_Sede', 'Nombre sede', 'Nombre Sede', 'Sede', 'Label']) ||
           idSede;
@@ -421,10 +572,13 @@ function getUserContext(email) {
 }
 
 function getRequests(email) {
+  const t0 = Date.now();
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
   try {
+    // Nota: aquí mantenemos getDataFromSheet por compatibilidad.
+    // Si esta pantalla también está lenta, lo optimizamos igual que detalle.
     let allRows = getDataFromSheet('Solicitudes');
     let filteredRows = [];
 
@@ -441,6 +595,7 @@ function getRequests(email) {
       return dateB - dateA;
     });
 
+    console.log(`⚡ [PERF] getRequests: ${Date.now() - t0}ms | total=${filteredRows.length}`);
     return { data: filteredRows, total: filteredRows.length };
 
   } catch (e) {
@@ -450,57 +605,54 @@ function getRequests(email) {
 }
 
 function getRequestDetail(email, { id }) {
+  const t0 = Date.now();
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado");
   if (!id) throw new Error("ID requerido");
 
-  try {
-    const allRequests = getDataFromSheet('Solicitudes');
-    const header = allRequests.find(row => String(_getField(row, ['ID Solicitud', 'ID Solicitudes'])).trim() == String(id).trim());
-    if (!header) throw new Error("Ticket no encontrado.");
+  const rid = String(id).trim();
+  const cache = CacheService.getScriptCache();
+  const ck = _detailCacheKey(email, rid);
 
-    if (!context.isAdmin) {
-      const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
-      if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
-        throw new Error("No tiene permisos para ver este ticket.");
-      }
-    }
-
-    const parentKeys = [
-      String(id),
-      String(_getField(header, ['Ticket G4S'])),
-      String(_getField(header, ['Ticket Cliente', 'Ticket (Opcional)']))
-    ].filter(x => x && x !== "undefined" && x !== "null");
-
-    const getChildren = (sheetName) => {
-      const allChildren = getDataFromSheet(sheetName);
-      const fkCandidates = ['ID Solicitudes', 'ID Solicitud', 'ID Solicitudes '];
-
-      const filtered = allChildren.filter(row => {
-        const fk = String(_getField(row, fkCandidates)).trim();
-        return fk && parentKeys.includes(fk);
-      });
-
-      filtered.sort((a, b) => {
-        const da = new Date(_getField(a, ['Fecha Actualización', 'Fecha Actualizacion', 'Fecha', 'FechaCambio'])).getTime() || 0;
-        const db = new Date(_getField(b, ['Fecha Actualización', 'Fecha Actualizacion', 'Fecha', 'FechaCambio'])).getTime() || 0;
-        return db - da;
-      });
-
-      return filtered;
-    };
-
-    return {
-      header: header,
-      services: getChildren('Observaciones historico'),
-      history: getChildren('Estados historico'),
-      documents: getChildren('Solicitudes anexos')
-    };
-
-  } catch (e) {
-    console.error("Error Detalle", e);
-    throw e;
+  const cached = cache.get(ck);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      console.log(`⚡ [PERF] getRequestDetail (cache): ${Date.now() - t0}ms`);
+      return parsed;
+    } catch (e) {}
   }
+
+  // Header rápido (1 fila)
+  const headerFound = _findSolicitudHeaderFast(rid);
+  if (!headerFound) throw new Error("Ticket no encontrado.");
+  const header = headerFound.obj;
+
+  if (!context.isAdmin) {
+    const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
+    if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
+      throw new Error("No tiene permisos para ver este ticket.");
+    }
+  }
+
+  const parentKeys = [
+    rid,
+    String(_getField(header, ['Ticket G4S'])),
+    String(_getField(header, ['Ticket Cliente', 'Ticket (Opcional)']))
+  ].filter(x => x && x !== "undefined" && x !== "null").map(x => String(x).trim());
+
+  // Hijos rápidos (solo filas del ticket)
+  const services = _getChildrenFast('Observaciones historico', parentKeys);
+  const history = _getChildrenFast('Estados historico', parentKeys);
+  const documents = _getChildrenFast('Solicitudes anexos', parentKeys);
+
+  const result = { header, services, history, documents };
+
+  const json = JSON.stringify(result);
+  if (json.length < 90000) cache.put(ck, json, 30);
+
+  console.log(`⚡ [PERF] getRequestDetail (full): ${Date.now() - t0}ms | obs=${services.length} hist=${history.length} anex=${documents.length}`);
+  return result;
 }
 
 function createRequest(email, payload) {
@@ -526,7 +678,6 @@ function createRequest(email, payload) {
     const now = new Date();
     const uuid = Utilities.getUuid();
 
-    // --- LÓGICA DE GENERACIÓN DE TICKET G4S ---
     const allSedes = getDataFromSheet('Sedes');
     const sedeInfo = allSedes.find(s => String(_getField(s, ['ID Sede', 'Id Sede', 'Sede'])).trim() === String(payload.idSede).trim());
     const idCliente = sedeInfo ? _getField(sedeInfo, ['ID Cliente', 'Id Cliente', 'Cliente']) : null;
@@ -541,7 +692,7 @@ function createRequest(email, payload) {
       }
     }
 
-    const ss = SpreadsheetApp.openById(MAIN_SPREADSHEET_ID);
+    const ss = _openSS(MAIN_SPREADSHEET_ID);
     const sheet = ss.getSheetByName('Solicitudes');
     const nextRow = sheet.getLastRow() + 1;
 
@@ -553,7 +704,7 @@ function createRequest(email, payload) {
       "Ticket G4S": ticketG4S,
       "Fecha creación cliente": now,
       "Estado": "Abierto",
-      "ID Sede": String(payload.idSede).trim(),      // ✅ se guarda ID sede
+      "ID Sede": String(payload.idSede).trim(),
       "Ticket Cliente": payload.ticketCliente || "",
       "Clasificación": payload.clasificacion,
       "Prioridad Solicitud": payload.prioridad,
@@ -563,6 +714,7 @@ function createRequest(email, payload) {
     };
 
     appendDataToSheet('Solicitudes', newRow);
+    _invalidateDetailCache(email, uuid);
 
     const returnRow = {
       ...newRow,
@@ -599,16 +751,16 @@ function getAnexoDownload(email, { anexoId }) {
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
   if (!anexoId) throw new Error("anexoId requerido");
 
-  const anexos = getDataFromSheet('Solicitudes anexos');
-
-  const idColCandidates = ['ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos '];
-  const row = anexos.find(r => String(_getField(r, idColCandidates)).trim() === String(anexoId).trim());
-  if (!row) throw new Error("Anexo no encontrado.");
+  const found = _findRowObjectByKey('Solicitudes anexos', anexoId, [
+    'ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos '
+  ]);
+  if (!found) throw new Error("Anexo no encontrado.");
+  const row = found.obj;
 
   const parentKey = _getField(row, ['ID Solicitudes', 'ID Solicitud']);
-  const allRequests = getDataFromSheet('Solicitudes');
-  const header = _findSolicitudHeaderByKey(allRequests, parentKey);
-  if (!header) throw new Error("No se pudo validar la solicitud padre del anexo.");
+  const headerFound = _findSolicitudHeaderFast(parentKey);
+  if (!headerFound) throw new Error("No se pudo validar la solicitud padre del anexo.");
+  const header = headerFound.obj;
 
   if (!context.isAdmin) {
     const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
@@ -617,9 +769,7 @@ function getAnexoDownload(email, { anexoId }) {
     }
   }
 
-  const pathValue =
-    _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
-
+  const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
   if (!pathValue) throw new Error("Este anexo no tiene archivo asociado.");
 
   const resolved = _resolveDriveFileFromAppSheetPath(pathValue);
@@ -640,7 +790,7 @@ function getAnexoDownload(email, { anexoId }) {
     if (!String(friendly).includes('.')) friendly = `${friendly}.${ext}`;
   }
 
-  const maxBytes = 8 * 1024 * 1024; // 8MB
+  const maxBytes = 8 * 1024 * 1024;
   const bytes = blob.getBytes();
 
   if (bytes.length > maxBytes) {
@@ -655,33 +805,16 @@ function getAnexoDownload(email, { anexoId }) {
 /**
  * ------------------------------------------------------------------
  * ✅ SOLICITUDES ACTIVOS (QR)
- * Hoja: "Solicitudes activos"
- * Columnas:
- *  - ID Solicitudes activos
- *  - ID Solicitudes
- *  - QR
- *  - ID Activo
- *  - Observaciones
- *  - Dibujo
- *  - Usuario Actualización
- *  - Fecha Actualización
  * ------------------------------------------------------------------
  */
-
-// ✅ Actualizado: acepta qrSerial (como manda tu UI) + idActivo
 function createSolicitudActivo(email, payload) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
   const solicitudId = String(payload?.solicitudId || payload?.IDSolicitudes || payload?.idSolicitud || '').trim();
-
-  // ✅ UI manda qrSerial; soportamos también qr
   const qr = String(payload?.qrSerial || payload?.qr || payload?.QR || '').trim();
-
-  // acepta llaves alternativas por compatibilidad
   const idActivo = String(payload?.idActivo || payload?.activoId || payload?.IDActivo || '').trim();
 
-  // opcional
   const observaciones = String(payload?.observaciones || payload?.novedades || '').trim();
   const dibujoBase64 = String(payload?.dibujoBase64 || '').trim();
 
@@ -689,10 +822,9 @@ function createSolicitudActivo(email, payload) {
   if (!qr) throw new Error("QR requerido");
   if (!idActivo) throw new Error("ID Activo requerido");
 
-  // 1) Validar solicitud padre + permisos
-  const allRequests = getDataFromSheet('Solicitudes');
-  const header = _findSolicitudHeaderByKey(allRequests, solicitudId);
-  if (!header) throw new Error("Solicitud padre no encontrada.");
+  const headerFound = _findSolicitudHeaderFast(solicitudId);
+  if (!headerFound) throw new Error("Solicitud padre no encontrada.");
+  const header = headerFound.obj;
 
   if (!context.isAdmin) {
     const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
@@ -701,11 +833,10 @@ function createSolicitudActivo(email, payload) {
     }
   }
 
-  // 2) Guardar dibujo opcional
   let dibujoPath = "";
   if (dibujoBase64) {
     const bytes = Utilities.base64Decode(dibujoBase64);
-    const maxBytes = 2 * 1024 * 1024; // 2MB
+    const maxBytes = 2 * 1024 * 1024;
     if (bytes.length > maxBytes) throw new Error("Dibujo demasiado grande (máx 2MB).");
 
     const root = _getRootFolderForFiles();
@@ -721,7 +852,6 @@ function createSolicitudActivo(email, payload) {
     dibujoPath = `/Info/Clientes/Activos/${fileName}`;
   }
 
-  // 3) Insertar fila
   const now = new Date();
   const rowId = Utilities.getUuid();
 
@@ -737,6 +867,7 @@ function createSolicitudActivo(email, payload) {
   };
 
   appendDataToSheet('Solicitudes activos', row);
+  _invalidateDetailCache(email, solicitudId);
 
   return { success: true, activoRowId: rowId, dibujoPath };
 }
@@ -747,9 +878,9 @@ function getSolicitudActivos(email, { solicitudId }) {
   const sid = String(solicitudId || '').trim();
   if (!sid) throw new Error("solicitudId requerido");
 
-  const allRequests = getDataFromSheet('Solicitudes');
-  const header = _findSolicitudHeaderByKey(allRequests, sid);
-  if (!header) throw new Error("Solicitud no encontrada.");
+  const headerFound = _findSolicitudHeaderFast(sid);
+  if (!headerFound) throw new Error("Solicitud no encontrada.");
+  const header = headerFound.obj;
 
   if (!context.isAdmin) {
     const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
@@ -758,14 +889,7 @@ function getSolicitudActivos(email, { solicitudId }) {
     }
   }
 
-  const rows = getDataFromSheet('Solicitudes activos')
-    .filter(r => String(_getField(r, ['ID Solicitudes', 'ID Solicitud'])).trim() === sid);
-
-  rows.sort((a, b) => {
-    const da = new Date(_getField(a, ['Fecha Actualización', 'Fecha Actualizacion'])).getTime() || 0;
-    const db = new Date(_getField(b, ['Fecha Actualización', 'Fecha Actualizacion'])).getTime() || 0;
-    return db - da;
-  });
+  const rows = _getChildrenFast('Solicitudes activos', [sid]);
 
   return { data: rows, total: rows.length };
 }
@@ -773,12 +897,8 @@ function getSolicitudActivos(email, { solicitudId }) {
 /**
  * ------------------------------------------------------------------
  * ✅ CATÁLOGO DE ACTIVOS + BÚSQUEDA POR QR
- * Hoja: "Activos" (en ACTIVOS_SPREADSHEET_ID)
- * IMPORTANTE: devuelve campos con nombres que tu UI espera:
- *  - idActivo, nombreActivo, qrSerial, nombreUbicacion, estadoActivo, funcionamiento
  * ------------------------------------------------------------------
  */
-
 function getActivosCatalog(email) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
@@ -794,10 +914,7 @@ function getActivosCatalog(email) {
     const idActivo = String(_getField(r, ['ID Activo', 'Id Activo', 'ID', 'Id'])).trim();
     const nombreActivo = String(_getField(r, ['Nombre Activo', 'Nombre', 'Activo'])).trim();
     const qrSerial = String(_getField(r, ['QR Serial', 'QR', 'Qr', 'Codigo QR'])).trim();
-
     const nombreUbicacion = String(_getField(r, ['Nombre Ubicacion', 'Ubicación', 'Ubicacion', 'Ubic'])).trim();
-
-    // opcionales (si existen en la hoja)
     const estadoActivo = String(_getField(r, ['Estado Activo', 'Estado', 'Condicion'])).trim();
     const funcionamiento = String(_getField(r, ['Funcionamiento', 'Funciona', 'Operativo'])).trim();
 

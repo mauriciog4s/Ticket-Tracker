@@ -1262,8 +1262,36 @@
 
         const openAnexo = async (doc, openKey) => {
           // 👇 abrir pestaña “ya” (para evitar bloqueo por await)
-          let tab = null;
-          try { tab = window.open("", "_blank", "noopener"); } catch (e) { tab = null; }
+       let tab = null;
+try {
+  const loadingHtml = `
+    <html><head>
+      <title>Cargando anexo…</title>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <style>
+        body{font-family:Roboto,system-ui; background:#f3f4f6; margin:0}
+        .c{max-width:520px;margin:12vh auto;background:#fff;padding:22px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+        .t{font-weight:800;color:#111827;margin:0 0 6px}
+        .p{color:#6b7280;font-size:13px;margin:0 0 14px}
+        .bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+        .bar>div{height:100%;width:40%;background:#0033A0;border-radius:999px;animation:m 1.1s infinite ease-in-out}
+        @keyframes m{0%{transform:translateX(-60%)}100%{transform:translateX(260%)}}
+      </style>
+    </head>
+    <body>
+      <div class="c">
+        <p class="t">Cargando anexo…</p>
+        <p class="p">Abrimos sin “about:blank”.</p>
+        <div class="bar"><div></div></div>
+      </div>
+    </body></html>`;
+  const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml)}`;
+  tab = window.open(dataUrl, "_blank", "noopener,noreferrer");
+} catch (e) {
+  tab = null;
+}
+
 
           const directUrl = String(pickAny(doc, ["URL","Url","Enlace","Link","FileUrl","Archivo URL"]) || "").trim();
           if (/^https?:\/\//i.test(directUrl)) {
@@ -1307,8 +1335,21 @@
             throw new Error("No se pudo determinar la ruta/URL del anexo.");
           } catch (e) {
             console.error(e);
-            if (tab && !tab.closed) tab.close();
-            alert("❌ No fue posible abrir el anexo: " + (e.message || e));
+       if (tab && !tab.closed) {
+  const errHtml = `
+    <html><head><title>Error</title><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <style>body{font-family:Roboto,system-ui;background:#f3f4f6;margin:0}
+    .c{max-width:520px;margin:12vh auto;background:#fff;padding:22px;border-radius:14px}
+    .t{font-weight:800;color:#b00020;margin:0 0 8px}
+    pre{white-space:pre-wrap;background:#111827;color:#fff;padding:12px;border-radius:10px;font-size:12px}</style></head>
+    <body><div class="c"><p class="t">No se pudo abrir el anexo</p>
+    <pre>${String(e?.message || e)}</pre></div></body></html>`;
+  tab.location.replace(`data:text/html;charset=utf-8,${encodeURIComponent(errHtml)}`);
+} else {
+  alert("❌ No fue posible abrir el anexo: " + (e.message || e));
+}
+
           } finally {
             setDownloadingId(null);
           }

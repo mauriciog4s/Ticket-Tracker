@@ -256,6 +256,9 @@ function apiHandler(request) {
       case 'getSolicitudActivos': return getSolicitudActivos(userEmail, payload);
       case 'getActivosCatalog': return getActivosCatalog(userEmail);
       case 'getActivoByQr': return getActivoByQr(userEmail, payload);
+      
+      // ✅ NUEVO: Carga masiva para la sincronización rápida
+      case 'getBatchRequestDetails': return getBatchRequestDetails(userEmail, payload);
 
       default: throw new Error(`Endpoint desconocido: ${endpoint}`);
     }
@@ -950,3 +953,100 @@ function getActivoByQr(email, payload) {
     }
   };
 }
+
+/**
+ * ------------------------------------------------------------------
+ * ✅✅✅ NUEVA FUNCIÓN MEJORADA: PRECARGA MASIVA INTELIGENTE
+ * Esta es la solución al problema de los "0 registros"
+ * ------------------------------------------------------------------
+ */
+function getBatchRequestDetails(email, { ids }) {
+  const t0 = Date.now();
+  const context = getUserContext(email);
+  if (!context.isValidUser) throw new Error("Acceso Denegado");
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) return {};
+
+  // Convertimos IDs a Set para búsqueda rápida
+  const targetIds = new Set(ids.map(x => String(x).trim()));
+
+  // Leemos las tablas completas
+  const allServices = getDataFromSheet('Observaciones historico');
+  const allHistory = getDataFromSheet('Estados historico');
+  const allDocs = getDataFromSheet('Solicitudes anexos');
+
+  const result = {};
+
+  // Inicializar estructura
+  targetIds.forEach(id => {
+    result[id] = { services: [], history: [], documents: [] };
+  });
+
+  // --- HELPER INTELIGENTE PARA ENCONTRAR EL ID PADRE ---
+  // Busca cualquier columna que parezca ser el ID Padre (ignora mayúsculas, espacios y plurales)
+  const findParentIdInRow = (row) => {
+    if (!row) return "";
+    
+    // Lista de nombres posibles para la columna FK (en minúsculas y sin caracteres raros)
+    const candidates = [
+      'idsolicitud',      // ID Solicitud
+      'idsolicitudes',    // ID Solicitudes
+      'ticketg4s',        // Ticket G4S
+      'ticketcliente',    // Ticket Cliente
+      'idsolicitudfk',
+      'idticket'
+    ];
+    
+    const keys = Object.keys(row);
+    for (const key of keys) {
+      // Normalizamos la cabecera actual (quitamos espacios y símbolos, a minúsculas)
+      const cleanKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      if (candidates.includes(cleanKey)) {
+        const val = row[key];
+        if (val !== undefined && val !== null && val !== "") {
+          return String(val).trim();
+        }
+      }
+    }
+    return "";
+  };
+
+  // Función helper para agrupar usando el buscador inteligente
+  const groupByParentSmart = (rows, targetSet, targetKeyInResult) => {
+    rows.forEach(row => {
+      const parentId = findParentIdInRow(row);
+      
+      // Si encontramos un ID y ese ID está en la lista solicitada
+      if (parentId && targetSet.has(parentId)) {
+        if (!result[parentId][targetKeyInResult]) result[parentId][targetKeyInResult] = [];
+        result[parentId][targetKeyInResult].push(row);
+      }
+    });
+  };
+
+  // Agrupar en memoria
+  groupByParentSmart(allServices, targetIds, 'services');
+  groupByParentSmart(allHistory, targetIds, 'history');
+  groupByParentSmart(allDocs, targetIds, 'documents');
+
+  // Ordenar resultados (opcional, pero recomendado)
+  Object.keys(result).forEach(id => {
+    // Helper para sacar fecha de cualquier columna que diga "Fecha"
+    const getTs = (row) => {
+      const keys = Object.keys(row);
+      const dateKey = keys.find(k => k.toLowerCase().includes('fecha'));
+      if (!dateKey) return 0;
+      const d = new Date(row[dateKey]);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    };
+
+    result[id].services.sort((a, b) => getTs(b) - getTs(a));
+    result[id].history.sort((a, b) => getTs(b) - getTs(a));
+    result[id].documents.sort((a, b) => getTs(b) - getTs(a));
+  });
+
+  console.log(`⚡ [BATCH SMART] Procesados ${ids.length} tickets. Tiempo: ${Date.now() - t0}ms`);
+  return result;
+}
+

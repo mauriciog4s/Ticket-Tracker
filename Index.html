@@ -72,7 +72,7 @@
         });
       };
 
-      // --- ICONOS ---
+      // --- ICONOS (Agregado Database) ---
       const Icon = ({ name, size = 20, className = "" }) => {
         const icons = {
           Home: (<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
@@ -94,7 +94,8 @@
           CloudLightning: (<><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></>),
           Monitor: (<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>),
           X: (<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>),
-          CheckBig: (<><polyline points="20 6 9 17 4 12"/></>)
+          CheckBig: (<><polyline points="20 6 9 17 4 12"/></>),
+          Database: (<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>)
         };
         return (
           <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
@@ -154,7 +155,7 @@
         return "bg-yellow-100 text-yellow-700";
       };
 
-      // --- ERROR BOUNDARY (para que no quede en blanco) ---
+      // --- ERROR BOUNDARY ---
       class ErrorBoundary extends React.Component {
         constructor(props) {
           super(props);
@@ -188,7 +189,7 @@
         }
       }
 
-      // --- LOGIN VIEW (✅ hooks NO condicionales) ---
+      // --- LOGIN VIEW ---
       const LoginView = ({ onSuccess, isCheckingCache }) => {
         const [loading, setLoading] = useState(false);
         const [errorMsg, setErrorMsg] = useState(null);
@@ -366,7 +367,6 @@
       };
 
       // --- CREATE REQUEST VIEW ---
-      // ✅ ACTUALIZADO: módulo Activos por QR (con modal + lista + vínculo al guardar)
       const CreateRequest = ({ userContext, setView, onRefresh, showToast }) => {
         const [formData, setFormData] = useState({
           idSede: "",
@@ -383,12 +383,12 @@
 
         // --- ANEXOS ---
         const fileInputRef = useRef(null);
-        const [attachments, setAttachments] = useState([]); // { id, file, tipo, status, error }
+        const [attachments, setAttachments] = useState([]);
         const [uploadInfo, setUploadInfo] = useState({ total: 0, done: 0 });
         const MAX_MB = 8;
 
         // --- ACTIVOS (QR) ---
-        const [activos, setActivos] = useState([]); // {idActivo, nombreActivo, qrSerial, nombreUbicacion, estadoActivo, funcionamiento}
+        const [activos, setActivos] = useState([]);
         const [showActivosModal, setShowActivosModal] = useState(false);
 
         const normalize = (v) => String(v ?? "").trim();
@@ -422,10 +422,6 @@
 
         const linkActivosToSolicitud = async (solicitudId) => {
           if (!activos.length) return;
-
-          // Intento simple y compatible: crear 1 registro por activo.
-          // Endpoint esperado en backend: "createSolicitudActivo"
-          // Payload: { solicitudId, qrSerial, idActivo, nombreActivo, nombreUbicacion, estadoActivo, funcionamiento }
           let anyOk = false;
           let anyErr = false;
 
@@ -535,7 +531,6 @@
               const list = res?.data || [];
               setCatalog(list);
             } catch (e) {
-              // No bloqueamos el QR por no tener catálogo
               console.warn("Catálogo no disponible:", e);
               setCatalog([]);
             } finally {
@@ -756,18 +751,9 @@
               ''
             ).trim();
 
-            if (!solicitudId) {
-              console.log("Respuesta createRequest:", res);
-              throw new Error("No se pudo obtener el ID de la solicitud creada.");
-            }
+            if (!solicitudId) throw new Error("No se pudo obtener el ID de la solicitud creada.");
 
-            // ✅ Vincular activos (no bloquea la creación si falla)
-            try {
-              await linkActivosToSolicitud(solicitudId);
-            } catch (e) {
-              console.warn("Vincular activos falló:", e);
-            }
-
+            try { await linkActivosToSolicitud(solicitudId); } catch (e) { console.warn("Vincular activos falló:", e); }
             await uploadAttachments(String(solicitudId).trim());
             setShowSuccess(true);
           } catch (err) {
@@ -993,8 +979,8 @@
                   )}
                 </div>
 
-                {/* QR ACTIVOS (✅ actualizado) */}
-                <div className="p-3 bg-gray-50 rounded border border-gray-100">
+                {/* QR ACTIVOS (oculto) */}
+                <div className="p-3 bg-gray-50 rounded border border-gray-100 hidden">
                   <div className="flex justify-between items-center">
                     <div className="flex flex-col">
                       <span className="text-sm text-gray-600 font-medium">Activos asociados a la solicitud (QR)</span>
@@ -1009,38 +995,7 @@
                       Nuevo
                     </button>
                   </div>
-
-                  {activos.length > 0 && (
-                    <div className="mt-3 bg-white border rounded overflow-hidden">
-                      <div className="divide-y">
-                        {activos.map((a, idx) => {
-                          const key = normalize(a.qrSerial) || normalize(a.idActivo) || String(idx);
-                          return (
-                            <div key={key} className="p-2 flex items-center gap-2">
-                              <div className="text-gray-500">
-                                <Icon name="Monitor" size={16} />
-                              </div>
-                              <div className="flex-1 overflow-hidden">
-                                <div className="text-xs font-bold text-gray-700 truncate">{a.nombreActivo || "Activo"}</div>
-                                <div className="text-[10px] text-gray-400 truncate">
-                                  QR: <span className="font-mono">{a.qrSerial || "-"}</span> · Ubicación: {a.nombreUbicacion || "-"}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                disabled={submitting}
-                                onClick={() => removeActivo(key)}
-                                className="p-1 border rounded hover:bg-gray-50 disabled:opacity-50"
-                                title="Quitar"
-                              >
-                                <Icon name="X" size={14} />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {/* ... lógica interna de activos ... */}
                 </div>
               </div>
             </div>
@@ -1048,77 +1003,65 @@
         );
       };
 
-      // --- CONFIG VIEW ---
-      const ConfigurationView = ({ userContext, onForceSync, isSyncing, lastSync }) => {
+      // --- CONFIG VIEW (✅ ACTUALIZADA: REPORTE DE SINCRONIZACIÓN) ---
+      const ConfigurationView = ({ userContext, onForceSync, isSyncing, lastSync, syncReport }) => {
         return (
           <div className="p-8 max-w-4xl mx-auto animate-fade-in">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
-              <button
-                onClick={onForceSync}
-                disabled={isSyncing}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm"
-              >
+              <button onClick={onForceSync} disabled={isSyncing} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm">
                 <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} />
                 {isSyncing ? "Sincronizando..." : "Forzar Sincronización"}
               </button>
             </div>
-
+            
             <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
               <Icon name="Info" size={16} className="text-yellow-600" />
-              <span>
-                {lastSync ? (
-                  <>
-                    Última actualización: <strong>{new Date(Number(lastSync)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
-                  </>
-                ) : (
-                  "Aún no se ha realizado ninguna sincronización."
-                )}
-              </span>
+              <span>{lastSync ? <>Última actualización: <strong>{new Date(Number(lastSync)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong></> : "Aún no se ha realizado ninguna sincronización."}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tarjeta Usuario */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                    <Icon name="User" size={32} />
-                  </div>
+                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Icon name="User" size={32} /></div>
                   <div>
                     <div className="text-xs uppercase font-bold text-gray-500">Cuenta Activa</div>
                     <div className="text-lg font-bold text-gray-800">{userContext?.email}</div>
-                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1">
-                      <Icon name="ShieldCheck" size={12} /> {userContext?.role}
-                    </div>
+                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1"><Icon name="ShieldCheck" size={12} /> {userContext?.role}</div>
                   </div>
                 </div>
               </div>
 
+              {/* Tarjeta Reporte Sync (Nueva) */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-700">Clientes Asignados</h3>
-                  <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">
-                    {userContext?.allowedClientIds ? userContext.allowedClientIds.length : 0}
-                  </span>
+                 <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-700 flex items-center gap-2"><Icon name="Database" size={18} className="text-blue-600" /> Tablas Sincronizadas</h3>
+                  {isSyncing && <span className="text-xs text-blue-600 font-bold animate-pulse">Procesando...</span>}
                 </div>
-
-                <div className="max-h-64 overflow-y-auto border rounded border-gray-100 bg-gray-50">
-                  {userContext?.allowedClientIds?.length > 0 ? (
-                    <ul className="divide-y divide-gray-100">
-                      {userContext.allowedClientIds.map((clientId, idx) => (
-                        <li key={idx} className="px-4 py-3 bg-white flex items-center gap-3">
-                          <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                          <div className="flex-1">
-                            <div className="text-xs font-bold text-gray-400 uppercase">
-                              {userContext?.clientNames?.[clientId] ? userContext.clientNames[clientId] : "ID Cliente"}
-                            </div>
-                            <div className="text-sm font-mono text-gray-700">{clientId}</div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="p-8 text-center text-gray-400 text-xs">Sin Clientes Asignados</div>
-                  )}
+                <div className="bg-gray-50 rounded border border-gray-100 overflow-hidden">
+                   {syncReport ? (
+                    <div className="divide-y divide-gray-100 text-sm">
+                      <div className="flex justify-between items-center px-4 py-2 bg-white">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="ClipboardList" size={14}/> Solicitudes</span>
+                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.requests} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
+                      </div>
+                       <div className="flex justify-between items-center px-4 py-2 bg-white">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="FileText" size={14}/> Observaciones</span>
+                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.obs} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
+                      </div>
+                       <div className="flex justify-between items-center px-4 py-2 bg-white">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="History" size={14}/> Historial</span>
+                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.hist} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
+                      </div>
+                       <div className="flex justify-between items-center px-4 py-2 bg-white">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="Download" size={14}/> Anexos & Archivos</span>
+                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.anx} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
+                      </div>
+                    </div>
+                   ) : (
+                     <div className="p-4 text-center text-xs text-gray-400 italic">Presiona "Forzar Sincronización" para ver detalles.</div>
+                   )}
                 </div>
               </div>
             </div>
@@ -1149,59 +1092,45 @@
               </div>
               <p className="text-gray-500">Bienvenido al portal de Gestión de Tecnología.</p>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
               <div onClick={() => setView("history")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div>
-                  <span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span>
-                </div>
+                <div className="flex justify-between items-start mb-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span></div>
                 <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
                 <div className="text-sm text-gray-500">Solicitudes totales</div>
               </div>
-
               <div onClick={() => setView("process")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div>
-                  <span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span>
-                </div>
+                <div className="flex justify-between items-start mb-4"><div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span></div>
                 <div className="text-3xl font-bold text-gray-800">{stats.pending}</div>
                 <div className="text-sm text-gray-500">Tickets en curso (No Cerrados)</div>
               </div>
-
               <div onClick={() => setView("history")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div>
-                  <span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span>
-                </div>
+                <div className="flex justify-between items-start mb-4"><div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span></div>
                 <div className="text-3xl font-bold text-gray-800">{stats.completed}</div>
                 <div className="text-sm text-gray-500">Tickets finalizados</div>
               </div>
             </div>
-
             <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <button
-                onClick={() => setView("create")}
-                className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1"
-              >
+              <button onClick={() => setView("create")} className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1">
                 <div className="bg-white/20 p-3 rounded-full"><Icon name="ClipboardList" size={32} /></div>
-                <div>
-                  <div className="text-lg font-bold">Crear nuevo Ticket</div>
-                  <div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div>
-                </div>
+                <div><div className="text-lg font-bold">Crear nuevo Ticket</div><div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div></div>
               </button>
             </div>
           </div>
         );
       };
 
-      // --- REQUEST DETAIL ---
-      const RequestDetail = ({ requestId, onBack, preloadedData }) => {
-        const [data, setData] = useState(preloadedData ? { header: preloadedData, services: [], history: [], docs: [] } : null);
-        const [loading, setLoading] = useState(true);
+      // --- REQUEST DETAIL (✅ OPTIMIZADO: USA CACHÉ) ---
+      const RequestDetail = ({ requestId, onBack, preloadedData, cachedDetails }) => {
+        // Inicializamos con datos de caché si existen
+        const cache = cachedDetails?.[requestId] || null;
+        const [data, setData] = useState(
+          cache
+            ? { header: preloadedData, services: cache.services, history: cache.history, docs: cache.documents }
+            : (preloadedData ? { header: preloadedData, services: [], history: [], docs: [] } : null)
+        );
+        const [loading, setLoading] = useState(!cache);
         const [error, setError] = useState(null);
-
         const [downloadingId, setDownloadingId] = useState(null);
 
         const pickAny = (obj, keys) => {
@@ -1234,14 +1163,11 @@
           for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
           const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || "application/octet-stream" });
           const url = URL.createObjectURL(blob);
-
           if (tabRef && !tabRef.closed) tabRef.location.href = url;
           else openUrlInNewTab(url);
-
           setTimeout(() => URL.revokeObjectURL(url), 30000);
         };
 
-        // (si usas AppSheet como fallback)
         const APPSHEET_APP_NAME = "AppSolicitudes-5916254";
         const APPSHEET_TABLE_NAME = "Solicitudes anexos";
         const APPSHEET_APP_VERSION = "1.000737";
@@ -1250,53 +1176,25 @@
           const p = String(filePathOrUrl || "").trim();
           if (!p) return "";
           if (/^https?:\/\//i.test(p)) return p;
-
           const params = new URLSearchParams();
           params.set("appName", APPSHEET_APP_NAME);
           params.set("tableName", APPSHEET_TABLE_NAME);
           params.set("fileName", p);
           params.set("appVersion", APPSHEET_APP_VERSION);
-
           return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
         };
 
         const openAnexo = async (doc, openKey) => {
-          // 👇 abrir pestaña “ya” (para evitar bloqueo por await)
-       let tab = null;
-try {
-  const loadingHtml = `
-    <html><head>
-      <title>Cargando anexo…</title>
-      <meta charset="utf-8"/>
-      <meta name="viewport" content="width=device-width,initial-scale=1"/>
-      <style>
-        body{font-family:Roboto,system-ui; background:#f3f4f6; margin:0}
-        .c{max-width:520px;margin:12vh auto;background:#fff;padding:22px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-        .t{font-weight:800;color:#111827;margin:0 0 6px}
-        .p{color:#6b7280;font-size:13px;margin:0 0 14px}
-        .bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
-        .bar>div{height:100%;width:40%;background:#0033A0;border-radius:999px;animation:m 1.1s infinite ease-in-out}
-        @keyframes m{0%{transform:translateX(-60%)}100%{transform:translateX(260%)}}
-      </style>
-    </head>
-    <body>
-      <div class="c">
-        <p class="t">Cargando anexo…</p>
-        <p class="p">Abrimos sin “about:blank”.</p>
-        <div class="bar"><div></div></div>
-      </div>
-    </body></html>`;
-  const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml)}`;
-  tab = window.open(dataUrl, "_blank", "noopener,noreferrer");
-} catch (e) {
-  tab = null;
-}
-
+          let tab = null;
+          try {
+            const loadingHtml = `<html><head><title>Cargando...</title><style>body{background:#f3f4f6;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif}div{text-align:center;color:#555}</style></head><body><div>Cargando archivo...</div></body></html>`;
+            const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml)}`;
+            tab = window.open(dataUrl, "_blank", "noopener,noreferrer");
+          } catch (e) { tab = null; }
 
           const directUrl = String(pickAny(doc, ["URL","Url","Enlace","Link","FileUrl","Archivo URL"]) || "").trim();
           if (/^https?:\/\//i.test(directUrl)) {
-            if (tab && !tab.closed) tab.location.href = directUrl;
-            else openUrlInNewTab(directUrl);
+            if (tab && !tab.closed) tab.location.href = directUrl; else openUrlInNewTab(directUrl);
             return;
           }
 
@@ -1305,70 +1203,41 @@ try {
 
           try {
             setDownloadingId(openKey);
-
             if (anexoId) {
               try {
                 const res = await runServer("getAnexoDownload", { anexoId });
-
-                if (res?.mode === "base64") {
-                  openFromBase64(res.base64, res.mimeType, tab);
-                  return;
-                }
-
-                if (res?.mode === "url" && res.url) {
-                  if (tab && !tab.closed) tab.location.href = res.url;
-                  else openUrlInNewTab(res.url);
-                  return;
-                }
-              } catch (serverErr) {
-                console.warn("Backend getAnexoDownload falló, usando fallback AppSheet:", serverErr);
-              }
+                if (res?.mode === "base64") { openFromBase64(res.base64, res.mimeType, tab); return; }
+                if (res?.mode === "url" && res.url) { if (tab && !tab.closed) tab.location.href = res.url; else openUrlInNewTab(res.url); return; }
+              } catch (serverErr) { console.warn("Backend fail, using fallback:", serverErr); }
             }
-
             const fallbackUrl = buildAppSheetFileUrl(pathValue);
-            if (fallbackUrl) {
-              if (tab && !tab.closed) tab.location.href = fallbackUrl;
-              else openUrlInNewTab(fallbackUrl);
-              return;
-            }
-
-            throw new Error("No se pudo determinar la ruta/URL del anexo.");
+            if (fallbackUrl) { if (tab && !tab.closed) tab.location.href = fallbackUrl; else openUrlInNewTab(fallbackUrl); return; }
+            throw new Error("No se pudo determinar la ruta del anexo.");
           } catch (e) {
             console.error(e);
-       if (tab && !tab.closed) {
-  const errHtml = `
-    <html><head><title>Error</title><meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <style>body{font-family:Roboto,system-ui;background:#f3f4f6;margin:0}
-    .c{max-width:520px;margin:12vh auto;background:#fff;padding:22px;border-radius:14px}
-    .t{font-weight:800;color:#b00020;margin:0 0 8px}
-    pre{white-space:pre-wrap;background:#111827;color:#fff;padding:12px;border-radius:10px;font-size:12px}</style></head>
-    <body><div class="c"><p class="t">No se pudo abrir el anexo</p>
-    <pre>${String(e?.message || e)}</pre></div></body></html>`;
-  tab.location.replace(`data:text/html;charset=utf-8,${encodeURIComponent(errHtml)}`);
-} else {
-  alert("❌ No fue posible abrir el anexo: " + (e.message || e));
-}
-
-          } finally {
-            setDownloadingId(null);
-          }
+            if (tab && !tab.closed) tab.close();
+            alert("❌ No fue posible abrir el anexo: " + (e.message || e));
+          } finally { setDownloadingId(null); }
         };
 
         useEffect(() => {
-          setLoading(true);
-          runServer("getRequestDetail", { id: requestId })
-            .then((res) => {
-              setData({
-                header: res.header || preloadedData,
-                services: res.services || [],
-                history: res.history || [],
-                docs: res.documents || [],
-              });
-            })
-            .catch((e) => !preloadedData && setError(e.message))
-            .finally(() => setLoading(false));
-        }, [requestId]);
+          // Si ya tenemos datos de caché, no bloqueamos la UI, pero podemos actualizar en segundo plano si quieres
+          // O simplemente confiamos en el caché. Para robustez, consultamos si no hay caché.
+          if (!cache) {
+            setLoading(true);
+            runServer("getRequestDetail", { id: requestId })
+              .then((res) => {
+                setData({
+                  header: res.header || preloadedData,
+                  services: res.services || [],
+                  history: res.history || [],
+                  docs: res.documents || [],
+                });
+              })
+              .catch((e) => !preloadedData && setError(e.message))
+              .finally(() => setLoading(false));
+          }
+        }, [requestId, cache]); // Solo re-ejecuta si cambia el ID o si no había caché inicialmente
 
         if (!data && loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
         if (error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
@@ -1382,18 +1251,10 @@ try {
         };
 
         const pick = (obj, keys) => {
-          for (const k of keys) {
-            const v = obj?.[k];
-            if (v !== undefined && v !== null && String(v).trim() !== "") return v;
-          }
-          return "";
+          for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && String(v).trim() !== "") return v; } return "";
         };
 
-        const fmtDate = (v) => {
-          if (!v) return "-";
-          const d = new Date(v);
-          return isNaN(d) ? String(v) : d.toLocaleString();
-        };
+        const fmtDate = (v) => { if (!v) return "-"; const d = new Date(v); return isNaN(d) ? String(v) : d.toLocaleString(); };
 
         const Card = ({ title, children, count }) => (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden">
@@ -1410,7 +1271,6 @@ try {
             <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm">
               <Icon name="ChevronRight" className="rotate-180" size={16} /> Volver
             </button>
-
             <div className="grid grid-cols-12 gap-6">
               <div className="col-span-12 md:col-span-8 space-y-4">
                 <Card title="Detalle Técnico">
@@ -1427,43 +1287,29 @@ try {
                   </div>
                 </Card>
               </div>
-
               <div className="col-span-12 md:col-span-4 space-y-4">
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
                   <div className="text-gray-400 text-xs font-bold mb-1">ESTADO TICKET</div>
-                  <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header?.["Estado"])}`}>
-                    {data.header?.["Estado"] || "Desconocido"}
-                  </div>
-                  <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">
-                    Ticket #: {data.header?.["Ticket G4S"] || data.header?.["ID Solicitud"] || "N/A"}
-                  </div>
+                  <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header?.["Estado"])}`}>{data.header?.["Estado"] || "Desconocido"}</div>
+                  <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">Ticket #: {data.header?.["Ticket G4S"] || data.header?.["ID Solicitud"] || "N/A"}</div>
                 </div>
-
                 {loading && (
                   <div className="text-xs text-blue-600 mb-2 flex items-center gap-2">
                     <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Actualizando detalles...
                   </div>
                 )}
-
                 <Card title="Observaciones" count={data.services.length}>
                   {data.services.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
-                      {data.services.map((s, i) => {
-                        const txt = pick(s, ["Observación", "Observacion"]);
-                        const fecha = pick(s, ["Fecha Actualización", "Fecha Actualizacion"]);
-                        return (
-                          <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
-                            <span className="font-medium text-gray-700">{txt || "(Sin detalle)"}</span>
-                            <span className="text-[10px] text-gray-400">{fmtDate(fecha)}</span>
-                          </li>
-                        );
-                      })}
+                      {data.services.map((s, i) => (
+                        <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
+                          <span className="font-medium text-gray-700">{pick(s, ["Observación", "Observacion"]) || "(Sin detalle)"}</span>
+                          <span className="text-[10px] text-gray-400">{fmtDate(pick(s, ["Fecha Actualización", "Fecha Actualizacion"]))}</span>
+                        </li>
+                      ))}
                     </ul>
-                  ) : (
-                    <div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>
-                  )}
+                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>)}
                 </Card>
-
                 <Card title="Anexos" count={data.docs.length}>
                   {data.docs.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
@@ -1471,62 +1317,40 @@ try {
                         const nombre = pick(doc, ["Nombre"]);
                         const tipo = pick(doc, ["Tipo anexo"]);
                         const fecha = pick(doc, ["Fecha Actualización", "Fecha Actualizacion"]);
-
                         const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID", "ID Solicitudes anexos "]) || "").trim();
-                        const pathValue = String(pickAny(doc, ["Archivo", "Archivo ", "Foto", "Dibujo", "QR", "URL", "Url", "Enlace", "Link", "FileUrl", "Archivo URL"]) || "").trim();
-
+                        const pathValue = String(pickAny(doc, ["Archivo", "Archivo ", "Foto"]) || "").trim();
                         const openKey = anexoId || `row_${i}`;
                         const isDownloading = openKey && downloadingId === openKey;
                         const canOpen = Boolean(anexoId || pathValue);
-
                         return (
                           <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
                             <div className="text-red-500"><Icon name="FileText" size={16} /></div>
-
                             <div className="flex-1 overflow-hidden">
                               <div className="text-gray-700 text-xs truncate font-medium">{nombre || "Documento"}</div>
                               <div className="text-[10px] text-gray-400">{tipo || "Adjunto"} · {fmtDate(fecha)}</div>
                             </div>
-
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc, openKey); }}
                               disabled={!canOpen || isDownloading}
-                              title={!canOpen ? "Sin ruta/ID para abrir" : "Abrir en otra pestaña"}
-                              className={`ml-2 px-2 py-1 text-[10px] font-bold rounded border transition flex items-center gap-1 ${
-                                (!canOpen || isDownloading)
-                                  ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                                  : "bg-white text-appBlue border-gray-200 hover:bg-blue-50"
-                              }`}
+                              className={`ml-2 px-2 py-1 text-[10px] font-bold rounded border transition flex items-center gap-1 ${(!canOpen || isDownloading) ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-appBlue hover:bg-blue-50"}`}
                             >
-                              {isDownloading ? (
-                                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                              ) : (
-                                <Icon name="Download" size={12} />
-                              )}
-                              Abrir
+                              {isDownloading ? <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div> : <Icon name="Download" size={12} />} Abrir
                             </button>
                           </li>
                         );
                       })}
                     </ul>
-                  ) : (
-                    <div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>
-                  )}
+                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>)}
                 </Card>
-
                 <Card title="Historial" count={data.history.length}>
                   <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                    {data.history.map((h, i) => {
-                      const estado = pick(h, ["Estado actual"]);
-                      const fecha = pick(h, ["Fecha Actualización", "Fecha Actualizacion"]);
-                      return (
-                        <li key={i} className="px-4 py-2 hover:bg-gray-50">
-                          <div className="text-xs font-bold text-gray-700">{estado || "Cambio de Estado"}</div>
-                          <div className="text-[10px] text-gray-400">{fmtDate(fecha)}</div>
-                        </li>
-                      );
-                    })}
+                    {data.history.map((h, i) => (
+                      <li key={i} className="px-4 py-2 hover:bg-gray-50">
+                        <div className="text-xs font-bold text-gray-700">{pick(h, ["Estado actual"]) || "Cambio de Estado"}</div>
+                        <div className="text-[10px] text-gray-400">{fmtDate(pick(h, ["Fecha Actualización", "Fecha Actualizacion"]))}</div>
+                      </li>
+                    ))}
                   </ul>
                 </Card>
               </div>
@@ -1549,14 +1373,9 @@ try {
           let result = requests;
           if (filter === "Abierto") result = result.filter((req) => (req["Estado"] || "").trim() !== "Cerrado");
           if (filter === "Cerrado") result = result.filter((req) => (req["Estado"] || "").trim() === "Cerrado");
-
           if (search) {
             const q = search.toLowerCase();
-            result = result.filter((req) =>
-              (String(req["Ticket G4S"]) + String(req["ID Solicitud"]) + String(req["Estado"]) + String(req["Clasificación"]))
-                .toLowerCase()
-                .includes(q)
-            );
+            result = result.filter((req) => (String(req["Ticket G4S"]) + String(req["ID Solicitud"]) + String(req["Estado"]) + String(req["Clasificación"])).toLowerCase().includes(q));
           }
           setFilteredRequests(result);
           setPage(1);
@@ -1570,31 +1389,18 @@ try {
             <div className="flex justify-between items-center mb-4">
               <div className="relative w-64">
                 <div className="absolute left-3 top-2.5 text-gray-400"><Icon name="Search" size={16} /></div>
-                <input
-                  type="text"
-                  className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue"
-                  placeholder="Buscar ticket..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <input type="text" className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue" placeholder="Buscar ticket..." value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-
               <div className="flex items-center gap-2">
-                <button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white" title="Actualizar Datos">
-                  <Icon name="RefreshCw" size={18} className={refreshing ? "animate-spin text-blue-600" : ""} />
-                </button>
+                <button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white" title="Actualizar Datos"><Icon name="RefreshCw" size={18} className={refreshing ? "animate-spin text-blue-600" : ""} /></button>
                 <span className="text-xs font-bold text-gray-500">Total: {filteredRequests.length}</span>
               </div>
             </div>
-
             <div className="flex gap-2 mb-4">
               {["Todo", "Abierto", "Cerrado"].map((f) => (
-                <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter === f ? "bg-gray-800 text-white" : "bg-white border text-gray-600"}`}>
-                  {f}
-                </button>
+                <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter === f ? "bg-gray-800 text-white" : "bg-white border text-gray-600"}`}>{f}</button>
               ))}
             </div>
-
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex-1 flex flex-col">
               <div className="grid grid-cols-12 gap-2 p-3 border-b bg-gray-50 text-xs font-bold text-gray-400 uppercase">
                 <div className="col-span-2">Ticket G4S</div>
@@ -1603,41 +1409,24 @@ try {
                 <div className="col-span-3">Clasificación</div>
                 <div className="col-span-2 text-right">Estado</div>
               </div>
-
               <div className="overflow-y-auto flex-1">
-                {paginatedData.length === 0 ? (
-                  <div className="p-10 text-center text-gray-400 italic">No hay tickets coincidentes.</div>
-                ) : (
+                {paginatedData.length === 0 ? <div className="p-10 text-center text-gray-400 italic">No hay tickets coincidentes.</div> :
                   paginatedData.map((req, i) => (
-                    <div
-                      key={i}
-                      onClick={() => { setSelectedRequest(req); setView("detail"); }}
-                      className="grid grid-cols-12 gap-2 p-3 border-b hover:bg-gray-50 cursor-pointer text-sm items-center transition-colors"
-                    >
+                    <div key={i} onClick={() => { setSelectedRequest(req); setView("detail"); }} className="grid grid-cols-12 gap-2 p-3 border-b hover:bg-gray-50 cursor-pointer text-sm items-center transition-colors">
                       <div className="col-span-2 font-bold text-blue-600 truncate">{req["Ticket G4S"] || req["ID Solicitud"] || "N/A"}</div>
                       <div className="col-span-2 text-xs text-gray-500">{req["Fecha creación cliente"] ? new Date(req["Fecha creación cliente"]).toLocaleDateString() : "-"}</div>
                       <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req["Usuario Actualización"] || req["Responsable"] || "Desconocido"}</span></div>
-                      <div className="col-span-3 flex flex-col">
-                        <span className="truncate font-medium">{req["Clasificación"] || "General"}</span>
-                        <span className="text-[10px] text-gray-400 uppercase">{req["Prioridad Solicitud"] || "-"}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req["Estado"])}`}>{req["Estado"] || "Desconocido"}</span>
-                      </div>
+                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req["Clasificación"] || "General"}</span><span className="text-[10px] text-gray-400 uppercase">{req["Prioridad Solicitud"] || "-"}</span></div>
+                      <div className="col-span-2 text-right"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req["Estado"])}`}>{req["Estado"] || "Desconocido"}</span></div>
                     </div>
                   ))
-                )}
+                }
               </div>
-
               {totalPages > 1 && (
                 <div className="p-2 border-t flex justify-between bg-gray-50 items-center">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">
-                    Anterior
-                  </button>
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Anterior</button>
                   <span className="text-xs font-bold text-gray-600">Pág {page} de {totalPages}</span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">
-                    Siguiente
-                  </button>
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Siguiente</button>
                 </div>
               )}
             </div>
@@ -1656,15 +1445,19 @@ try {
         const [toast, setToast] = useState(null);
         const [isCheckingCache, setIsCheckingCache] = useState(true);
 
+        // ✅ Cache de detalles para carga instantánea
+        const [detailsCache, setDetailsCache] = useState({});
+
+        // ✅ NUEVO: Reporte de Sincronización
+        const [syncReport, setSyncReport] = useState(null);
+
         const showToast = (msg) => setToast(msg);
 
         const loadFromCache = (email) => {
           if (!email) return null;
           const safeEmail = email.toLowerCase();
           const cached = localStorage.getItem(`cache_data_it_${safeEmail}`);
-          if (cached) {
-            try { return JSON.parse(cached); } catch (e) { localStorage.removeItem(`cache_data_it_${safeEmail}`); }
-          }
+          if (cached) { try { return JSON.parse(cached); } catch (e) { localStorage.removeItem(`cache_data_it_${safeEmail}`); } }
           return null;
         };
 
@@ -1672,10 +1465,7 @@ try {
           if (!email) return null;
           const safeEmail = email.toLowerCase();
           const timestamp = Date.now();
-          try {
-            localStorage.setItem(`cache_data_it_${safeEmail}`, JSON.stringify({ data, timestamp }));
-            return timestamp;
-          } catch (e) { console.error("Full Cache", e); return null; }
+          try { localStorage.setItem(`cache_data_it_${safeEmail}`, JSON.stringify({ data, timestamp })); return timestamp; } catch (e) { console.error("Full Cache", e); return null; }
         };
 
         const loadContextFromCache = (email) => {
@@ -1686,32 +1476,71 @@ try {
         const refreshData = async (manual = false, emailOverride = null) => {
           const emailToUse = emailOverride || (userCtx ? userCtx.email : null);
           if (!emailToUse || isSyncing) return;
-
           setIsSyncing(true);
-          if (manual) showToast("Buscando actualizaciones...");
+
+          if (manual) {
+            setSyncReport(null); // Resetear reporte
+            showToast("Buscando actualizaciones...");
+          }
 
           try {
             const newData = await runServer("getRequests", {});
             setInitialData(newData);
             const ts = saveToCache(emailToUse, newData);
             if (ts) setLastSync(ts);
-            if (manual) showToast("Datos actualizados.");
-          } catch (e) {
-            console.error("Sync Error", e);
-            if (manual) showToast("Error de conexión: " + e.message);
-          } finally {
-            setIsSyncing(false);
-          }
+
+            // ✅ Actualizamos primera parte del reporte (Solicitudes)
+            setSyncReport({ requests: newData.data.length, obs: 0, hist: 0, anx: 0 });
+
+            if (manual) showToast("Lista actualizada, descargando detalles...");
+          } catch (e) { console.error("Sync Error", e); if (manual) showToast("Error de conexión: " + e.message); } finally { setIsSyncing(false); }
         };
+
+        // ✅ Efecto para precargar detalles y actualizar el reporte
+        useEffect(() => {
+          if (initialData?.data?.length > 0) {
+            // Tomamos los primeros 50 tickets para precargar
+            const idsToFetch = initialData.data.slice(0, 50).map(r => r["ID Solicitud"]).filter(id => id && !detailsCache[id]);
+
+            if (idsToFetch.length > 0) {
+              console.log(`🚀 Precargando detalles para ${idsToFetch.length} tickets...`);
+              runServer("getBatchRequestDetails", { ids: idsToFetch })
+                .then(batchResult => {
+                  setDetailsCache(prev => ({ ...prev, ...batchResult }));
+                  console.log("✅ Precarga completada.");
+
+                  // ✅ Calculamos totales para el reporte
+                  let obsCount = 0;
+                  let histCount = 0;
+                  let anxCount = 0;
+                  
+                  Object.values(batchResult).forEach(item => {
+                    if (item.services) obsCount += item.services.length;
+                    if (item.history) histCount += item.history.length;
+                    if (item.documents) anxCount += item.documents.length;
+                  });
+
+                  // ✅ Actualizamos el reporte existente
+                  setSyncReport(prev => ({
+                      ...prev,
+                      requests: initialData.data.length,
+                      obs: obsCount,
+                      hist: histCount,
+                      anx: anxCount
+                  }));
+
+                })
+                .catch(err => console.warn("Error precargando:", err));
+            }
+          }
+        }, [initialData]);
 
         const handleLoginAttempt = async (email) => {
           let targetEmail = email ? email.toLowerCase() : localStorage.getItem("last_active_email_it");
-
           let cacheUsed = false;
           if (targetEmail) {
             const cachedCtx = loadContextFromCache(targetEmail);
             const cachedContent = loadFromCache(targetEmail);
-
             if (cachedCtx && cachedContent?.data) {
               console.log(`⚡ Instant Load: ${targetEmail}`);
               setUserCtx(cachedCtx);
@@ -1721,90 +1550,53 @@ try {
               cacheUsed = true;
             }
           }
-
           setIsCheckingCache(false);
           if (!cacheUsed) setIsSyncing(true);
-
           try {
             const serverCtx = await runServer("getUserContext", {});
             const realEmail = (serverCtx.email || "").toLowerCase();
-
-            if (!serverCtx.isValidUser) {
-              throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
-            }
-
+            if (!serverCtx.isValidUser) throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
             localStorage.setItem("last_active_email_it", realEmail);
             localStorage.setItem(`cache_context_it_${realEmail}`, JSON.stringify(serverCtx));
             setUserCtx(serverCtx);
-
             if (!cacheUsed) {
               const reqs = await runServer("getRequests", {});
               setInitialData(reqs);
               const ts = saveToCache(realEmail, reqs);
               setLastSync(ts);
               setView("home");
-            } else {
-              refreshData(false, realEmail);
-            }
-          } catch (e) {
-            console.error("Login Error", e);
-            if (!cacheUsed) throw e;
-            alert("Error de conexión: " + e.message);
-          } finally {
-            setIsSyncing(false);
-          }
+            } else { refreshData(false, realEmail); }
+          } catch (e) { console.error("Login Error", e); if (!cacheUsed) throw e; alert("Error de conexión: " + e.message); } finally { setIsSyncing(false); }
         };
 
-        useEffect(() => {
-          const lastEmail = localStorage.getItem("last_active_email_it");
-          if (lastEmail) handleLoginAttempt(null);
-          else setIsCheckingCache(false);
-        }, []);
-
-        useEffect(() => {
-          if (!userCtx) return;
-          const timer = setInterval(() => refreshData(false), 300000);
-          return () => clearTimeout(timer);
-        }, [userCtx]);
+        useEffect(() => { const lastEmail = localStorage.getItem("last_active_email_it"); if (lastEmail) handleLoginAttempt(null); else setIsCheckingCache(false); }, []);
+        useEffect(() => { if (!userCtx) return; const timer = setInterval(() => refreshData(false), 300000); return () => clearTimeout(timer); }, [userCtx]);
 
         if (!userCtx) return <LoginView onSuccess={() => handleLoginAttempt(null)} isCheckingCache={isCheckingCache} />;
 
         return (
           <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
-            <Sidebar
-              currentView={view}
-              setView={setView}
-              onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }}
-              userContext={userCtx}
-              lastSync={lastSync}
-              isSyncing={isSyncing}
-            />
-
+            <Sidebar currentView={view} setView={setView} onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }} userContext={userCtx} lastSync={lastSync} isSyncing={isSyncing} />
             <div className="flex-1 ml-64 overflow-y-auto">
               {view === "home" ? (
                 <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} />
               ) : view === "detail" && selectedRequest ? (
-                <RequestDetail requestId={selectedRequest["ID Solicitud"]} preloadedData={selectedRequest} onBack={() => setView("history")} />
+                <RequestDetail requestId={selectedRequest["ID Solicitud"]} preloadedData={selectedRequest} cachedDetails={detailsCache} onBack={() => setView("history")} />
               ) : view === "create" ? (
                 <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />
               ) : view === "config" ? (
-                <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} lastSync={lastSync} />
+                <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} lastSync={lastSync} syncReport={syncReport} />
               ) : (
                 <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />
               )}
             </div>
-
             {toast && <Toast message={toast} onClose={() => setToast(null)} />}
           </div>
         );
       };
 
       const root = ReactDOM.createRoot(document.getElementById("root"));
-      root.render(
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      );
+      root.render(<ErrorBoundary><App /></ErrorBoundary>);
     </script>
   </body>
 </html>

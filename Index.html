@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>G4S Ticket Tracker</title>
 
+    <!-- React & Tailwind -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -22,16 +23,23 @@
     </script>
 
     <style>
+      /* Scrollbar */
       ::-webkit-scrollbar { width: 8px; }
       ::-webkit-scrollbar-track { background: #f1f1f1; }
       ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+      
       body { font-family: Roboto, system-ui, -apple-system, Segoe UI, sans-serif; background-color: #f3f4f6; }
+      
+      /* Animations */
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      
       .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
       @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      
       .toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; font-size: 14px; animation: slideUp 0.3s ease-out; }
       @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      
       .sync-indicator { font-size: 10px; color: #666; display: flex; align-items: center; gap: 4px; }
       .spin-slow { animation: spin 2s linear infinite; }
       @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -41,11 +49,17 @@
       .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.5rem; font-size: 0.875rem; transition: all 0.2s; outline: none; background: white; }
       .input-field:focus { border-color: #D32F2F; box-shadow: 0 0 0 1px #D32F2F; }
       .section-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin-bottom: 1rem; margin-top: 1.5rem; }
-      .btn-option { border: 1px solid #d1d5db; padding: 0.5rem 1rem; font-size: 0.875rem; color: #4b5563; background: white; transition: all 0.2s; }
-      .btn-option:first-child { border-top-left-radius: 0.25rem; border-bottom-left-radius: 0.25rem; }
-      .btn-option:last-child { border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; }
-      .btn-option.selected { background-color: #f3f4f6; border-color: #9ca3af; font-weight: 600; color: #111827; }
+      
+      /* Botones de opción */
+      .btn-option { border: 1px solid #d1d5db; padding: 0.5rem 1rem; font-size: 0.875rem; color: #4b5563; background: white; transition: all 0.2s; white-space: nowrap; margin-right: -1px; margin-bottom: 4px; }
+      .btn-option:hover { background-color: #f9fafb; z-index: 10; position: relative; }
+      .btn-option.selected { background-color: #f3f4f6; border-color: #9ca3af; font-weight: 600; color: #111827; z-index: 20; position: relative; }
       .btn-option.selected-red { background-color: #D32F2F; border-color: #D32F2F; color: white; }
+      
+      /* Ajuste de bordes para grupos */
+      .group-start { border-top-left-radius: 0.25rem; border-bottom-left-radius: 0.25rem; }
+      .group-end { border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; }
+      .group-single { border-radius: 0.25rem; }
     </style>
   </head>
 
@@ -55,24 +69,64 @@
     <script type="text/babel">
       const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-      // --- COMUNICACIÓN CON APPS SCRIPT ---
+      // --- MOCK DATA PARA PRUEBAS LOCALES ---
+      const MOCK_DATA = {
+        userContext: {
+          email: "usuario.demo@g4s.com",
+          role: "Usuario",
+          isValidUser: true,
+          isAdmin: false,
+          allowedClientIds: ["SEDE-001", "SEDE-002"],
+          assignedCustomerNames: ["Banco Demo"], 
+          clientNames: { "SEDE-001": "Sede Principal", "SEDE-002": "Sucursal Norte" }
+        },
+        requests: [
+          { "ID Solicitud": "REQ-001", "Ticket G4S": "G10000123", "Estado": "Abierto", "Fecha creación cliente": new Date().toISOString(), "Clasificación": "Hardware", "Prioridad Solicitud": "Alta", "Usuario Actualización": "usuario.demo@g4s.com", "Solicitud": "Fallo en pantalla", "ID Sede": "SEDE-001", "Observación": "Pantalla negra intermitente" },
+          { "ID Solicitud": "REQ-002", "Ticket G4S": "G10000124", "Estado": "Cerrado", "Fecha creación cliente": new Date(Date.now() - 86400000).toISOString(), "Clasificación": "Software", "Prioridad Solicitud": "Media", "Usuario Actualización": "admin@g4s.com", "Solicitud": "Instalación Office", "ID Sede": "SEDE-002", "Observación": "Licencia requerida" }
+        ],
+        classificationOptions: ["Visita técnica", "Visita comercial", "Garantia", "Laboratorio", "HSE"],
+        details: {
+            "REQ-001": { services: [{ "Observación": "Técnico asignado", "Fecha Actualización": new Date().toISOString() }], history: [], documents: [], activos: [] }
+        }
+      };
+
+      // --- SERVER BRIDGE ---
       const runServer = (endpoint, payload = {}) => {
         return new Promise((resolve, reject) => {
-          if (typeof google === "undefined" || !google.script) {
-            reject(new Error("Debes ejecutar esta aplicación desde Google Apps Script (WebApp)."));
-            return;
+          if (typeof google !== "undefined" && google.script) {
+            google.script.run
+              .withSuccessHandler((res) => {
+                if (res && res.error) reject(new Error(res.message || "Error del servidor."));
+                else resolve(res);
+              })
+              .withFailureHandler((err) => reject(err))
+              .apiHandler({ endpoint, payload });
+          } else {
+            console.warn(`⚠️ [MOCK MODE] Llamada a servidor simulada: ${endpoint}`, payload);
+            setTimeout(() => {
+              switch (endpoint) {
+                case 'getUserContext': resolve(MOCK_DATA.userContext); break;
+                case 'getRequests': resolve({ data: MOCK_DATA.requests, total: MOCK_DATA.requests.length }); break;
+                case 'getRequestDetail': resolve({ header: MOCK_DATA.requests.find(r => r["ID Solicitud"] === payload.id) || MOCK_DATA.requests[0], services: [], history: [], documents: [], activos: [] }); break;
+                case 'getBatchRequestDetails': 
+                  const batchRes = {};
+                  (payload.ids || []).forEach(id => batchRes[id] = { services: [], history: [], documents: [], activos: [] });
+                  resolve(batchRes); 
+                  break;
+                case 'createRequest': resolve({ success: true, solicitudId: "NEW-UUID", ticketG4S: "G-NEW-123", row: { "ID Solicitud": "NEW-UUID", "Ticket G4S": "G-NEW-123", "Estado": "Abierto", ...payload, "Fecha creación cliente": new Date().toISOString() } }); break;
+                case 'uploadAnexo': resolve({ success: true }); break;
+                case 'getActivosCatalog': resolve({ data: [] }); break;
+                case 'getActivoByQr': resolve({ found: false }); break;
+                case 'createSolicitudActivo': resolve({ success: true }); break;
+                case 'getClassificationOptions': resolve(MOCK_DATA.classificationOptions); break;
+                default: resolve({});
+              }
+            }, 800);
           }
-          google.script.run
-            .withSuccessHandler((res) => {
-              if (res && res.error) reject(new Error(res.message || "Error del servidor."));
-              else resolve(res);
-            })
-            .withFailureHandler((err) => reject(err))
-            .apiHandler({ endpoint, payload });
         });
       };
 
-      // --- ICONOS (Agregado Database) ---
+      // --- ICONOS ---
       const Icon = ({ name, size = 20, className = "" }) => {
         const icons = {
           Home: (<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
@@ -95,7 +149,8 @@
           Monitor: (<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>),
           X: (<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>),
           CheckBig: (<><polyline points="20 6 9 17 4 12"/></>),
-          Database: (<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>)
+          Database: (<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>),
+          Trash2: (<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>)
         };
         return (
           <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
@@ -178,8 +233,8 @@
                   </div>
                   <p className="text-sm text-gray-600">Detalle:</p>
                   <pre className="mt-2 text-xs bg-gray-50 border rounded p-3 overflow-auto">{this.state.message}</pre>
-                  <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700">
-                    Recargar
+                  <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="mt-4 px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700">
+                    Borrar Caché y Recargar
                   </button>
                 </div>
               </div>
@@ -190,19 +245,18 @@
       }
 
       // --- LOGIN VIEW ---
-      const LoginView = ({ onSuccess, isCheckingCache }) => {
+      const LoginView = ({ onSuccess, isCheckingCache, externalError, onClearError }) => {
         const [loading, setLoading] = useState(false);
-        const [errorMsg, setErrorMsg] = useState(null);
+        const [localError, setLocalError] = useState(null);
+
+        // Combinamos errores locales con los externos
+        const activeError = externalError || localError;
 
         if (isCheckingCache) {
           return (
             <div className="flex h-screen items-center justify-center bg-gray-100">
               <div className="flex flex-col items-center">
-                <img
-                  src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
-                  alt="G4S"
-                  className="h-16 w-auto mb-4 opacity-50 grayscale"
-                />
+                <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-16 w-auto mb-4 opacity-50 grayscale" />
               </div>
             </div>
           );
@@ -210,58 +264,61 @@
 
         const login = async () => {
           setLoading(true);
-          setErrorMsg(null);
+          setLocalError(null);
+          if (onClearError) onClearError(); // Limpiamos error previo
+          
           try {
             await onSuccess(null);
           } catch (e) {
             console.error(e);
             setLoading(false);
-            setErrorMsg(e.message || "Error desconocido al iniciar sesión.");
+            setLocalError(e.message || "Error desconocido al iniciar sesión.");
           }
         };
 
         return (
-          <div className="flex flex-col h-screen bg-gray-100">
-            <div className="bg-appRed h-2 w-full"></div>
+          <div className="flex flex-col h-screen bg-gray-100 font-sans">
             <div className="flex-1 flex items-center justify-center p-4">
-              <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+              <div className="bg-white p-10 rounded-2xl shadow-xl max-w-md w-full text-center relative overflow-hidden">
+                
+                {/* Logo G4S */}
                 <div className="flex justify-center mb-6">
-                  <img
-                    src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
-                    alt="G4S Logo"
-                    className="h-20 w-auto object-contain"
-                  />
+                  <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-16 w-auto object-contain" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">Ticket Tracker</h1>
-                <p className="text-gray-500 mb-8 text-sm">Gestión de Tecnología & Servicios</p>
 
-                {errorMsg && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-left animate-fade-in">
-                    <Icon name="AlertTriangle" className="text-red-600 flex-shrink-0" size={20} />
-                    <div>
-                      <h4 className="text-sm font-bold text-red-700">Acceso Denegado</h4>
-                      <p className="text-xs text-red-600 mt-1">{errorMsg}</p>
+                <h1 className="text-2xl font-bold text-gray-800 mb-1 tracking-tight">Ticket Tracker</h1>
+                <p className="text-gray-400 mb-8 text-sm font-medium">Gestión de Tecnología & Servicios</p>
+
+                {/* ALERTA DE ERROR PERSONALIZADA */}
+                {activeError && (
+                  <div className="mb-8 bg-red-50 border border-red-100 rounded-lg p-4 text-left animate-fade-in">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon name="AlertTriangle" className="text-appRed" size={18} />
+                      <h4 className="text-sm font-bold text-appRed">Acceso Denegado</h4>
                     </div>
+                    <p className="text-xs text-red-600 leading-relaxed ml-6">
+                      {activeError}
+                    </p>
                   </div>
                 )}
 
                 {loading ? (
-                  <div className="py-6">
-                    <div className="w-10 h-10 border-4 border-appRed border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                    <p className="text-xs text-gray-400">Autenticando...</p>
+                  <div className="py-4">
+                    <div className="w-8 h-8 border-4 border-appBlue border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-xs text-gray-400 font-bold">Verificando credenciales...</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <button
                       onClick={login}
-                      className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded flex items-center justify-center gap-2 transition shadow-sm"
+                      className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition shadow-md hover:shadow-lg transform active:scale-95"
                     >
-                      <Icon name="User" size={18} /> Ingresar con Google
+                      <Icon name="User" size={20} /> Ingresar con Google
                     </button>
                   </div>
                 )}
 
-                <div className="mt-8 text-[10px] text-gray-400">© 2025 G4S Secure Solutions.</div>
+                <div className="mt-10 text-[10px] text-gray-300">© 2025 G4S Secure Solutions.</div>
               </div>
             </div>
           </div>
@@ -269,13 +326,18 @@
       };
 
       // --- SIDEBAR ---
-      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSync, isSyncing }) => {
+      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSyncRequests, lastSyncDetails, isSyncing }) => {
         const menuItems = [
           { id: "home", icon: "Home", title: "Inicio" },
           { id: "create", icon: "ClipboardList", title: "Nueva Solicitud" },
           { id: "process", icon: "Monitor", title: "Tickets Activos" },
           { id: "history", icon: "History", title: "Historial Tickets" },
         ];
+
+        // Lógica de visualización del nombre de cliente
+        const clientDisplay = userContext?.assignedCustomerNames?.length > 0 
+          ? userContext.assignedCustomerNames.join(", ") 
+          : (userContext?.isAdmin ? "G4S Global" : "Sin asignar");
 
         return (
           <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-lg z-10 fixed">
@@ -323,8 +385,24 @@
               </div>
             </div>
 
+            {/* SECCIÓN USUARIO Y CLIENTE */}
             <div className="p-4 border-t bg-gray-50">
               <div className="flex flex-col gap-2 mb-3">
+                
+                {/* Info del Cliente */}
+                <div className="flex items-center gap-2 mb-1">
+                   <div className="p-1.5 rounded bg-white border border-gray-200 text-gray-400">
+                     <Icon name="Database" size={14} />
+                   </div>
+                   <div className="overflow-hidden flex-1">
+                    <div className="text-[9px] uppercase font-bold text-gray-400">Cliente Asignado</div>
+                    <div className="text-xs font-bold text-blue-800 truncate w-full" title={clientDisplay}>
+                      {clientDisplay}
+                    </div>
+                   </div>
+                </div>
+
+                {/* Info del Usuario */}
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-full bg-gray-200">
                     <Icon name="User" size={16} className="text-gray-600" />
@@ -337,7 +415,7 @@
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">
+                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1 mt-1">
                   {isSyncing ? (
                     <div className="sync-indicator text-blue-600 font-bold">
                       <Icon name="RefreshCw" size={10} className="spin-slow" /> Actualizando...
@@ -347,9 +425,9 @@
                       <Icon name="CloudLightning" size={10} /> Al día
                     </div>
                   )}
-                  {lastSync && (
+                  {lastSyncRequests && (
                     <span className="text-[9px] text-gray-400">
-                      {new Date(Number(lastSync)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(Number(lastSyncRequests)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   )}
                 </div>
@@ -380,6 +458,33 @@
 
         const [submitting, setSubmitting] = useState(false);
         const [showSuccess, setShowSuccess] = useState(false);
+        
+        // Estado para clasificaciones dinámicas
+        const [classificationOptions, setClassificationOptions] = useState([]);
+        const [loadingOptions, setLoadingOptions] = useState(false);
+
+        // --- FETCH DE CLASIFICACIONES ---
+        useEffect(() => {
+          let mounted = true;
+          setLoadingOptions(true);
+          runServer('getClassificationOptions')
+            .then(opts => {
+               if(mounted && Array.isArray(opts)) {
+                 setClassificationOptions(opts);
+                 // Preseleccionar la primera opción si existe
+                 if (opts.length > 0) setFormData(prev => ({...prev, tipoServicio: opts[0]}));
+               }
+            })
+            .catch(err => console.error("Error fetching classifications", err))
+            .finally(() => mounted && setLoadingOptions(false));
+          
+          return () => { mounted = false; };
+        }, []);
+
+        // --- FECHA EN FORMATO COLOMBIA ---
+        const currentDate = useMemo(() => {
+            return new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", hour12: true });
+        }, []);
 
         // --- ANEXOS ---
         const fileInputRef = useRef(null);
@@ -484,7 +589,7 @@
         const removeAttachment = (id) => setAttachments((prev) => prev.filter((a) => a.id !== id));
         const updateTipo = (id, tipo) => setAttachments((prev) => prev.map((a) => (a.id === id ? { ...a, tipo } : a)));
 
-        const uploadAttachments = async (solicitudId) => {
+       const uploadAttachments = async (solicitudId) => {
           const valid = attachments.filter((a) => a.status === "ready");
           if (valid.length === 0) return;
 
@@ -495,7 +600,24 @@
             try {
               setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "uploading" } : a)));
               const { base64, mimeType } = await fileToBase64(att.file);
-              await runServer("uploadAnexo", { solicitudId, tipoAnexo: att.tipo, fileName: att.file.name, mimeType, base64 });
+              
+              // --- ACTUALIZACIÓN: LIMPIEZA DE NOMBRE ---
+              // 1. Quitar tildes
+              // 2. Cambiar espacios por guiones bajos
+              // 3. Eliminar caracteres raros
+              const safeName = att.file.name
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes (á -> a)
+                .replace(/\s+/g, "_")                              // Espacios -> _
+                .replace(/[^a-zA-Z0-9._-]/g, "");                  // Solo deja letras, números, . _ -
+
+              await runServer("uploadAnexo", { 
+                solicitudId, 
+                tipoAnexo: att.tipo, 
+                fileName: safeName, // Enviamos el nombre limpio
+                mimeType, 
+                base64 
+              });
+              
               setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "done" } : a)));
             } catch (e) {
               setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "error", error: e.message || String(e) } : a)));
@@ -505,7 +627,6 @@
           }
         };
 
-        const currentDate = useMemo(() => new Date().toLocaleString(), []);
         const handleChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
 
         // --- MODAL ACTIVOS ---
@@ -736,7 +857,8 @@
 
           setSubmitting(true);
 
-          const payload = { ...formData, observacion: `[Tipo: ${formData.tipoServicio}] ${formData.observacion}` };
+          // ✅ OBSERVACIÓN SIN CONCATENAR
+          const payload = { ...formData, observacion: formData.observacion };
 
           try {
             const res = await runServer('createRequest', payload);
@@ -860,17 +982,33 @@
 
                 <div>
                   <label className="input-label">Clasificación *</label>
-                  <div className="flex">
-                    {["Visita técnica", "Visita comercial"].map((t) => (
-                      <button
-                        type="button"
-                        key={t}
-                        onClick={() => handleChange("tipoServicio", t)}
-                        className={`btn-option ${formData.tipoServicio === t ? "selected" : ""}`}
-                      >
-                        {t}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap">
+                    {loadingOptions && <span className="text-xs text-gray-400 animate-pulse">Cargando opciones...</span>}
+                    {!loadingOptions && classificationOptions.length === 0 && <span className="text-xs text-red-400">Sin opciones disponibles</span>}
+                    
+                    {/* Render dinámico de opciones */}
+                    {classificationOptions.map((t, idx) => {
+                       // Lógica para redondear bordes si están "pegados" visualmente (estilo grupo)
+                       let radiusClass = "group-single";
+                       
+                       // Si quieres que parezcan unidos:
+                       if (classificationOptions.length > 1) {
+                         if (idx === 0) radiusClass = "group-start";
+                         else if (idx === classificationOptions.length - 1) radiusClass = "group-end";
+                         else radiusClass = "";
+                       }
+                       
+                       return (
+                        <button
+                          type="button"
+                          key={t}
+                          onClick={() => handleChange("tipoServicio", t)}
+                          className={`btn-option ${formData.tipoServicio === t ? "selected" : ""} ${radiusClass}`}
+                        >
+                          {t}
+                        </button>
+                       )
+                    })}
                   </div>
                 </div>
 
@@ -882,16 +1020,24 @@
                 <div>
                   <label className="input-label">Prioridad Solicitud</label>
                   <div className="flex">
-                    {["Baja", "Media", "Alta"].map((p) => (
-                      <button
-                        type="button"
-                        key={p}
-                        onClick={() => handleChange("prioridad", p)}
-                        className={`btn-option ${formData.prioridad === p ? "selected-red" : ""}`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+                    {["Baja", "Media", "Alta"].map((p, idx, arr) => {
+                        let radiusClass = "group-single";
+                        if (arr.length > 1) {
+                            if (idx === 0) radiusClass = "group-start";
+                            else if (idx === arr.length - 1) radiusClass = "group-end";
+                            else radiusClass = "";
+                        }
+                        return (
+                          <button
+                            type="button"
+                            key={p}
+                            onClick={() => handleChange("prioridad", p)}
+                            className={`btn-option ${formData.prioridad === p ? "selected-red" : ""} ${radiusClass}`}
+                          >
+                            {p}
+                          </button>
+                        );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1003,21 +1149,25 @@
         );
       };
 
-      // --- CONFIG VIEW (✅ ACTUALIZADA: REPORTE DE SINCRONIZACIÓN) ---
-      const ConfigurationView = ({ userContext, onForceSync, isSyncing, lastSync, syncReport }) => {
+      // --- CONFIG VIEW ---
+      const ConfigurationView = ({ userContext, onForceSync, onClearCache, isSyncing, lastSyncRequests, lastSyncDetails, syncReport }) => {
         return (
           <div className="p-8 max-w-4xl mx-auto animate-fade-in">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
               <button onClick={onForceSync} disabled={isSyncing} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm">
                 <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} />
-                {isSyncing ? "Sincronizando..." : "Forzar Sincronización"}
+                {isSyncing ? "Sincronizando..." : "Forzar Sincronización Completa"}
               </button>
             </div>
             
-            <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-yellow-50 p-3 rounded border border-yellow-200">
-              <Icon name="Info" size={16} className="text-yellow-600" />
-              <span>{lastSync ? <>Última actualización: <strong>{new Date(Number(lastSync)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong></> : "Aún no se ha realizado ninguna sincronización."}</span>
+            <div className="flex items-center gap-2 mb-2 text-sm text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
+              <Icon name="ClipboardList" size={16} className="text-gray-600" />
+              <span>Sincronización Solicitudes: {lastSyncRequests ? <strong>{new Date(Number(lastSyncRequests)).toLocaleString()}</strong> : "Pendiente"}</span>
+            </div>
+            <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
+              <Icon name="Database" size={16} className="text-gray-600" />
+              <span>Sincronización Tablas Anexas: {lastSyncDetails ? <strong>{new Date(Number(lastSyncDetails)).toLocaleString()}</strong> : "Pendiente"}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1031,13 +1181,16 @@
                     <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1"><Icon name="ShieldCheck" size={12} /> {userContext?.role}</div>
                   </div>
                 </div>
+                <button onClick={onClearCache} className="w-full mt-2 py-2 px-3 bg-red-50 border border-red-200 text-red-600 rounded hover:bg-red-100 text-sm font-bold flex items-center justify-center gap-2 transition">
+                  <Icon name="Trash2" size={14} /> Reiniciar Datos Locales (Reset)
+                </button>
               </div>
 
-              {/* Tarjeta Reporte Sync (Nueva) */}
+              {/* Tarjeta Reporte Sync */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                  <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-700 flex items-center gap-2"><Icon name="Database" size={18} className="text-blue-600" /> Tablas Sincronizadas</h3>
-                  {isSyncing && <span className="text-xs text-blue-600 font-bold animate-pulse">Procesando...</span>}
+                  <h3 className="font-bold text-gray-700 flex items-center gap-2"><Icon name="Database" size={18} className="text-blue-600" /> Datos Locales</h3>
+                  {isSyncing && <span className="text-xs text-blue-600 font-bold animate-pulse">Descargando...</span>}
                 </div>
                 <div className="bg-gray-50 rounded border border-gray-100 overflow-hidden">
                    {syncReport ? (
@@ -1060,7 +1213,7 @@
                       </div>
                     </div>
                    ) : (
-                     <div className="p-4 text-center text-xs text-gray-400 italic">Presiona "Forzar Sincronización" para ver detalles.</div>
+                     <div className="p-4 text-center text-xs text-gray-400 italic">Sin datos. Sincroniza para ver detalles.</div>
                    )}
                 </div>
               </div>
@@ -1069,7 +1222,7 @@
         );
       };
 
-      // --- HOME ---
+      // --- HOME DASHBOARD ---
       const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
         const stats = useMemo(() => {
           const total = requests.length;
@@ -1120,109 +1273,25 @@
         );
       };
 
-      // --- REQUEST DETAIL (✅ OPTIMIZADO: USA CACHÉ) ---
+      // --- REQUEST DETAIL (✅ AHORA CON FORMATO DE FECHA CO) ---
       const RequestDetail = ({ requestId, onBack, preloadedData, cachedDetails }) => {
-        // Inicializamos con datos de caché si existen
         const cache = cachedDetails?.[requestId] || null;
+        
         const [data, setData] = useState(
           cache
-            ? { header: preloadedData, services: cache.services, history: cache.history, docs: cache.documents }
-            : (preloadedData ? { header: preloadedData, services: [], history: [], docs: [] } : null)
+            ? { 
+                header: preloadedData, 
+                services: cache.services || [], 
+                history: cache.history || [], 
+                docs: cache.documents || [], 
+                activos: cache.activos || [] 
+              }
+            : (preloadedData ? { header: preloadedData, services: [], history: [], docs: [], activos: [] } : null)
         );
         const [loading, setLoading] = useState(!cache);
         const [error, setError] = useState(null);
-        const [downloadingId, setDownloadingId] = useState(null);
-
-        const pickAny = (obj, keys) => {
-          if (!obj) return "";
-          const objKeys = Object.keys(obj);
-          for (const k of keys) {
-            const direct = obj?.[k];
-            if (direct !== undefined && direct !== null && String(direct).trim() !== "") return direct;
-            const altKey = objKeys.find((x) => String(x).trim() === String(k).trim());
-            const alt = altKey ? obj?.[altKey] : "";
-            if (alt !== undefined && alt !== null && String(alt).trim() !== "") return alt;
-          }
-          return "";
-        };
-
-        const openUrlInNewTab = (url) => {
-          if (!url) return;
-          const a = document.createElement("a");
-          a.href = url;
-          a.target = "_blank";
-          a.rel = "noopener";
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        };
-
-        const openFromBase64 = (base64, mimeType, tabRef) => {
-          const byteChars = atob(base64);
-          const byteNumbers = new Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
-          const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || "application/octet-stream" });
-          const url = URL.createObjectURL(blob);
-          if (tabRef && !tabRef.closed) tabRef.location.href = url;
-          else openUrlInNewTab(url);
-          setTimeout(() => URL.revokeObjectURL(url), 30000);
-        };
-
-        const APPSHEET_APP_NAME = "AppSolicitudes-5916254";
-        const APPSHEET_TABLE_NAME = "Solicitudes anexos";
-        const APPSHEET_APP_VERSION = "1.000737";
-
-        const buildAppSheetFileUrl = (filePathOrUrl) => {
-          const p = String(filePathOrUrl || "").trim();
-          if (!p) return "";
-          if (/^https?:\/\//i.test(p)) return p;
-          const params = new URLSearchParams();
-          params.set("appName", APPSHEET_APP_NAME);
-          params.set("tableName", APPSHEET_TABLE_NAME);
-          params.set("fileName", p);
-          params.set("appVersion", APPSHEET_APP_VERSION);
-          return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
-        };
-
-        const openAnexo = async (doc, openKey) => {
-          let tab = null;
-          try {
-            const loadingHtml = `<html><head><title>Cargando...</title><style>body{background:#f3f4f6;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif}div{text-align:center;color:#555}</style></head><body><div>Cargando archivo...</div></body></html>`;
-            const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml)}`;
-            tab = window.open(dataUrl, "_blank", "noopener,noreferrer");
-          } catch (e) { tab = null; }
-
-          const directUrl = String(pickAny(doc, ["URL","Url","Enlace","Link","FileUrl","Archivo URL"]) || "").trim();
-          if (/^https?:\/\//i.test(directUrl)) {
-            if (tab && !tab.closed) tab.location.href = directUrl; else openUrlInNewTab(directUrl);
-            return;
-          }
-
-          const anexoId = String(pickAny(doc, ["ID Solicitudes anexos","ID Solicitud anexos","ID Anexo","ID","ID Solicitudes anexos "]) || "").trim();
-          const pathValue = String(pickAny(doc, ["Archivo","Archivo ","Foto","Dibujo","QR"]) || "").trim();
-
-          try {
-            setDownloadingId(openKey);
-            if (anexoId) {
-              try {
-                const res = await runServer("getAnexoDownload", { anexoId });
-                if (res?.mode === "base64") { openFromBase64(res.base64, res.mimeType, tab); return; }
-                if (res?.mode === "url" && res.url) { if (tab && !tab.closed) tab.location.href = res.url; else openUrlInNewTab(res.url); return; }
-              } catch (serverErr) { console.warn("Backend fail, using fallback:", serverErr); }
-            }
-            const fallbackUrl = buildAppSheetFileUrl(pathValue);
-            if (fallbackUrl) { if (tab && !tab.closed) tab.location.href = fallbackUrl; else openUrlInNewTab(fallbackUrl); return; }
-            throw new Error("No se pudo determinar la ruta del anexo.");
-          } catch (e) {
-            console.error(e);
-            if (tab && !tab.closed) tab.close();
-            alert("❌ No fue posible abrir el anexo: " + (e.message || e));
-          } finally { setDownloadingId(null); }
-        };
-
+        
         useEffect(() => {
-          // Si ya tenemos datos de caché, no bloqueamos la UI, pero podemos actualizar en segundo plano si quieres
-          // O simplemente confiamos en el caché. Para robustez, consultamos si no hay caché.
           if (!cache) {
             setLoading(true);
             runServer("getRequestDetail", { id: requestId })
@@ -1232,29 +1301,90 @@
                   services: res.services || [],
                   history: res.history || [],
                   docs: res.documents || [],
+                  activos: res.activos || [] 
                 });
               })
               .catch((e) => !preloadedData && setError(e.message))
               .finally(() => setLoading(false));
           }
-        }, [requestId, cache]); // Solo re-ejecuta si cambia el ID o si no había caché inicialmente
+        }, [requestId, cache]);
 
         if (!data && loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
         if (error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
 
-        const isRelevantField = (key, value) => {
-          if (!value || value === "0" || value === 0) return false;
-          const k = key.toLowerCase();
-          if (k.includes("precio") || k.includes("cobro") || k.includes("id_") || k.includes("related") || k.includes("_rownumber")) return false;
-          if (k === "estado" || k === "id solicitud") return false;
-          return true;
+        const pickAny = (obj, keys) => { if (!obj) return ""; const objKeys = Object.keys(obj); for (const k of keys) { const direct = obj?.[k]; if (direct !== undefined && direct !== null && String(direct).trim() !== "") return direct; const altKey = objKeys.find((x) => String(x).trim() === String(k).trim()); const alt = altKey ? obj?.[altKey] : ""; if (alt !== undefined && alt !== null && String(alt).trim() !== "") return alt; } return ""; };
+        const pick = (obj, keys) => { for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && String(v).trim() !== "") return v; } return ""; };
+        
+        // Formato Colombia
+        const fmtDate = (v) => { 
+            if (!v) return "-"; 
+            const d = new Date(v); 
+            if (isNaN(d.getTime())) return String(v); // Si no es fecha válida, devolver string original
+            return new Intl.DateTimeFormat("es-CO", {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: true,
+                timeZone: "America/Bogota"
+            }).format(d);
+        };
+        
+        // 1. GENERADOR DE URL DE RESPALDO (APPSHEET)
+        const buildAppSheetFileUrl = (filePathOrUrl) => {
+          const p = String(filePathOrUrl || "").trim();
+          if (!p) return "";
+          if (/^https?:\/\//i.test(p)) return p;
+          
+          const params = new URLSearchParams();
+          params.set("appName", "AppSolicitudes-5916254"); 
+          params.set("tableName", "Solicitudes anexos");
+          params.set("fileName", p);
+          params.set("appVersion", "1.000737");
+          
+          return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
         };
 
-        const pick = (obj, keys) => {
-          for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && String(v).trim() !== "") return v; } return "";
-        };
+        // 2. LÓGICA DE APERTURA ROBUSTA (SIMPLIFICADA y MEJORADA)
+        const openAnexo = async (doc) => {
+          const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID"]) || "").trim();
+          let pathValue = String(pickAny(doc, ["Archivo", "Archivo ", "Foto", "Dibujo", "QR"]) || "").trim();
+          const fileName = String(pickAny(doc, ["Nombre"]) || "Anexo").trim();
 
-        const fmtDate = (v) => { if (!v) return "-"; const d = new Date(v); return isNaN(d) ? String(v) : d.toLocaleString(); };
+          // 1. Si no hay path, error
+          if (!pathValue) { alert("Ruta de archivo no encontrada."); return; }
+
+          // 2. Extraer ID de Drive si existe (soporta URLs completas o parciales)
+          const idMatch = pathValue.match(/\/d\/([a-zA-Z0-9_-]+)/) || pathValue.match(/id=([a-zA-Z0-9_-]+)/);
+          
+          if (idMatch && idMatch[1]) {
+            // Es un archivo de Drive: Forzar modo VISUALIZACIÓN (/view)
+            const viewUrl = `https://drive.google.com/file/d/${idMatch[1]}/view`;
+            window.open(viewUrl, "_blank");
+            return;
+          }
+
+          // 3. Si es una ruta relativa (Legacy), pedir URL al backend
+          // Esto maneja los archivos antiguos que se guardaron como "Info/..."
+          try {
+             const res = await runServer("getAnexoDownload", { anexoId });
+             if (res && res.url) {
+                // Si el backend devuelve URL de Drive, asegurar que sea /view
+                const backendIdMatch = res.url.match(/\/d\/([a-zA-Z0-9_-]+)/) || res.url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (backendIdMatch && backendIdMatch[1]) {
+                    window.open(`https://drive.google.com/file/d/${backendIdMatch[1]}/view`, "_blank");
+                } else {
+                    window.open(res.url, "_blank");
+                }
+             } else {
+                // Fallback AppSheet URL generator (solo si todo lo demas falla)
+                const fallbackUrl = buildAppSheetFileUrl(pathValue);
+                window.open(fallbackUrl, "_blank");
+             }
+          } catch(e) {
+             console.warn(e);
+             // Intento final desesperado
+             window.open(pathValue, "_blank"); 
+          }
+        };
 
         const Card = ({ title, children, count }) => (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden">
@@ -1276,11 +1406,16 @@
                 <Card title="Detalle Técnico">
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
                     {Object.entries(data.header || {}).map(([key, value]) => {
-                      if (!isRelevantField(key, value)) return null;
+                      if (!value || value === "0" || key.includes("_rownumber") || key === "Estado" || key === "ID Solicitud") return null;
+                      
+                      // DETECTAR SI ES FECHA Y FORMATEAR
+                      const isDate = key.toLowerCase().includes("fecha");
+                      const displayVal = isDate ? fmtDate(value) : value;
+
                       return (
                         <div key={key} className="border-b border-gray-50 pb-2 last:border-0">
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key.replace(/([A-Z])/g, " $1").trim()}</div>
-                          <div className="text-sm text-gray-700 break-words font-medium">{value}</div>
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key}</div>
+                          <div className="text-sm text-gray-700 break-words font-medium">{displayVal}</div>
                         </div>
                       );
                     })}
@@ -1293,62 +1428,65 @@
                   <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header?.["Estado"])}`}>{data.header?.["Estado"] || "Desconocido"}</div>
                   <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">Ticket #: {data.header?.["Ticket G4S"] || data.header?.["ID Solicitud"] || "N/A"}</div>
                 </div>
-                {loading && (
-                  <div className="text-xs text-blue-600 mb-2 flex items-center gap-2">
-                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Actualizando detalles...
-                  </div>
-                )}
-                <Card title="Observaciones" count={data.services.length}>
-                  {data.services.length > 0 ? (
+                
+                <Card title="Observaciones" count={data.services?.length || 0}>
+                  {data.services && data.services.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
                       {data.services.map((s, i) => (
                         <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
                           <span className="font-medium text-gray-700">{pick(s, ["Observación", "Observacion"]) || "(Sin detalle)"}</span>
-                          <span className="text-[10px] text-gray-400">{fmtDate(pick(s, ["Fecha Actualización", "Fecha Actualizacion"]))}</span>
+                          <span className="text-[10px] text-gray-400">{fmtDate(pick(s, ["Fecha Actualización"]))}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>)}
                 </Card>
-                <Card title="Anexos" count={data.docs.length}>
-                  {data.docs.length > 0 ? (
+
+                <Card title="Activos Asociados" count={data.activos?.length || 0}>
+                  {data.activos && data.activos.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
-                      {data.docs.map((doc, i) => {
-                        const nombre = pick(doc, ["Nombre"]);
-                        const tipo = pick(doc, ["Tipo anexo"]);
-                        const fecha = pick(doc, ["Fecha Actualización", "Fecha Actualizacion"]);
-                        const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID", "ID Solicitudes anexos "]) || "").trim();
-                        const pathValue = String(pickAny(doc, ["Archivo", "Archivo ", "Foto"]) || "").trim();
-                        const openKey = anexoId || `row_${i}`;
-                        const isDownloading = openKey && downloadingId === openKey;
-                        const canOpen = Boolean(anexoId || pathValue);
-                        return (
-                          <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
-                            <div className="text-red-500"><Icon name="FileText" size={16} /></div>
-                            <div className="flex-1 overflow-hidden">
-                              <div className="text-gray-700 text-xs truncate font-medium">{nombre || "Documento"}</div>
-                              <div className="text-[10px] text-gray-400">{tipo || "Adjunto"} · {fmtDate(fecha)}</div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc, openKey); }}
-                              disabled={!canOpen || isDownloading}
-                              className={`ml-2 px-2 py-1 text-[10px] font-bold rounded border transition flex items-center gap-1 ${(!canOpen || isDownloading) ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-appBlue hover:bg-blue-50"}`}
-                            >
-                              {isDownloading ? <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div> : <Icon name="Download" size={12} />} Abrir
-                            </button>
-                          </li>
-                        );
-                      })}
+                      {data.activos.map((a, i) => (
+                        <li key={i} className="px-4 py-2 hover:bg-gray-50">
+                          <div className="flex items-center gap-2 mb-1">
+                             <Icon name="Monitor" size={16} className="text-gray-500" />
+                             <span className="text-xs font-bold text-gray-700">{pick(a, ["Nombre Activo", "Nombre"])}</span>
+                          </div>
+                          <div className="text-[10px] text-gray-500 ml-6">
+                            QR: <span className="font-mono bg-gray-100 px-1 rounded">{pick(a, ["QR", "QR Serial"])}</span>
+                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400 italic">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay activos vinculados.</div>)}
+                </Card>
+                
+                <Card title="Anexos" count={data.docs?.length || 0}>
+                  {data.docs && data.docs.length > 0 ? (
+                    <ul className="divide-y divide-gray-100">
+                      {data.docs.map((doc, i) => (
+                        <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
+                          <div className="text-red-500"><Icon name="FileText" size={16} /></div>
+                          <div className="flex-1 overflow-hidden">
+                            <div className="text-gray-700 text-xs truncate font-medium">{pick(doc, ["Nombre"]) || "Documento"}</div>
+                            <div className="text-[10px] text-gray-400">{pick(doc, ["Tipo anexo"])} · {fmtDate(pick(doc, ["Fecha Actualización"]))}</div>
+                          </div>
+                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc); }} className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50">
+                            Abrir
+                          </button>
+                        </li>
+                      ))}
                     </ul>
                   ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>)}
                 </Card>
-                <Card title="Historial" count={data.history.length}>
+
+                {/* ✅ MODIFICACIÓN EN EL HISTORIAL PARA LEER 'Estado actual' */}
+                <Card title="Historial" count={data.history?.length || 0}>
                   <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                    {data.history.map((h, i) => (
+                    {data.history && data.history.map((h, i) => (
                       <li key={i} className="px-4 py-2 hover:bg-gray-50">
-                        <div className="text-xs font-bold text-gray-700">{pick(h, ["Estado actual"]) || "Cambio de Estado"}</div>
-                        <div className="text-[10px] text-gray-400">{fmtDate(pick(h, ["Fecha Actualización", "Fecha Actualizacion"]))}</div>
+                        <div className="text-xs font-bold text-gray-700">{pick(h, ["Estado actual", "Estado Actual", "Estado"])}</div>
+                        <div className="text-[10px] text-gray-400">{fmtDate(pick(h, ["Fecha Actualización"]))}</div>
                       </li>
                     ))}
                   </ul>
@@ -1437,155 +1575,250 @@
       // --- MAIN APP ---
       const App = () => {
         const [userCtx, setUserCtx] = useState(null);
-        const [initialData, setInitialData] = useState(null);
+        const [initialData, setInitialData] = useState(null); 
+        const [detailsCache, setDetailsCache] = useState({}); 
         const [view, setView] = useState("create");
         const [selectedRequest, setSelectedRequest] = useState(null);
+        
         const [isSyncing, setIsSyncing] = useState(false);
-        const [lastSync, setLastSync] = useState(null);
+        const [syncStep, setSyncStep] = useState(""); 
+        const [lastSyncRequests, setLastSyncRequests] = useState(null);
+        const [lastSyncDetails, setLastSyncDetails] = useState(null);
+        const [syncReport, setSyncReport] = useState(null); 
+        
         const [toast, setToast] = useState(null);
+        const [loginError, setLoginError] = useState(null); 
         const [isCheckingCache, setIsCheckingCache] = useState(true);
-
-        // ✅ Cache de detalles para carga instantánea
-        const [detailsCache, setDetailsCache] = useState({});
-
-        // ✅ NUEVO: Reporte de Sincronización
-        const [syncReport, setSyncReport] = useState(null);
 
         const showToast = (msg) => setToast(msg);
 
+        // --- MANEJO DE LOCALSTORAGE ---
+        const CACHE_KEY_REQUESTS = (email) => `cache_data_it_${email}`;
+        const CACHE_KEY_DETAILS = (email) => `cache_details_it_${email}`;
+        const CACHE_KEY_CONTEXT = (email) => `cache_context_it_${email}`;
+
         const loadFromCache = (email) => {
-          if (!email) return null;
+          if (!email) return { requests: null, details: null, ctx: null };
           const safeEmail = email.toLowerCase();
-          const cached = localStorage.getItem(`cache_data_it_${safeEmail}`);
-          if (cached) { try { return JSON.parse(cached); } catch (e) { localStorage.removeItem(`cache_data_it_${safeEmail}`); } }
-          return null;
+          
+          let requests = null, details = null, ctx = null;
+          try {
+            const r = localStorage.getItem(CACHE_KEY_REQUESTS(safeEmail));
+            if (r) requests = JSON.parse(r);
+            
+            const d = localStorage.getItem(CACHE_KEY_DETAILS(safeEmail));
+            if (d) details = JSON.parse(d);
+
+            const c = localStorage.getItem(CACHE_KEY_CONTEXT(safeEmail));
+            if (c) ctx = JSON.parse(c);
+          } catch(e) { console.error("Cache load error", e); }
+          
+          return { requests, details, ctx };
         };
 
-        const saveToCache = (email, data) => {
-          if (!email) return null;
-          const safeEmail = email.toLowerCase();
-          const timestamp = Date.now();
-          try { localStorage.setItem(`cache_data_it_${safeEmail}`, JSON.stringify({ data, timestamp })); return timestamp; } catch (e) { console.error("Full Cache", e); return null; }
+        const saveRequestsToCache = (email, data) => {
+          if (!email) return;
+          const ts = Date.now();
+          localStorage.setItem(CACHE_KEY_REQUESTS(email.toLowerCase()), JSON.stringify({ data, timestamp: ts }));
+          setLastSyncRequests(ts);
         };
 
-        const loadContextFromCache = (email) => {
-          if (!email) return null;
-          try { return JSON.parse(localStorage.getItem(`cache_context_it_${email.toLowerCase()}`)); } catch (e) { return null; }
+        const saveDetailsToCache = (email, cacheMap) => {
+          if (!email) return;
+          const ts = Date.now();
+          try {
+            localStorage.setItem(CACHE_KEY_DETAILS(email.toLowerCase()), JSON.stringify({ data: cacheMap, timestamp: ts }));
+            setLastSyncDetails(ts);
+          } catch (e) {
+            console.warn("Storage Full?", e);
+            showToast("⚠️ Memoria llena: No se pudieron guardar todos los detalles offline.");
+          }
+        };
+
+        const clearLocalCache = () => {
+          localStorage.clear();
+          showToast("Datos eliminados. Recargando...");
+          setTimeout(() => window.location.reload(), 1000);
         };
 
         const refreshData = async (manual = false, emailOverride = null) => {
-          const emailToUse = emailOverride || (userCtx ? userCtx.email : null);
-          if (!emailToUse || isSyncing) return;
-          setIsSyncing(true);
+          const email = emailOverride || (userCtx ? userCtx.email : null);
+          if (!email || isSyncing) return;
 
-          if (manual) {
-            setSyncReport(null); // Resetear reporte
-            showToast("Buscando actualizaciones...");
-          }
+          setIsSyncing(true);
+          setSyncStep("requests");
+          if (manual) showToast("1/2 Descargando Solicitudes...");
 
           try {
-            const newData = await runServer("getRequests", {});
-            setInitialData(newData);
-            const ts = saveToCache(emailToUse, newData);
-            if (ts) setLastSync(ts);
+            // PASO 1: SOLICITUDES
+            const reqData = await runServer("getRequests", {});
+            setInitialData(reqData);
+            saveRequestsToCache(email, reqData);
 
-            // ✅ Actualizamos primera parte del reporte (Solicitudes)
-            setSyncReport({ requests: newData.data.length, obs: 0, hist: 0, anx: 0 });
+            // PASO 2: TABLAS ANEXAS
+            if (reqData.data && reqData.data.length > 0) {
+              setSyncStep("details");
+              if (manual) showToast(`2/2 Descargando tablas anexas (${reqData.data.length} tickets)...`);
+              
+              const allIds = reqData.data.map(r => r["ID Solicitud"]).filter(Boolean);
+              const chunkSize = 40;
+              let newDetails = { ...detailsCache }; 
+              
+              const chunkPromises = [];
+              for (let i = 0; i < allIds.length; i += chunkSize) {
+                const chunk = allIds.slice(i, i + chunkSize);
+                chunkPromises.push(runServer("getBatchRequestDetails", { ids: chunk }));
+              }
+              
+              const parallelBatchSize = 5;
+              for (let i = 0; i < chunkPromises.length; i += parallelBatchSize) {
+                 const currentBatch = chunkPromises.slice(i, i + parallelBatchSize);
+                 const results = await Promise.all(currentBatch);
+                 results.forEach(res => { newDetails = { ...newDetails, ...res }; });
+                 console.log(`Lote paralelo ${i / parallelBatchSize + 1} completado.`);
+              }
 
-            if (manual) showToast("Lista actualizada, descargando detalles...");
-          } catch (e) { console.error("Sync Error", e); if (manual) showToast("Error de conexión: " + e.message); } finally { setIsSyncing(false); }
+              setDetailsCache(newDetails);
+              saveDetailsToCache(email, newDetails);
+              updateSyncReport(reqData.data.length, newDetails);
+            } else {
+               setLastSyncDetails(Date.now());
+               updateSyncReport(0, {});
+            }
+
+            if (manual) showToast("✅ Sincronización completa.");
+
+          } catch (e) {
+            console.error("Sync Error", e);
+            if (manual) showToast("❌ Error de conexión: " + e.message);
+          } finally {
+            setIsSyncing(false);
+            setSyncStep("");
+          }
         };
 
-        // ✅ Efecto para precargar detalles y actualizar el reporte
-        useEffect(() => {
-          if (initialData?.data?.length > 0) {
-            // Tomamos los primeros 50 tickets para precargar
-            const idsToFetch = initialData.data.slice(0, 50).map(r => r["ID Solicitud"]).filter(id => id && !detailsCache[id]);
-
-            if (idsToFetch.length > 0) {
-              console.log(`🚀 Precargando detalles para ${idsToFetch.length} tickets...`);
-              runServer("getBatchRequestDetails", { ids: idsToFetch })
-                .then(batchResult => {
-                  setDetailsCache(prev => ({ ...prev, ...batchResult }));
-                  console.log("✅ Precarga completada.");
-
-                  // ✅ Calculamos totales para el reporte
-                  let obsCount = 0;
-                  let histCount = 0;
-                  let anxCount = 0;
-                  
-                  Object.values(batchResult).forEach(item => {
-                    if (item.services) obsCount += item.services.length;
-                    if (item.history) histCount += item.history.length;
-                    if (item.documents) anxCount += item.documents.length;
-                  });
-
-                  // ✅ Actualizamos el reporte existente
-                  setSyncReport(prev => ({
-                      ...prev,
-                      requests: initialData.data.length,
-                      obs: obsCount,
-                      hist: histCount,
-                      anx: anxCount
-                  }));
-
-                })
-                .catch(err => console.warn("Error precargando:", err));
-            }
-          }
-        }, [initialData]);
+        const updateSyncReport = (reqCount, detailsMap) => {
+          let obs = 0, hist = 0, anx = 0;
+          Object.values(detailsMap).forEach(d => {
+            if (d.services) obs += d.services.length;
+            if (d.history) hist += d.history.length;
+            if (d.documents) anx += d.documents.length;
+          });
+          setSyncReport({ requests: reqCount, obs, hist, anx });
+        };
 
         const handleLoginAttempt = async (email) => {
           let targetEmail = email ? email.toLowerCase() : localStorage.getItem("last_active_email_it");
-          let cacheUsed = false;
+          let cacheFound = false;
+
           if (targetEmail) {
-            const cachedCtx = loadContextFromCache(targetEmail);
-            const cachedContent = loadFromCache(targetEmail);
-            if (cachedCtx && cachedContent?.data) {
-              console.log(`⚡ Instant Load: ${targetEmail}`);
-              setUserCtx(cachedCtx);
-              setInitialData(cachedContent.data);
-              if (cachedContent.timestamp) setLastSync(Number(cachedContent.timestamp));
-              setView("home");
-              cacheUsed = true;
+            const { requests, details, ctx } = loadFromCache(targetEmail);
+            if (ctx && requests?.data) {
+              const hasClients = ctx.allowedClientIds && ctx.allowedClientIds.length > 0;
+              const isAdmin = ctx.isAdmin;
+
+              if (hasClients || isAdmin) {
+                  console.log(`⚡ Carga Instantánea para: ${targetEmail}`);
+                  setUserCtx(ctx);
+                  setInitialData(requests.data);
+                  setLastSyncRequests(requests.timestamp);
+                  
+                  if (details?.data) {
+                    setDetailsCache(details.data);
+                    setLastSyncDetails(details.timestamp);
+                    updateSyncReport(requests.data.data.length, details.data);
+                  }
+                  
+                  setView("home");
+                  cacheFound = true;
+              }
             }
           }
+
           setIsCheckingCache(false);
-          if (!cacheUsed) setIsSyncing(true);
+          
           try {
+            if (!cacheFound) setIsSyncing(true);
             const serverCtx = await runServer("getUserContext", {});
             const realEmail = (serverCtx.email || "").toLowerCase();
-            if (!serverCtx.isValidUser) throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
+            
+            // 1. Validar existencia usuario
+            if (!serverCtx.isValidUser) {
+                 throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
+            }
+
+            // 2. Validar Clientes Asignados (Si no es admin)
+            if (!serverCtx.isAdmin && (!serverCtx.allowedClientIds || serverCtx.allowedClientIds.length === 0)) {
+                 throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
+            }
+            
             localStorage.setItem("last_active_email_it", realEmail);
-            localStorage.setItem(`cache_context_it_${realEmail}`, JSON.stringify(serverCtx));
+            localStorage.setItem(CACHE_KEY_CONTEXT(realEmail), JSON.stringify(serverCtx));
             setUserCtx(serverCtx);
-            if (!cacheUsed) {
-              const reqs = await runServer("getRequests", {});
-              setInitialData(reqs);
-              const ts = saveToCache(realEmail, reqs);
-              setLastSync(ts);
+
+            if (!cacheFound) {
               setView("home");
-            } else { refreshData(false, realEmail); }
-          } catch (e) { console.error("Login Error", e); if (!cacheUsed) throw e; alert("Error de conexión: " + e.message); } finally { setIsSyncing(false); }
+              refreshData(true, realEmail); 
+            } else {
+              refreshData(false, realEmail);
+            }
+          } catch (e) {
+            console.error("Login Error", e);
+            if (!cacheFound) {
+                 setLoginError(e.message);
+            }
+            setIsSyncing(false);
+          }
         };
 
-        useEffect(() => { const lastEmail = localStorage.getItem("last_active_email_it"); if (lastEmail) handleLoginAttempt(null); else setIsCheckingCache(false); }, []);
-        useEffect(() => { if (!userCtx) return; const timer = setInterval(() => refreshData(false), 300000); return () => clearTimeout(timer); }, [userCtx]);
+        useEffect(() => { 
+          const lastEmail = localStorage.getItem("last_active_email_it"); 
+          if (lastEmail) handleLoginAttempt(null); 
+          else setIsCheckingCache(false); 
+        }, []);
 
-        if (!userCtx) return <LoginView onSuccess={() => handleLoginAttempt(null)} isCheckingCache={isCheckingCache} />;
+        if (!userCtx) return (
+            <LoginView 
+                onSuccess={() => handleLoginAttempt(null)} 
+                isCheckingCache={isCheckingCache} 
+                externalError={loginError}
+                onClearError={() => setLoginError(null)}
+            />
+        );
 
         return (
           <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
-            <Sidebar currentView={view} setView={setView} onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }} userContext={userCtx} lastSync={lastSync} isSyncing={isSyncing} />
+            <Sidebar 
+              currentView={view} 
+              setView={setView} 
+              onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }} 
+              userContext={userCtx} 
+              lastSyncRequests={lastSyncRequests} 
+              lastSyncDetails={lastSyncDetails} 
+              isSyncing={isSyncing} 
+            />
             <div className="flex-1 ml-64 overflow-y-auto">
               {view === "home" ? (
                 <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} />
               ) : view === "detail" && selectedRequest ? (
-                <RequestDetail requestId={selectedRequest["ID Solicitud"]} preloadedData={selectedRequest} cachedDetails={detailsCache} onBack={() => setView("history")} />
+                <RequestDetail 
+                  requestId={selectedRequest["ID Solicitud"]} 
+                  preloadedData={selectedRequest} 
+                  cachedDetails={detailsCache} 
+                  onBack={() => setView("history")} 
+                />
               ) : view === "create" ? (
                 <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />
               ) : view === "config" ? (
-                <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} isSyncing={isSyncing} lastSync={lastSync} syncReport={syncReport} />
+                <ConfigurationView 
+                  userContext={userCtx} 
+                  onForceSync={() => refreshData(true)} 
+                  onClearCache={clearLocalCache} 
+                  isSyncing={isSyncing} 
+                  lastSyncRequests={lastSyncRequests} 
+                  lastSyncDetails={lastSyncDetails} 
+                  syncReport={syncReport} 
+                />
               ) : (
                 <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />
               )}

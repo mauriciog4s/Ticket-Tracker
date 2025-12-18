@@ -390,9 +390,15 @@ function uploadAnexo(email, payload) {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch(e) {}
 
-    // ✅ CORRECCIÓN DEFINITIVA: URL DEL VISOR (NO DE DESCARGA)
-    // Esto funciona en AppSheet (si la seguridad está apagada) y en Web.
-    const storedPath = `https://drive.google.com/file/d/${file.getId()}/view`;
+    // ✅ LÓGICA INTELIGENTE DE URL
+    const fileId = file.getId();
+    let storedPath = `https://drive.google.com/file/d/${fileId}/view`; // Por defecto, visor (PDFs, etc)
+
+    // Si es imagen, usamos export=view para que AppSheet muestre la miniatura
+    // El frontend se encargará de convertir esto para evitar la descarga
+    if (tipoAnexo === 'Foto' || tipoAnexo === 'Dibujo' || mimeType.startsWith('image/')) {
+        storedPath = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
     
     const anexoUuid = Utilities.getUuid();
     const now = new Date();
@@ -607,7 +613,7 @@ function getUserContext(email) {
       });
     }
 
-    cache.put(cacheKey, JSON.stringify(context), 600);
+    cache.put(cacheKey, JSON.stringify(context), 350);
     return context;
 
   } catch (e) {
@@ -874,7 +880,7 @@ function createSolicitudActivo(email, payload) {
       } catch(e) {}
 
       // ✅ CAMBIO A URL DIRECTA TAMBIÉN PARA DIBUJOS
-      dibujoPath = `https://drive.google.com/file/d/${file.getId()}/view`;
+      dibujoPath = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
     }
 
     const now = new Date();
@@ -1002,28 +1008,15 @@ function getBatchRequestDetails(email, { ids }) {
   return result;
 }
 
+// ------------------------------------------------------------------
+// ✅ MODIFICACIÓN: OPCIONES DE CLASIFICACIÓN HARDCODED
+// ------------------------------------------------------------------
 function getClassificationOptions(email) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
-
-  const cache = CacheService.getScriptCache();
-  const cacheKey = "clasif_visita_opts_v1";
-  const cached = cache.get(cacheKey);
-  if (cached) return JSON.parse(cached);
-
-  const rows = getDataFromSheet('Estados');
   
-  // Extraemos la columna 'Clasificación visita'
-  const options = rows.map(r => _getField(r, ['Clasificación visita', 'Clasificacion visita', 'Clasificacion']))
-                      .filter(val => val && String(val).trim() !== "");
-
-  // Filtramos duplicados
-  const uniqueOptions = [...new Set(options)];
-  uniqueOptions.sort();
-
-  // Guardamos en caché por 1 hora
-  cache.put(cacheKey, JSON.stringify(uniqueOptions), 3600);
-  return uniqueOptions;
+  // Retorno directo de las dos opciones solicitadas
+  return ["Visita técnica", "Visita comercial"];
 }
 
 function _renderFileView(anexoId) {

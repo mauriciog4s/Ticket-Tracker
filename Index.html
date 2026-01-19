@@ -318,6 +318,7 @@
           { id: "create", icon: "ClipboardList", title: "Nueva Solicitud" },
           { id: "process", icon: "Monitor", title: "Tickets Activos" },
           { id: "history", icon: "History", title: "Historial Tickets" },
+          { id: "assets", icon: "Database", title: "Activos" },
         ];
 
         return (
@@ -661,6 +662,86 @@
       };
 
       /**
+       * --- AssetsView ---
+       * Listado de activos tecnológicos.
+       */
+      const AssetsView = ({ userContext }) => {
+        const [assets, setAssets] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [search, setSearch] = useState("");
+
+        useEffect(() => {
+          runServer('getActivosCatalog')
+            .then(res => {
+              if (res && res.data) setAssets(res.data);
+            })
+            .catch(err => console.error("Error loading assets:", err))
+            .finally(() => setLoading(false));
+        }, []);
+
+        const filtered = useMemo(() => {
+          return assets.filter(a => {
+            const str = `${a.idActivo} ${a.nombreActivo} ${a.qrSerial} ${a.nombreUbicacion}`.toLowerCase();
+            return !search || str.includes(search.toLowerCase());
+          });
+        }, [assets, search]);
+
+        return (
+          <div className="p-8 flex flex-col h-screen">
+             <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Catálogo de Activos</h2>
+                <div className="relative w-64">
+                   <Icon name="Search" className="absolute left-3 top-2 text-gray-400" size={16} />
+                   <input
+                     className="w-full pl-10 pr-4 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                     placeholder="Buscar activo..."
+                     value={search}
+                     onChange={(e) => setSearch(e.target.value)}
+                   />
+                </div>
+             </div>
+
+             <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex-1 overflow-y-auto">
+               {loading ? (
+                 <div className="p-20 text-center text-gray-400 flex flex-col items-center gap-4">
+                   <Icon name="RefreshCw" className="animate-spin" size={32} />
+                   <p>Cargando catálogo de activos...</p>
+                 </div>
+               ) : (
+                 <table className="w-full text-left text-sm">
+                   <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold border-b">
+                     <tr>
+                       <th className="px-6 py-4">ID Activo</th>
+                       <th className="px-6 py-4">Nombre</th>
+                       <th className="px-6 py-4">QR / Serial</th>
+                       <th className="px-6 py-4">Ubicación</th>
+                       <th className="px-6 py-4 text-right">Estado</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y">
+                     {filtered.map((a, i) => (
+                       <tr key={i} className="hover:bg-gray-50 transition">
+                         <td className="px-6 py-4 font-bold text-gray-700">{a.idActivo}</td>
+                         <td className="px-6 py-4 font-medium">{a.nombreActivo}</td>
+                         <td className="px-6 py-4 text-gray-500 font-mono text-xs">{a.qrSerial}</td>
+                         <td className="px-6 py-4 text-gray-400">{a.nombreUbicacion}</td>
+                         <td className="px-6 py-4 text-right">
+                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${a.estadoActivo?.toLowerCase().includes("activo") ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                             {a.estadoActivo}
+                           </span>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               )}
+               {!loading && filtered.length === 0 && <div className="p-20 text-center text-gray-400 italic">No se encontraron activos.</div>}
+             </div>
+          </div>
+        );
+      };
+
+      /**
        * --- HomeDashboard ---
        * Panel principal de métricas.
        */
@@ -914,6 +995,7 @@
             />
             <div className="flex-1 ml-64 overflow-y-auto h-screen">
               {view === "home" && <HomeDashboard userContext={userCtx} requests={initialData.data} setView={setView} />}
+              {view === "assets" && <AssetsView userContext={userCtx} />}
               {view === "create" && <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />}
               {view === "detail" && <RequestDetail requestId={selectedRequest?.["ID Solicitud"]} onBack={() => setView("history")} preloadedData={selectedRequest} />}
               {(view === "history" || view === "process") && <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />}

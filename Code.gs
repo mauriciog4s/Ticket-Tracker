@@ -1,68 +1,62 @@
 /**
+ * G4S TICKET TRACKER - BACKEND (Google Apps Script)
+ *
+ * Este archivo contiene la lógica del servidor para gestionar tickets,
+ * anexos, activos y permisos, utilizando Google Sheets como base de datos.
+ */
+
+/**
  * ------------------------------------------------------------------
  * CONFIGURACIÓN Y MAPEO DE HOJAS
  * ------------------------------------------------------------------
  */
 
-// IDs extraídos de las URLs proporcionadas
+// IDs de los Spreadsheets que actúan como base de datos
 const MAIN_SPREADSHEET_ID = '1MC76eZZt7qiso2M8LMz777_xJnzrl_ZpZptDZBnPlDo'; 
 const PERMISSIONS_SPREADSHEET_ID = '1zcZZGe_93ytWXtCF1kmk_Y8zc5b5cL1xH34i7v1w01k'; 
 const CLIENTS_SPREADSHEET_ID = '1hHWPJF9KSC0opplpCNgHRNkW6CLf7StXG2Y31m6yUpo'; 
 const SEDES_SPREADSHEET_ID = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM'; 
 const ACTIVOS_SPREADSHEET_ID = '1JU8c1MidgV4DRFg6W-GxZ2tHkfKNqGt1_cR5VDTehC4'; 
 
-// Configuración para saber en qué Spreadsheet buscar cada tabla
+// Mapeo de tablas a sus respectivos Spreadsheets
 const SHEET_CONFIG = {
   'Solicitudes': MAIN_SPREADSHEET_ID,
   'Estados historico': MAIN_SPREADSHEET_ID,
   'Observaciones historico': MAIN_SPREADSHEET_ID,
   'Estados': MAIN_SPREADSHEET_ID,
   'Solicitudes anexos': MAIN_SPREADSHEET_ID,
+  'Solicitudes activos': MAIN_SPREADSHEET_ID,
   'Permisos': PERMISSIONS_SPREADSHEET_ID,
   'Usuarios filtro': PERMISSIONS_SPREADSHEET_ID,
   'Clientes': CLIENTS_SPREADSHEET_ID,
   'Sedes': SEDES_SPREADSHEET_ID,
-  'Solicitudes activos': MAIN_SPREADSHEET_ID,
   'Activos': ACTIVOS_SPREADSHEET_ID,
 };
 
 /**
  * ------------------------------------------------------------------
- * OPTIMIZACIÓN: Reuso de Spreadsheet abiertos (memoria por ejecución)
+ * OPTIMIZACIÓN: Gestión de Memoria y Caché de Ejecución
  * ------------------------------------------------------------------
  */
+
+// Caché en memoria para evitar aperturas repetidas de Spreadsheets
 const __SS_MEMO = {}; 
 function _openSS(spreadsheetId) {
   if (!__SS_MEMO[spreadsheetId]) __SS_MEMO[spreadsheetId] = SpreadsheetApp.openById(spreadsheetId);
   return __SS_MEMO[spreadsheetId];
 }
 
-/**
- * ------------------------------------------------------------------
- * HELPER DE SEGURIDAD Y CONCURRENCIA
- * ------------------------------------------------------------------
- */
-function _withLock(callback) {
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(30000); 
-    const result = callback();
-    SpreadsheetApp.flush(); 
-    return result;
-  } catch (e) {
-    console.error("Error de Lock/Concurrencia:", e);
-    throw new Error("El servidor está ocupado. Intente de nuevo en unos segundos.");
-  } finally {
-    lock.releaseLock();
-  }
-}
+// Caché en memoria para metadatos de las hojas (encabezados, índices)
+const __SHEET_INFO_MEMO = {};
 
 /**
- * OPTIMIZACIÓN: memo de info de hoja por ejecución
+ * Normaliza nombres de encabezados para búsquedas insensibles a mayúsculas/espacios.
  */
-const __SHEET_INFO_MEMO = {}; 
 function _normHeader(x) { return String(x || "").trim().toLowerCase(); }
 
+/**
+ * Obtiene información estructural de una hoja (hoja, encabezados, última fila/columna).
+ */
 function _getSheetInfo(sheetName) {
   if (__SHEET_INFO_MEMO[sheetName]) return __SHEET_INFO_MEMO[sheetName];
 
@@ -96,6 +90,15 @@ function _getSheetInfo(sheetName) {
   return info;
 }
 
+/**
+ * ------------------------------------------------------------------
+ * HELPERS DE DATOS Y BÚSQUEDA
+ * ------------------------------------------------------------------
+ */
+
+/**
+ * Encuentra el índice de una columna basándose en nombres candidatos.
+ */
 function _findColIndex(headersNorm, candidateNames) {
   for (let i = 0; i < candidateNames.length; i++) {
     const idx = headersNorm.indexOf(_normHeader(candidateNames[i]));
@@ -104,6 +107,9 @@ function _findColIndex(headersNorm, candidateNames) {
   return -1;
 }
 
+/**
+ * Convierte una fila de datos en un objeto JS usando los encabezados como llaves.
+ */
 function _rowToObject(headers, row) {
   const obj = {};
   for (let i = 0; i < headers.length; i++) {
@@ -114,6 +120,9 @@ function _rowToObject(headers, row) {
   return obj;
 }
 
+/**
+ * Agrupa números de fila consecutivos para realizar lecturas por bloques (optimización de red).
+ */
 function _mergeRowRuns(rowNumsSorted) {
   const runs = [];
   if (!rowNumsSorted.length) return runs;
@@ -131,6 +140,9 @@ function _mergeRowRuns(rowNumsSorted) {
   return runs;
 }
 
+/**
+ * Lee bloques de filas desde la hoja.
+ */
 function _fetchRowRuns(sheet, runs, lastCol) {
   const rows = [];
   runs.forEach(([start, end]) => {
@@ -141,6 +153,9 @@ function _fetchRowRuns(sheet, runs, lastCol) {
   return rows;
 }
 
+/**
+ * Busca un objeto (fila) en una tabla por una llave y valor específicos.
+ */
 function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
   const { sheet, headers, headersNorm, lastRow, lastCol } = _getSheetInfo(sheetName);
   if (!sheet || lastRow < 2) return null;
@@ -166,6 +181,10 @@ function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
   return null;
 }
 
+/**
+ * Obtiene registros hijos (ej. observaciones o anexos) filtrados por IDs de solicitud.
+ * Optimizado para lectura rápida por bloques.
+ */
 function _getChildrenFast(sheetName, parentKeys) {
   const { sheet, headers, headersNorm, lastRow, lastCol } = _getSheetInfo(sheetName);
   if (!sheet || lastRow < 2) return [];
@@ -189,7 +208,6 @@ function _getChildrenFast(sheetName, parentKeys) {
 
   rowNums.sort((a, b) => a - b);
   const runs = _mergeRowRuns(rowNums);
-
   const rows = _fetchRowRuns(sheet, runs, lastCol);
 
   const out = [];
@@ -206,6 +224,7 @@ function _getChildrenFast(sheetName, parentKeys) {
     out.push(obj);
   }
 
+  // Ordenar por fecha descendente
   out.sort((a, b) => (b.__ts || 0) - (a.__ts || 0));
   out.forEach(o => delete o.__ts);
 
@@ -214,17 +233,44 @@ function _getChildrenFast(sheetName, parentKeys) {
 
 /**
  * ------------------------------------------------------------------
- * ROUTER INTELIGENTE
+ * SEGURIDAD Y CONCURRENCIA
  * ------------------------------------------------------------------
  */
+
+/**
+ * Ejecuta un callback protegiéndolo con un bloqueo de script para evitar condiciones de carrera.
+ */
+function _withLock(callback) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const result = callback();
+    SpreadsheetApp.flush();
+    return result;
+  } catch (e) {
+    console.error("Error de Lock/Concurrencia:", e);
+    throw new Error("El servidor está ocupado. Por favor, intente de nuevo en unos segundos.");
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * ------------------------------------------------------------------
+ * ENTRADA PRINCIPAL (ROUTERS)
+ * ------------------------------------------------------------------
+ */
+
+/**
+ * Maneja las peticiones GET (Carga de la página y Visualización de archivos).
+ */
 function doGet(e) {
-  // ✅ ROUTER DE ARCHIVOS (MODO PROXY)
+  // ROUTER DE ARCHIVOS (MODO PROXY para visualizar anexos sin problemas de CORS)
   if (e.parameter && e.parameter.v === 'archivo' && e.parameter.id) {
     return _renderFileView(e.parameter.id);
   }
 
   const template = HtmlService.createTemplateFromFile('Index');
-  // ✅ IMPORTANTE: Inyectamos la URL del script para el frontend
   template.scriptUrl = ScriptApp.getService().getUrl();
   
   return template
@@ -234,6 +280,9 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+/**
+ * Resuelve el correo del llamante, ya sea por sesión activa o por payload (fallback).
+ */
 function _resolveCallerEmail(request) {
   const active = Session.getActiveUser().getEmail();
   if (active) return String(active).toLowerCase().trim();
@@ -246,43 +295,55 @@ function _resolveCallerEmail(request) {
   return "";
 }
 
+/**
+ * Manejador central de peticiones desde el frontend (google.script.run).
+ */
 function apiHandler(request) {
   const userEmail = _resolveCallerEmail(request);
   const { endpoint, payload } = request || {};
 
-  console.log(`🔒 [API CHECK] Endpoint: ${endpoint} | ActiveUser: ${Session.getActiveUser().getEmail()} | Resuelto: ${userEmail}`);
+  console.log(`🔒 [API] Endpoint: ${endpoint} | Usuario: ${userEmail}`);
 
   try {
-    if (!userEmail) throw new Error("No se pudo verificar la identidad del usuario.");
+    if (!userEmail) throw new Error("No se pudo verificar su identidad corporativa.");
 
     switch (endpoint) {
+      // Contexto y Tickets
       case 'getUserContext': return getUserContext(userEmail, payload?.ignoreCache);
       case 'getRequests': return getRequests(userEmail);
       case 'getRequestDetail': return getRequestDetail(userEmail, payload);
+      case 'getBatchRequestDetails': return getBatchRequestDetails(userEmail, payload);
       
+      // Creación y Subida
       case 'createRequest': return createRequest(userEmail, payload);
       case 'uploadAnexo': return uploadAnexo(userEmail, payload);
-      case 'createSolicitudActivo': return createSolicitudActivo(userEmail, payload);
-      
       case 'getAnexoDownload': return getAnexoDownload(userEmail, payload);
+
+      // Activos (QR)
+      case 'createSolicitudActivo': return createSolicitudActivo(userEmail, payload);
       case 'getSolicitudActivos': return getSolicitudActivos(userEmail, payload);
       case 'getActivosCatalog': return getActivosCatalog(userEmail);
       case 'getActivoByQr': return getActivoByQr(userEmail, payload);
       
+      // Utilidades
       case 'getClassificationOptions': return getClassificationOptions(userEmail);
-      
-      case 'getBatchRequestDetails': return getBatchRequestDetails(userEmail, payload);
 
-      default: throw new Error(`Endpoint desconocido: ${endpoint}`);
+      default: throw new Error(`El endpoint '${endpoint}' no está definido.`);
     }
 
   } catch (err) {
-    console.error(`❌ ERROR DE SEGURIDAD/EJECUCIÓN: ${err.message}`, err);
-    return { error: true, message: "Error procesando su solicitud. Contacte al administrador." };
+    console.error(`❌ ERROR API [${endpoint}]: ${err.message}`, err);
+    return { error: true, message: err.message || "Error interno del servidor. Contacte a soporte." };
   }
 }
 
-// CACHE
+/**
+ * ------------------------------------------------------------------
+ * LÓGICA DE NEGOCIO Y DATOS
+ * ------------------------------------------------------------------
+ */
+
+// Gestión de Caché de Detalles
 const DETAIL_CACHE_VER = "v3"; 
 function _detailCacheKey(email, id) {
   const e = String(email || "").toLowerCase().trim();
@@ -293,258 +354,9 @@ function _invalidateDetailCache(email, id) {
   try { CacheService.getScriptCache().remove(_detailCacheKey(email, id)); } catch (e) {}
 }
 
-// ------------------------------------------------------------------
-// ✅ FUNCIÓN DE SANITIZACIÓN ROBUSTA (Sin espacios ni caracteres raros)
-// ------------------------------------------------------------------
-function _sanitizeFileName(name) {
-  const n = String(name || 'anexo').trim();
-  return n.normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
-          .replace(/[/\\]/g, '_')
-          .replace(/[<>:"|?*]/g, '')
-          .replace(/\s+/g, '_') 
-          .slice(0, 120) || 'anexo';
-}
-
-function _ensureFolder(parent, name) {
-  const it = parent.getFoldersByName(name);
-  if (it.hasNext()) return it.next();
-  return parent.createFolder(name);
-}
-
-function _ensurePathFromRoot(root, parts) {
-  let current = root;
-  parts.forEach(p => { current = _ensureFolder(current, p); });
-  return current;
-}
-
-// ------------------------------------------------------------------
-// ✅ FUNCIÓN UPLOAD V4: CARPETAS FIJAS POR TIPO (IDS ESPECÍFICOS)
-// ------------------------------------------------------------------
-function uploadAnexo(email, payload) {
-  const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
-
-  // --- IDs DE CARPETAS PROPORCIONADOS ---
-  const IMAGES_FOLDER_ID = '1tzYk9jiQ7Lp_bSZylMn0vuzfWZt4xTHb'; // Carpeta para Fotos/Dibujos
-  const DOCS_FOLDER_ID   = '1-CBsinL67dJUPfr8WXtKP1wM93B6zPDX'; // Carpeta para Documentos
-  // ----------------------------------------
-
-  const solicitudId = String(payload?.solicitudId || '').trim();
-  const tipoAnexo = String(payload?.tipoAnexo || 'Archivo').trim();
-  const fileNameInput = String(payload?.fileName || 'anexo');
-  const mimeType = String(payload?.mimeType || 'application/octet-stream').trim();
-  const base64 = String(payload?.base64 || '').trim();
-
-  if (!solicitudId) throw new Error("solicitudId requerido");
-  if (!base64) throw new Error("base64 requerido");
-
-  const headerFound = _findRowObjectByKey('Solicitudes', solicitudId, ['ID Solicitud', 'ID Solicitudes']);
-  if (!headerFound) throw new Error("Solicitud padre no encontrada.");
-  
-  const maxBytes = 10 * 1024 * 1024;
-  const bytes = Utilities.base64Decode(base64);
-  if (bytes.length > maxBytes) throw new Error("Archivo demasiado grande (máx 10MB).");
-
-  // Limpieza de nombre
-  const safeFileName = _sanitizeFileName(fileNameInput).replace(/\s+/g, '_'); 
-  const shortId = solicitudId.replace(/-/g, '').slice(0, 8);
-  const rand = Math.floor(Math.random() * 900000) + 100000;
-  
-  const extMatch = safeFileName.match(/\.([0-9a-z]+)$/i);
-  const ext = extMatch ? extMatch[1] : (mimeType.includes('image') ? 'jpg' : 'pdf');
-  const baseName = safeFileName.replace(/\.[^/.]+$/, "").replace(/\./g, "_");
-  
-  const finalName = `${shortId}_${tipoAnexo}_${rand}_${baseName}.${ext}`;
-
-  const blob = Utilities.newBlob(bytes, mimeType, finalName);
-
-  return _withLock(() => {
-    let file;
-    let storedPath;
-
-    if (tipoAnexo === 'Foto' || tipoAnexo === 'Dibujo' || mimeType.startsWith('image/')) {
-        // --- MODO FOTO: Guardar en carpeta específica IMAGES_FOLDER_ID ---
-        
-        try {
-          const targetFolder = DriveApp.getFolderById(IMAGES_FOLDER_ID);
-          file = targetFolder.createFile(blob);
-          
-          // OJO: Para que AppSheet vea la foto, escribimos: "NombreCarpeta/NombreArchivo"
-          // Esto asume que la carpeta IMAGES_FOLDER_ID está en la ubicación correcta para AppSheet
-          storedPath = `${targetFolder.getName()}/${finalName}`;
-          
-        } catch (e) {
-          throw new Error("No se pudo acceder a la carpeta de Imágenes definida. Verifique el ID.");
-        }
-        
-    } else {
-        // --- MODO DOCUMENTO: Guardar en carpeta específica DOCS_FOLDER_ID ---
-        
-        try {
-          const targetFolder = DriveApp.getFolderById(DOCS_FOLDER_ID);
-          file = targetFolder.createFile(blob);
-          
-          // Para documentos usamos URL completa para descarga web
-          storedPath = `https://drive.google.com/file/d/${file.getId()}/view`;
-          
-        } catch (e) {
-          throw new Error("No se pudo acceder a la carpeta de Documentos definida. Verifique el ID.");
-        }
-    }
-
-    // Permisos (Intento de hacerlos visibles para lectores)
-    try {
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch(e) {
-      try { file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); } catch(e2) {}
-    }
-
-    const anexoUuid = Utilities.getUuid();
-    const now = new Date();
-
-    const row = {
-      "ID Solicitudes anexos": anexoUuid,
-      "ID Solicitudes": solicitudId,
-      "Tipo anexo": tipoAnexo,
-      "Nombre": safeFileName,
-      "Usuario Actualización": email,
-      "Fecha Actualización": now
-    };
-
-    if (tipoAnexo === 'Foto') {
-      row['Foto'] = storedPath;
-    } else if (tipoAnexo === 'Dibujo') {
-      row['Dibujo'] = storedPath;
-    } else {
-      row['Archivo'] = storedPath;
-    }
-
-    appendDataToSheet('Solicitudes anexos', row);
-    _invalidateDetailCache(email, solicitudId);
-
-    return { success: true, anexoId: anexoUuid, fileName: file.getName(), path: storedPath };
-  });
-}
-
-// HELPERS
-function getDataFromSheet(sheetName) {
-  const { sheet, headers, lastRow, lastCol } = _getSheetInfo(sheetName);
-  if (!sheet || lastRow < 2 || lastCol < 1) return [];
-
-  const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-  if (values.length < 2) return [];
-
-  const data = values.slice(1);
-  return data.map(row => _rowToObject(headers, row));
-}
-
-function appendDataToSheet(sheetName, objectData) {
-  const spreadsheetId = SHEET_CONFIG[sheetName];
-  const ss = SpreadsheetApp.openById(spreadsheetId); 
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) throw new Error(`Hoja ${sheetName} no encontrada.`);
-
-  const lastCol = sheet.getLastColumn();
-  if (lastCol === 0) throw new Error(`La hoja ${sheetName} está vacía.`);
-
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const rowArray = headers.map(header => {
-    let val = objectData[header];
-    if (val === undefined) {
-       const cleanHeader = String(header).trim().toLowerCase();
-       const foundKey = Object.keys(objectData).find(k => String(k).trim().toLowerCase() === cleanHeader);
-       if (foundKey) val = objectData[foundKey];
-    }
-    return val === undefined || val === null ? "" : val;
-  });
-
-  sheet.appendRow(rowArray);
-  
-  const possibleTicketId = objectData["ID Solicitud"] || objectData["ID Solicitudes"] || "";
-  if (possibleTicketId) _invalidateDetailCache(String(objectData["Usuario Actualización"] || ""), possibleTicketId);
-
-  return { success: true };
-}
-
-function _getField(row, candidateNames) {
-  if (!row) return "";
-  const keys = Object.keys(row);
-  for (let i = 0; i < candidateNames.length; i++) {
-    const c = candidateNames[i];
-    if (row[c] !== undefined && row[c] !== null && row[c] !== "") return row[c];
-    const k = keys.find(x => String(x).trim() === String(c).trim());
-    if (k && row[k] !== undefined && row[k] !== null && row[k] !== "") return row[k];
-  }
-  return "";
-}
-
-function _normalizePath(path) {
-  if (!path) return "";
-  let p = String(path).trim();
-  if (/^https?:\/\//i.test(p)) return p;
-  p = p.replace(/\\/g, '/');
-  p = p.replace(/^\/+/, '');
-  p = p.replace(/\/+/g, '/');
-  return p;
-}
-
-function _getRootFolderForFiles() {
-  const file = DriveApp.getFileById(MAIN_SPREADSHEET_ID);
-  const parents = file.getParents();
-  if (parents.hasNext()) return parents.next();
-  return DriveApp.getRootFolder();
-}
-
-function _resolveDriveFileFromAppSheetPath(pathValue) {
-  const p = String(pathValue || "").trim();
-
-  // Si ya es una URL de view, la devolvemos como tal
-  if (/file\/d\/([^/]+)/.test(p)) {
-     return { kind: "url", url: p };
-  }
-  
-  // Soporte para URLs antiguas con id=
-  if (/id=([^&]+)/.test(p)) {
-     const id = p.match(/id=([^&]+)/)[1];
-     return { kind: "url", url: `https://drive.google.com/file/d/${id}/view` };
-  }
-
-  // Lógica legacy para rutas relativas
-  const root = _getRootFolderForFiles();
-  const parts = p.split('/').filter(Boolean);
-  const filename = parts.pop();
-
-  try {
-    let current = root;
-    parts.forEach(folderName => {
-      const it = current.getFoldersByName(folderName);
-      if (!it.hasNext()) throw new Error(`Carpeta no encontrada: ${folderName}`);
-      current = it.next();
-    });
-
-    const files = current.getFilesByName(filename);
-    if (files.hasNext()) return { kind: "file", file: files.next() };
-
-  } catch (e) {
-    // fallback
-  }
-
-  const safeName = filename.replace(/"/g, '\\"');
-  const q = `name = "${safeName}" and trashed = false`;
-  const it2 = DriveApp.searchFiles(q);
-  if (it2.hasNext()) return { kind: "file", file: it2.next() };
-
-  throw new Error(`Archivo no encontrado: ${filename}`);
-}
-
-function _findSolicitudHeaderFast(key) {
-  return _findRowObjectByKey('Solicitudes', key, [
-    'ID Solicitud', 'ID Solicitudes', 'Ticket G4S', 'Ticket Cliente', 'Ticket (Opcional)'
-  ]);
-}
-
-// LOGICA NEGOCIO
-
+/**
+ * Obtiene el contexto del usuario: rol, clientes y sedes permitidas.
+ */
 function getUserContext(email, ignoreCache = false) {
   const cache = CacheService.getScriptCache();
   const cacheKey = `ctx_it_v5_${Utilities.base64Encode(email)}`; 
@@ -565,6 +377,7 @@ function getUserContext(email, ignoreCache = false) {
       isAdmin: false
     };
 
+    // 1. Verificar permisos base
     const allPermissions = getDataFromSheet('Permisos');
     const userData = allPermissions.find(row => String(row['Correo']).toLowerCase() === email.toLowerCase());
 
@@ -575,12 +388,11 @@ function getUserContext(email, ignoreCache = false) {
         context.role = 'Administrador';
         context.isAdmin = true;
       }
-    } else {
-      console.warn(`⚠️ Usuario IT ${email} no encontrado en tabla Permisos.`);
     }
 
     if (!context.isValidUser) return context;
 
+    // 2. Resolver Clientes y Sedes (Filtros)
     const allRelations = getDataFromSheet('Usuarios filtro');
     const myRelations = allRelations.filter(row => String(row['Usuario']).toLowerCase() === email.toLowerCase());
 
@@ -591,6 +403,7 @@ function getUserContext(email, ignoreCache = false) {
     });
 
     if (assignedClientIds.length > 0) {
+      // Nombres de Clientes
       const allClientes = getDataFromSheet('Clientes');
       const myClients = allClientes.filter(c => 
         assignedClientIds.includes(String(_getField(c, ['ID Cliente', 'Id Cliente', 'Cliente'])))
@@ -601,6 +414,7 @@ function getUserContext(email, ignoreCache = false) {
         if (clientName) context.assignedCustomerNames.push(String(clientName).trim());
       });
 
+      // Sedes (Hijas de Clientes)
       const allSedes = getDataFromSheet('Sedes');
       const mySedes = allSedes.filter(sede => assignedClientIds.includes(String(_getField(sede, ['ID Cliente', 'Id Cliente', 'Cliente']))));
 
@@ -619,15 +433,17 @@ function getUserContext(email, ignoreCache = false) {
     return context;
 
   } catch (e) {
-    console.error("Error getUserContext", e);
+    console.error("Error en getUserContext:", e);
     throw e;
   }
 }
 
+/**
+ * Obtiene el listado de solicitudes filtrado por los permisos del usuario.
+ */
 function getRequests(email) {
-  const t0 = Date.now();
   const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
+  if (!context.isValidUser) throw new Error("Acceso denegado: Usuario no registrado.");
 
   try {
     let allRows = getDataFromSheet('Solicitudes');
@@ -640,26 +456,27 @@ function getRequests(email) {
       filteredRows = allRows.filter(row => context.allowedClientIds.includes(String(_getField(row, ['ID Sede']))));
     }
 
+    // Ordenar por fecha de creación descendente
     filteredRows.sort((a, b) => {
       const dateA = new Date(_getField(a, ['Fecha creación cliente', 'Fecha creacion cliente'])).getTime() || 0;
       const dateB = new Date(_getField(b, ['Fecha creación cliente', 'Fecha creacion cliente'])).getTime() || 0;
       return dateB - dateA;
     });
 
-    console.log(`⚡ [PERF] getRequests: ${Date.now() - t0}ms | total=${filteredRows.length}`);
     return { data: filteredRows, total: filteredRows.length };
-
   } catch (e) {
-    console.error("Error getRequests", e);
-    throw new Error("Error obteniendo datos.");
+    console.error("Error en getRequests:", e);
+    throw new Error("No se pudieron obtener las solicitudes.");
   }
 }
 
+/**
+ * Obtiene el detalle de un ticket específico (header, observaciones, historial, anexos).
+ */
 function getRequestDetail(email, { id }) {
-  const t0 = Date.now();
   const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado");
-  if (!id) throw new Error("ID requerido");
+  if (!context.isValidUser) throw new Error("Acceso denegado.");
+  if (!id) throw new Error("Se requiere un ID de solicitud.");
 
   const rid = String(id).trim();
   const cache = CacheService.getScriptCache();
@@ -667,20 +484,18 @@ function getRequestDetail(email, { id }) {
 
   const cached = cache.get(ck);
   if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      return parsed;
-    } catch (e) {}
+    try { return JSON.parse(cached); } catch (e) {}
   }
 
   const headerFound = _findSolicitudHeaderFast(rid);
-  if (!headerFound) throw new Error("Ticket no encontrado.");
+  if (!headerFound) throw new Error("El ticket solicitado no existe.");
   const header = headerFound.obj;
 
+  // Validar permisos de sede
   if (!context.isAdmin) {
     const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
     if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
-      throw new Error("No tiene permisos para ver este ticket.");
+      throw new Error("No tiene permisos para ver este ticket específico.");
     }
   }
 
@@ -690,11 +505,13 @@ function getRequestDetail(email, { id }) {
     String(_getField(header, ['Ticket Cliente', 'Ticket (Opcional)']))
   ].filter(x => x && x !== "undefined" && x !== "null").map(x => String(x).trim());
 
-  const services = _getChildrenFast('Observaciones historico', parentKeys);
-  const history = _getChildrenFast('Estados historico', parentKeys);
-  const documents = _getChildrenFast('Solicitudes anexos', parentKeys);
-
-  const result = { header, services, history, documents };
+  const result = {
+    header,
+    services: _getChildrenFast('Observaciones historico', parentKeys),
+    history: _getChildrenFast('Estados historico', parentKeys),
+    documents: _getChildrenFast('Solicitudes anexos', parentKeys),
+    activos: _getChildrenFast('Solicitudes activos', parentKeys)
+  };
 
   const json = JSON.stringify(result);
   if (json.length < 90000) cache.put(ck, json, 30);
@@ -702,43 +519,43 @@ function getRequestDetail(email, { id }) {
   return result;
 }
 
-// ------------------------------------------------------------------
-// ✅ CREATE REQUEST ACTUALIZADO CON API DE APPSHEET
-// ------------------------------------------------------------------
+/**
+ * Crea una nueva solicitud de servicio.
+ */
 function createRequest(email, payload) {
   const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
+  if (!context.isValidUser) throw new Error("Acceso denegado.");
 
   if (!payload?.idSede || !payload?.solicitud || !payload?.observacion) {
-    throw new Error("Faltan campos obligatorios.");
+    throw new Error("Por favor, complete todos los campos obligatorios.");
   }
 
   if (!context.isAdmin && !context.allowedClientIds.includes(String(payload.idSede))) {
-    throw new Error("No tiene permisos para esta sede.");
+    throw new Error("No tiene permisos para reportar en esta sede.");
   }
 
   return _withLock(() => {
     const now = new Date();
     const uuid = Utilities.getUuid();
 
+    // Lógica de prefijo de Ticket G4S basado en el cliente
     const allSedes = getDataFromSheet('Sedes');
     const sedeInfo = allSedes.find(s => String(_getField(s, ['ID Sede', 'Id Sede', 'Sede'])).trim() === String(payload.idSede).trim());
     const idCliente = sedeInfo ? _getField(sedeInfo, ['ID Cliente', 'Id Cliente', 'Cliente']) : null;
 
-    let letraInicial = "X";
+    let letraInicial = "G"; // Default G4S
     if (idCliente) {
       const allClientes = getDataFromSheet('Clientes');
       const clienteInfo = allClientes.find(c => String(_getField(c, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim() === String(idCliente).trim());
       if (clienteInfo) {
-        const nombreCorto = _getField(clienteInfo, ['Nombre corto', 'Nombre_Corto', 'RazonSocial', 'Razón Social']) || "G";
+        const nombreCorto = _getField(clienteInfo, ['Nombre corto', 'Nombre_Corto', 'RazonSocial']) || "G";
         letraInicial = String(nombreCorto).trim().charAt(0).toUpperCase();
       }
     }
 
-    const ss = SpreadsheetApp.openById(MAIN_SPREADSHEET_ID);
+    const ss = _openSS(MAIN_SPREADSHEET_ID);
     const sheet = ss.getSheetByName('Solicitudes');
     const nextRow = sheet.getLastRow() + 1;
-
     const rand = Math.floor(Math.random() * 90) + 10;
     const ticketG4S = `${letraInicial}${1000000 + nextRow}${rand}`;
 
@@ -749,208 +566,296 @@ function createRequest(email, payload) {
       "Estado": "Creado",
       "ID Sede": String(payload.idSede).trim(),
       "Ticket Cliente": payload.ticketCliente || "",
-      
-      // ✅ MAPEADO CORRECTO SEGÚN SOLICITUD
       "Clasificación Solicitud": payload.clasificacion, 
       "Clasificación": payload.tipoServicio,
-      "Técnicos Clientes": "Por disponibilidad", // Valor fijo solicitado
-
+      "Técnicos Clientes": "Por disponibilidad",
       "Prioridad Solicitud": payload.prioridad,
       "Solicitud": payload.solicitud,
       "Observación": payload.observacion,
       "Usuario Actualización": email
     };
 
-    // --- INTEGRACIÓN DE LA API PARA ACTIVAR CORREOS ---
+    // Integrar con AppSheet API para disparar flujos automáticos (correos, etc.)
     const apiResult = enviarAppSheetAPI('Solicitudes', newRow);
 
-    // Respaldo de seguridad
+    // Respaldo: si la API falla, guardamos directamente en la hoja
     if (!apiResult || (apiResult && apiResult.RestServerErrorMessage)) {
-      console.warn("API falló, usando guardado directo como respaldo.");
+      console.warn("API de AppSheet falló o no disponible. Guardando directo.");
       appendDataToSheet('Solicitudes', newRow);
     }
-    // ------------------------------------------------
 
+    // Historial inicial
     try {
-      const historyRow = {
+      appendDataToSheet('Estados historico', {
         "ID Estado": Utilities.getUuid(),
         "ID Solicitudes": uuid,
         "Estado actual": "Creado",
         "Usuario Actualización": email,
         "Fecha Actualización": now
-      };
-      appendDataToSheet('Estados historico', historyRow);
-    } catch (e) {
-      console.warn("No se pudo guardar el historial inicial:", e);
-    }
+      });
+    } catch (e) { console.warn("Error guardando historial inicial:", e); }
 
     _invalidateDetailCache(email, uuid);
 
-    const returnRow = {
-      ...newRow,
-      "Fecha creación cliente": (newRow["Fecha creación cliente"] instanceof Date)
-        ? newRow["Fecha creación cliente"].toISOString()
-        : newRow["Fecha creación cliente"]
-    };
+    const returnRow = { ...newRow };
+    if (returnRow["Fecha creación cliente"] instanceof Date) returnRow["Fecha creación cliente"] = returnRow["Fecha creación cliente"].toISOString();
 
     return {
       success: true,
       solicitudId: uuid,
       ticketG4S: ticketG4S,
-      GeneratedTicket: ticketG4S,
-      Status: "Success",
-      Rows: [returnRow],
       row: returnRow
     };
   });
 }
 
+/**
+ * ------------------------------------------------------------------
+ * GESTIÓN DE ARCHIVOS Y ANEXOS
+ * ------------------------------------------------------------------
+ */
+
+function _sanitizeFileName(name) {
+  const n = String(name || 'anexo').trim();
+  return n.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[/\\]/g, '_')
+          .replace(/[<>:"|?*]/g, '')
+          .replace(/\s+/g, '_')
+          .slice(0, 120) || 'anexo';
+}
+
+/**
+ * Sube un anexo (Foto, Dibujo o Archivo) a Drive y registra el enlace en Sheets.
+ */
+function uploadAnexo(email, payload) {
+  const context = getUserContext(email);
+  if (!context.isValidUser) throw new Error("Acceso denegado.");
+
+  // Carpetas fijas de almacenamiento
+  const IMAGES_FOLDER_ID = '1tzYk9jiQ7Lp_bSZylMn0vuzfWZt4xTHb';
+  const DOCS_FOLDER_ID   = '1-CBsinL67dJUPfr8WXtKP1wM93B6zPDX';
+
+  const solicitudId = String(payload?.solicitudId || '').trim();
+  const tipoAnexo = String(payload?.tipoAnexo || 'Archivo').trim();
+  const base64 = String(payload?.base64 || '').trim();
+
+  if (!solicitudId || !base64) throw new Error("Faltan datos para la subida (solicitudId/base64).");
+
+  const headerFound = _findRowObjectByKey('Solicitudes', solicitudId, ['ID Solicitud', 'ID Solicitudes']);
+  if (!headerFound) throw new Error("La solicitud padre no existe.");
+  
+  const bytes = Utilities.base64Decode(base64);
+  if (bytes.length > 10 * 1024 * 1024) throw new Error("El archivo excede el límite de 10MB.");
+
+  const safeFileName = _sanitizeFileName(payload?.fileName || 'anexo');
+  const shortId = solicitudId.replace(/-/g, '').slice(0, 8);
+  const rand = Math.floor(Math.random() * 900000) + 100000;
+  const ext = (payload?.mimeType || "").includes('image') ? 'jpg' : 'pdf';
+  const finalName = `${shortId}_${tipoAnexo}_${rand}_${safeFileName.split('.')[0]}.${ext}`;
+
+  const blob = Utilities.newBlob(bytes, payload?.mimeType || 'application/octet-stream', finalName);
+
+  return _withLock(() => {
+    let file;
+    let storedPath;
+
+    try {
+      const isImg = tipoAnexo === 'Foto' || tipoAnexo === 'Dibujo' || (payload?.mimeType || "").startsWith('image/');
+      const targetFolder = DriveApp.getFolderById(isImg ? IMAGES_FOLDER_ID : DOCS_FOLDER_ID);
+      file = targetFolder.createFile(blob);
+
+      // Formato de ruta compatible con la lógica del visor
+      storedPath = isImg ? `${targetFolder.getName()}/${finalName}` : `https://drive.google.com/file/d/${file.getId()}/view`;
+
+      try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
+    } catch (e) {
+      throw new Error(`Error al acceder a Drive: ${e.message}`);
+    }
+
+    const anexoUuid = Utilities.getUuid();
+    const row = {
+      "ID Solicitudes anexos": anexoUuid,
+      "ID Solicitudes": solicitudId,
+      "Tipo anexo": tipoAnexo,
+      "Nombre": safeFileName,
+      "Usuario Actualización": email,
+      "Fecha Actualización": new Date()
+    };
+
+    if (tipoAnexo === 'Foto') row['Foto'] = storedPath;
+    else if (tipoAnexo === 'Dibujo') row['Dibujo'] = storedPath;
+    else row['Archivo'] = storedPath;
+
+    appendDataToSheet('Solicitudes anexos', row);
+    _invalidateDetailCache(email, solicitudId);
+
+    return { success: true, anexoId: anexoUuid, path: storedPath };
+  });
+}
+
+/**
+ * Resuelve un archivo físico en Drive basándose en una ruta (AppSheet o directa).
+ */
+function _resolveDriveFile(pathValue) {
+  const p = String(pathValue || "").trim();
+  if (!p) return null;
+
+  // 1. Caso ID de Drive directo en URL
+  const idMatch = p.match(/\/d\/([a-zA-Z0-9_-]+)/) || p.match(/id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) {
+    try { return DriveApp.getFileById(idMatch[1]); } catch(e) {}
+  }
+
+  // 2. Caso Nombre de Archivo (Rutas relativas de AppSheet)
+  const parts = p.split('/');
+  const fileName = parts[parts.length - 1];
+  if (fileName) {
+    const filesIt = DriveApp.getFilesByName(fileName);
+    if (filesIt.hasNext()) return filesIt.next();
+  }
+
+  return null;
+}
+
+/**
+ * Endpoint para obtener la URL de descarga o visualización de un anexo.
+ */
 function getAnexoDownload(email, { anexoId }) {
   const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
-  if (!anexoId) throw new Error("anexoId requerido");
+  if (!context.isValidUser) throw new Error("Acceso denegado.");
 
-  const found = _findRowObjectByKey('Solicitudes anexos', anexoId, [
-    'ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos '
-  ]);
-  if (!found) throw new Error("Anexo no encontrado.");
-  const row = found.obj;
+  const found = _findRowObjectByKey('Solicitudes anexos', anexoId, ['ID Solicitudes anexos', 'ID Anexo', 'ID']);
+  if (!found) throw new Error("Anexo no encontrado en la base de datos.");
 
-  const parentKey = _getField(row, ['ID Solicitudes', 'ID Solicitud']);
-  const headerFound = _findSolicitudHeaderFast(parentKey);
-  if (!headerFound) throw new Error("No se pudo validar la solicitud padre del anexo.");
-  const header = headerFound.obj;
+  const pathValue = _getField(found.obj, ['Archivo', 'Foto', 'Dibujo']) || "";
+  const file = _resolveDriveFile(pathValue);
 
-  if (!context.isAdmin) {
-    const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
-    if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
-      throw new Error("No tiene permisos para descargar este anexo.");
-    }
-  }
+  if (!file) throw new Error("No se pudo localizar el archivo físico en Google Drive.");
 
-  const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
-  
-  if (pathValue.includes("drive.google.com")) {
-     return { mode: "url", url: pathValue, fileName: _getField(row, ['Nombre']) };
-  }
-
-  const resolved = _resolveDriveFileFromAppSheetPath(pathValue);
-
-  if (resolved.kind === "url") {
-    const fileNameFromRow = _getField(row, ['Nombre']) || "Anexo";
-    return { mode: "url", fileName: fileNameFromRow, url: resolved.url };
-  }
-
-  const file = resolved.file;
-  return { mode: "url", url: `https://drive.google.com/file/d/${file.getId()}/view`, fileName: file.getName() };
+  return {
+    mode: "url",
+    url: `https://drive.google.com/file/d/${file.getId()}/view`,
+    fileName: file.getName()
+  };
 }
+
+/**
+ * Sirve el visor de archivos (Modo Proxy) para evitar bloqueos del navegador.
+ */
+function _renderFileView(anexoId) {
+  try {
+    const found = _findRowObjectByKey('Solicitudes anexos', anexoId, ['ID Solicitudes anexos', 'ID Anexo', 'ID']);
+    if (!found) return HtmlService.createHtmlOutput("<h1>Anexo no registrado.</h1>");
+
+    const pathValue = _getField(found.obj, ['Archivo', 'Foto', 'Dibujo']) || "";
+    const file = _resolveDriveFile(pathValue);
+
+    if (!file) return HtmlService.createHtmlOutput("<h1>Archivo no disponible en Drive.</h1>");
+
+    if (file.getSize() > 8 * 1024 * 1024) {
+      return HtmlService.createHtmlOutput(`
+        <div style="font-family:sans-serif;text-align:center;padding-top:50px;">
+          <h2>Archivo demasiado grande para previsualizar</h2>
+          <p>Tamaño: ${(file.getSize()/(1024*1024)).toFixed(2)}MB</p>
+          <a href="${file.getDownloadUrl()}" style="background:#0033A0;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Descargar Directamente</a>
+        </div>
+      `);
+    }
+
+    const blob = file.getBlob();
+    const base64 = Utilities.base64Encode(blob.getBytes());
+
+    // Generar página minimalista de descarga automática
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family:sans-serif;text-align:center;padding:50px;background:#f3f4f6;">
+        <div style="background:white;padding:30px;border-radius:8px;display:inline-block;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+          <h3>Procesando: ${file.getName()}</h3>
+          <p>Su descarga comenzará en breve...</p>
+          <button id="btn" style="background:#D32F2F;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-weight:bold;">Guardar ahora</button>
+        </div>
+        <script>
+          const blob = new Blob([new Uint8Array(atob("${base64}").split("").map(c => c.charCodeAt(0)))], {type: "${blob.getContentType()}"});
+          const url = URL.createObjectURL(blob);
+          const save = () => { const a = document.createElement('a'); a.href = url; a.download = "${file.getName()}"; a.click(); };
+          document.getElementById('btn').onclick = save;
+          setTimeout(save, 1000);
+        </script>
+      </body>
+      </html>
+    `;
+    return HtmlService.createHtmlOutput(html);
+  } catch (e) {
+    return HtmlService.createHtmlOutput(`<h3>Error crítico del visor: ${e.message}</h3>`);
+  }
+}
+
+/**
+ * ------------------------------------------------------------------
+ * GESTIÓN DE ACTIVOS (QR)
+ * ------------------------------------------------------------------
+ */
 
 function createSolicitudActivo(email, payload) {
   const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
+  if (!context.isValidUser) throw new Error("Acceso denegado.");
 
-  const solicitudId = String(payload?.solicitudId || payload?.IDSolicitudes || payload?.idSolicitud || '').trim();
-  const qr = String(payload?.qrSerial || payload?.qr || payload?.QR || '').trim();
-  const idActivo = String(payload?.idActivo || payload?.activoId || payload?.IDActivo || '').trim();
-  const observaciones = String(payload?.observaciones || payload?.novedades || '').trim();
-  const dibujoBase64 = String(payload?.dibujoBase64 || '').trim();
-
-  if (!solicitudId) throw new Error("solicitudId requerido");
-  if (!qr) throw new Error("QR requerido");
-  if (!idActivo) throw new Error("ID Activo requerido");
-
-  const headerFound = _findSolicitudHeaderFast(solicitudId);
-  if (!headerFound) throw new Error("Solicitud padre no encontrada.");
-  const header = headerFound.obj;
-
-  if (!context.isAdmin) {
-    const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
-    if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
-      throw new Error("No tiene permisos para asociar activos a este ticket.");
-    }
-  }
+  const solicitudId = String(payload?.solicitudId || payload?.idSolicitud || '').trim();
+  if (!solicitudId) throw new Error("ID de solicitud requerido.");
 
   return _withLock(() => {
-    let dibujoPath = "";
-    if (dibujoBase64) {
-      const bytes = Utilities.base64Decode(dibujoBase64);
-      const root = _getRootFolderForFiles();
-      const folder = _ensurePathFromRoot(root, ['Info', 'Clientes', 'Activos']);
-      const short = Utilities.getUuid().replace(/-/g, '').slice(0, 8);
-      const rand = Math.floor(Math.random() * 900000) + 100000;
-      const fileName = `${short}.Dibujo.${rand}.png`;
-      const blob = Utilities.newBlob(bytes, 'image/png', fileName);
-      const file = folder.createFile(blob);
-      
-      try {
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch(e) {}
-
-      dibujoPath = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
-    }
-
-    const now = new Date();
     const rowId = Utilities.getUuid();
-
     const row = {
       "ID Solicitudes activos": rowId,
       "ID Solicitudes": solicitudId,
-      "QR": qr,
-      "ID Activo": idActivo,
-      "Observaciones": observaciones,
-      "Dibujo": dibujoPath,
+      "QR": String(payload?.qrSerial || '').trim(),
+      "ID Activo": String(payload?.idActivo || '').trim(),
+      "Observaciones": String(payload?.observaciones || '').trim(),
       "Usuario Actualización": email,
-      "Fecha Actualización": now
+      "Fecha Actualización": new Date()
     };
 
     appendDataToSheet('Solicitudes activos', row);
     _invalidateDetailCache(email, solicitudId);
-
-    return { success: true, activoRowId: rowId, dibujoPath };
+    return { success: true, rowId };
   });
 }
 
 function getSolicitudActivos(email, { solicitudId }) {
-  const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
-  const sid = String(solicitudId || '').trim();
-  if (!sid) throw new Error("solicitudId requerido");
-  const rows = _getChildrenFast('Solicitudes activos', [sid]);
+  if (!getUserContext(email).isValidUser) throw new Error("Acceso denegado.");
+  const rows = _getChildrenFast('Solicitudes activos', [String(solicitudId).trim()]);
   return { data: rows, total: rows.length };
 }
 
 function getActivosCatalog(email) {
-  const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
+  if (!getUserContext(email).isValidUser) throw new Error("Acceso denegado.");
+
   const cache = CacheService.getScriptCache();
-  const key = "activos_catalog_v2";
-  const cached = cache.get(key);
+  const cached = cache.get("activos_catalog_v2");
   if (cached) return JSON.parse(cached);
 
   const rows = getDataFromSheet('Activos');
-  const mapped = rows.map(r => {
-    return {
-      idActivo: String(_getField(r, ['ID Activo'])).trim(),
-      nombreActivo: String(_getField(r, ['Nombre Activo'])).trim(),
-      qrSerial: String(_getField(r, ['QR Serial'])).trim(),
-      nombreUbicacion: String(_getField(r, ['Nombre Ubicacion'])).trim(),
-      estadoActivo: String(_getField(r, ['Estado Activo'])).trim(),
-      funcionamiento: String(_getField(r, ['Funcionamiento'])).trim()
-    };
-  }).filter(x => x.idActivo || x.qrSerial);
+  const mapped = rows.map(r => ({
+    idActivo: String(_getField(r, ['ID Activo'])).trim(),
+    nombreActivo: String(_getField(r, ['Nombre Activo'])).trim(),
+    qrSerial: String(_getField(r, ['QR Serial'])).trim(),
+    nombreUbicacion: String(_getField(r, ['Nombre Ubicacion'])).trim(),
+    estadoActivo: String(_getField(r, ['Estado Activo'])).trim(),
+    funcionamiento: String(_getField(r, ['Funcionamiento'])).trim()
+  })).filter(x => x.idActivo || x.qrSerial);
 
   const res = { data: mapped, total: mapped.length };
-  cache.put(key, JSON.stringify(res), 600);
+  cache.put("activos_catalog_v2", JSON.stringify(res), 600);
   return res;
 }
 
 function getActivoByQr(email, payload) {
-  const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
+  if (!getUserContext(email).isValidUser) throw new Error("Acceso denegado.");
   const q = String(payload?.qr || '').trim();
-  if (!q) throw new Error("qr requerido");
   const rows = getDataFromSheet('Activos');
-  const found = rows.find(r => String(_getField(r, ['QR Serial', 'QR', 'Qr', 'Codigo QR'])).trim() === q);
+  const found = rows.find(r => String(_getField(r, ['QR Serial', 'QR'])).trim() === q);
+
   if (!found) return { found: false };
   return {
     found: true,
@@ -958,208 +863,120 @@ function getActivoByQr(email, payload) {
       idActivo: String(_getField(found, ['ID Activo'])).trim(),
       nombreActivo: String(_getField(found, ['Nombre Activo'])).trim(),
       qrSerial: q,
-      nombreUbicacion: String(_getField(found, ['Nombre Ubicacion'])).trim(),
-      estadoActivo: String(_getField(found, ['Estado Activo'])).trim(),
-      funcionamiento: String(_getField(found, ['Funcionamiento'])).trim()
+      nombreUbicacion: String(_getField(found, ['Nombre Ubicacion'])).trim()
     }
   };
-}
-
-function getBatchRequestDetails(email, { ids }) {
-  const t0 = Date.now();
-  const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado");
-  if (!ids || !Array.isArray(ids) || ids.length === 0) return {};
-
-  const targetIds = new Set(ids.map(x => String(x).trim()));
-  const allServices = getDataFromSheet('Observaciones historico');
-  const allHistory = getDataFromSheet('Estados historico');
-  const allDocs = getDataFromSheet('Solicitudes anexos');
-  const allActivos = getDataFromSheet('Solicitudes activos');
-
-  const result = {};
-  targetIds.forEach(id => { result[id] = { services: [], history: [], documents: [], activos: [] }; });
-
-  const findParentIdInRow = (row) => {
-    if (!row) return "";
-    const candidates = ['idsolicitud', 'idsolicitudes', 'ticketg4s', 'ticketcliente'];
-    const keys = Object.keys(row);
-    for (const key of keys) {
-      const cleanKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (candidates.includes(cleanKey)) {
-        const val = row[key];
-        if (val !== undefined && val !== null && val !== "") return String(val).trim();
-      }
-    }
-    return "";
-  };
-
-  const groupByParentSmart = (rows, targetSet, targetKeyInResult) => {
-    rows.forEach(row => {
-      const parentId = findParentIdInRow(row);
-      if (parentId && targetSet.has(parentId)) {
-        if (!result[parentId][targetKeyInResult]) result[parentId][targetKeyInResult] = [];
-        result[parentId][targetKeyInResult].push(row);
-      }
-    });
-  };
-
-  groupByParentSmart(allServices, targetIds, 'services');
-  groupByParentSmart(allHistory, targetIds, 'history');
-  groupByParentSmart(allDocs, targetIds, 'documents');
-  groupByParentSmart(allActivos, targetIds, 'activos');
-
-  console.log(`⚡ [BATCH SMART] Procesados ${ids.length} tickets. Tiempo: ${Date.now() - t0}ms`);
-  return result;
-}
-
-function getClassificationOptions(email) {
-  const context = getUserContext(email);
-  if (!context.isValidUser) throw new Error("Acceso Denegado.");
-  return ["Visita técnica", "Visita comercial"];
-}
-
-// ------------------------------------------------------------------
-// ✅ MODO PROXY V5: CORRECCIÓN DE RUTAS RELATIVAS (INTERFAZ ORIGINAL COMPLETA)
-// ------------------------------------------------------------------
-function _renderFileView(anexoId) {
-  try {
-    const found = _findRowObjectByKey('Solicitudes anexos', anexoId, [
-      'ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID'
-    ]);
-    
-    if (!found) return HtmlService.createHtmlOutput("<h1>Archivo no encontrado en la base de datos.</h1>");
-    const row = found.obj;
-    const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
-    const fileName = _getField(row, ['Nombre']) || "Archivo_G4S";
-
-    let file = null;
-
-    if (pathValue.includes("drive.google.com") || pathValue.includes("/d/")) {
-        const idMatch = pathValue.match(/\/d\/([a-zA-Z0-9_-]+)/) || pathValue.match(/id=([a-zA-Z0-9_-]+)/);
-        if (idMatch && idMatch[1]) {
-            try { file = DriveApp.getFileById(idMatch[1]); } catch(e) {}
-        }
-    } else {
-        const parts = pathValue.split('/');
-        const exactFileName = parts[parts.length - 1]; 
-
-        if (exactFileName) {
-            const filesIt = DriveApp.getFilesByName(exactFileName);
-            if (filesIt.hasNext()) {
-                file = filesIt.next();
-            }
-        }
-    }
-
-    if (!file) {
-       return HtmlService.createHtmlOutput(`
-         <div style='font-family:sans-serif;text-align:center;padding:40px;'>
-           <h1>Archivo no encontrado en Drive</h1>
-           <p>No se pudo localizar el archivo físico: <b>${fileName}</b></p>
-         </div>
-       `);
-    }
-
-    if (file.getSize() > 8 * 1024 * 1024) { 
-      return HtmlService.createHtmlOutput(`
-        <div style="font-family:sans-serif;text-align:center;margin-top:50px;">
-          <h2>Archivo Grande</h2>
-          <a href="https://drive.google.com/uc?export=download&id=${file.getId()}" style="background:#0033A0;color:white;padding:15px;text-decoration:none;">Descargar</a>
-        </div>
-      `);
-    }
-
-    const blob = file.getBlob();
-    const base64 = Utilities.base64Encode(blob.getBytes());
-    const mimeType = blob.getContentType();
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>G4S - ${fileName}</title>
-        <style>
-          body { margin: 0; padding: 0; background-color: #f3f4f6; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
-          .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
-          .btn { background: #D32F2F; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; }
-          .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #D32F2F; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 15px auto; }
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div id="loader"><div class="spinner"></div><h3>Procesando...</h3></div>
-          <div id="content" style="display:none;">
-            <h3>Listo</h3>
-            <p>${fileName}</p>
-            <button id="dlBtn" class="btn">Guardar Archivo</button>
-          </div>
-        </div>
-        <script>
-          window.onload = function() {
-            const rawBase64 = "${base64}";
-            const byteCharacters = atob(rawBase64);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
-            const blob = new Blob([new Uint8Array(byteNumbers)], {type: "${mimeType}"});
-            const url = URL.createObjectURL(blob);
-            const btn = document.getElementById('dlBtn');
-            btn.onclick = function() {
-              const a = document.createElement('a'); a.href = url; a.download = "${fileName}"; a.click();
-            };
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('content').style.display = 'block';
-            setTimeout(() => btn.click(), 800);
-          };
-        </script>
-      </body>
-      </html>
-    `;
-
-    return HtmlService.createHtmlOutput(html);
-
-  } catch (e) {
-    return HtmlService.createHtmlOutput(`<h3>Error de Sistema: ${e.message}</h3>`);
-  }
 }
 
 /**
  * ------------------------------------------------------------------
- * ✅ FUNCIÓN PUENTE: API DE APPSHEET
+ * SINCRONIZACIÓN MASIVA (MODO OFFLINE)
+ * ------------------------------------------------------------------
+ */
+
+function getBatchRequestDetails(email, { ids }) {
+  if (!getUserContext(email).isValidUser) throw new Error("Acceso denegado.");
+  if (!ids || !ids.length) return {};
+
+  const targetIds = new Set(ids.map(x => String(x).trim()));
+  const tables = ['Observaciones historico', 'Estados historico', 'Solicitudes anexos', 'Solicitudes activos'];
+  const result = {};
+  targetIds.forEach(id => { result[id] = { services: [], history: [], documents: [], activos: [] }; });
+
+  const mapKey = { 'Observaciones historico': 'services', 'Estados historico': 'history', 'Solicitudes anexos': 'documents', 'Solicitudes activos': 'activos' };
+
+  tables.forEach(table => {
+    const rows = getDataFromSheet(table);
+    rows.forEach(row => {
+      const parentId = String(_getField(row, ['ID Solicitudes', 'ID Solicitud'])).trim();
+      if (parentId && targetIds.has(parentId)) {
+        result[parentId][mapKey[table]].push(row);
+      }
+    });
+  });
+
+  return result;
+}
+
+function getClassificationOptions(email) {
+  if (!getUserContext(email).isValidUser) throw new Error("Acceso denegado.");
+  return ["Visita técnica", "Visita comercial", "Soporte Remoto", "Mantenimiento"];
+}
+
+/**
+ * ------------------------------------------------------------------
+ * HELPER DE BAJO NIVEL: ACCESO A HOJAS
+ * ------------------------------------------------------------------
+ */
+
+function getDataFromSheet(sheetName) {
+  const { sheet, headers, lastRow, lastCol } = _getSheetInfo(sheetName);
+  if (!sheet || lastRow < 2) return [];
+  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  return values.map(row => _rowToObject(headers, row));
+}
+
+function appendDataToSheet(sheetName, objectData) {
+  const { sheet, headers, lastCol } = _getSheetInfo(sheetName);
+  if (!sheet) throw new Error(`Hoja '${sheetName}' no encontrada.`);
+
+  const rowArray = headers.map(header => {
+    let val = objectData[header];
+    if (val === undefined) {
+      const norm = _normHeader(header);
+      const key = Object.keys(objectData).find(k => _normHeader(k) === norm);
+      val = key ? objectData[key] : "";
+    }
+    return val ?? "";
+  });
+
+  sheet.appendRow(rowArray);
+  return { success: true };
+}
+
+function _getField(row, candidateNames) {
+  if (!row) return "";
+  const keys = Object.keys(row);
+  for (const c of candidateNames) {
+    const k = keys.find(x => _normHeader(x) === _normHeader(c));
+    if (k && row[k] !== undefined && row[k] !== null && row[k] !== "") return row[k];
+  }
+  return "";
+}
+
+/**
+ * ------------------------------------------------------------------
+ * INTEGRACIÓN CON APPSHEET API
  * ------------------------------------------------------------------
  */
 function enviarAppSheetAPI(tableName, rowData) {
+  /**
+   * 🔒 NOTA DE SEGURIDAD:
+   * Se recomienda mover 'appId' y 'accessKey' a Propiedades del Script (ScriptProperties)
+   * para evitar exponer llaves en el código fuente.
+   * Ejemplo: PropertiesService.getScriptProperties().getProperty('APPSHEET_KEY');
+   */
   const appId = "c0817cfb-b068-4a46-ae3b-228c0385a486"; 
   const accessKey = "V2-gaw9Q-LcMsx-wfJof-pFCgC-u6igd-FMxtR-23Zr1-V3O4K"; 
-  
   const url = `https://api.appsheet.com/api/v1/apps/${appId}/tables/${tableName}/Action`;
   
   const payload = {
     "Action": "Add",
-    "Properties": { 
-       "Locale": "es-CO", 
-       "Timezone": "SA Pacific Standard Time",
-       "RunAsUserEmail": rowData["Usuario Actualización"] 
-    },
+    "Properties": { "Locale": "es-CO", "Timezone": "SA Pacific Standard Time", "RunAsUserEmail": rowData["Usuario Actualización"] },
     "Rows": [ rowData ]
   };
   
-  const options = {
-    "method": "post",
-    "contentType": "application/json",
-    "headers": { "ApplicationAccessKey": accessKey },
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
-  };
-
   try {
-    const response = UrlFetchApp.fetch(url, options);
-    const resText = response.getContentText();
-    console.log("Respuesta AppSheet API: " + resText);
-    return JSON.parse(resText);
+    const response = UrlFetchApp.fetch(url, {
+      "method": "post",
+      "contentType": "application/json",
+      "headers": { "ApplicationAccessKey": accessKey },
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    });
+    return JSON.parse(response.getContentText());
   } catch (e) {
-    console.error("Error en la API de AppSheet: " + e);
+    console.error("Error AppSheet API:", e);
     return null;
   }
 }

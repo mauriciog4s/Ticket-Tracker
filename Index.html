@@ -6,13 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>G4S Ticket Tracker</title>
 
-    <!-- React & Tailwind -->
+    <!-- Librerías de React y ReactDOM (Versión de Desarrollo) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel para transpilar JSX en el navegador -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS vía CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
+      /**
+       * Configuración personalizada de Tailwind CSS.
+       * Define la paleta de colores corporativos de G4S.
+       */
       tailwind.config = {
         theme: {
           extend: {
@@ -23,20 +31,22 @@
     </script>
 
     <style>
-      /* Scrollbar */
+      /* Personalización de la barra de desplazamiento */
       ::-webkit-scrollbar { width: 8px; }
       ::-webkit-scrollbar-track { background: #f1f1f1; }
       ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
       
       body { font-family: Roboto, system-ui, -apple-system, Segoe UI, sans-serif; background-color: #f3f4f6; }
       
-      /* Animations */
+      /* Animaciones de desvanecimiento y entrada */
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
       
+      /* Efecto Skeleton para estados de carga */
       .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
       @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
       
+      /* Notificaciones tipo Toast */
       .toast { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; font-size: 14px; animation: slideUp 0.3s ease-out; }
       @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       
@@ -44,19 +54,19 @@
       .spin-slow { animation: spin 2s linear infinite; }
       @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-      /* Inputs estilo Material/AppSheet */
+      /* Estilos para campos de entrada y etiquetas (estilo Material Design) */
       .input-label { font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-bottom: 0.25rem; display: block; }
       .input-field { width: 100%; border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.5rem; font-size: 0.875rem; transition: all 0.2s; outline: none; background: white; }
       .input-field:focus { border-color: #D32F2F; box-shadow: 0 0 0 1px #D32F2F; }
       .section-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin-bottom: 1rem; margin-top: 1.5rem; }
       
-      /* Botones de opción */
+      /* Botones de opción de selección única/múltiple */
       .btn-option { border: 1px solid #d1d5db; padding: 0.5rem 1rem; font-size: 0.875rem; color: #4b5563; background: white; transition: all 0.2s; white-space: nowrap; margin-right: -1px; margin-bottom: 4px; }
       .btn-option:hover { background-color: #f9fafb; z-index: 10; position: relative; }
       .btn-option.selected { background-color: #f3f4f6; border-color: #9ca3af; font-weight: 600; color: #111827; z-index: 20; position: relative; }
       .btn-option.selected-red { background-color: #D32F2F; border-color: #D32F2F; color: white; }
       
-      /* Ajuste de bordes para grupos */
+      /* Utilidades para redondear bordes en grupos de botones */
       .group-start { border-top-left-radius: 0.25rem; border-bottom-left-radius: 0.25rem; }
       .group-end { border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; }
       .group-single { border-radius: 0.25rem; }
@@ -64,17 +74,22 @@
   </head>
 
   <body>
-    <!-- ✅ GUARDAMOS LA URL DEL SCRIPT EN UNA VARIABLE GLOBAL PARA EL PROXY -->
+    <!-- ✅ Inyección de la URL del Script para el Proxy de Archivos -->
     <script>
       var SCRIPT_URL = "<?= scriptUrl ?>";
     </script>
 
+    <!-- Contenedor principal de la App de React -->
     <div id="root"></div>
 
     <script type="text/babel">
       const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-      // --- MOCK DATA PARA PRUEBAS LOCALES ---
+      /**
+       * --- MOCK DATA PARA PRUEBAS LOCALES ---
+       * Estos datos se utilizan únicamente si la aplicación se abre fuera del entorno
+       * de Google Apps Script (ej: abriendo el archivo localmente en el navegador).
+       */
       const MOCK_DATA = {
         userContext: {
           email: "usuario.demo@g4s.com",
@@ -95,7 +110,11 @@
         }
       };
 
-      // --- SERVER BRIDGE ---
+      /**
+       * --- runServer ---
+       * Puente de comunicación con el backend (Code.gs).
+       * Encapsula google.script.run en Promesas y maneja el modo MOCK.
+       */
       const runServer = (endpoint, payload = {}) => {
         return new Promise((resolve, reject) => {
           if (typeof google !== "undefined" && google.script) {
@@ -107,7 +126,8 @@
               .withFailureHandler((err) => reject(err))
               .apiHandler({ endpoint, payload });
           } else {
-            console.warn(`⚠️ [MOCK MODE] Llamada a servidor simulada: ${endpoint}`, payload);
+            // Simulación de respuesta del servidor en entorno local
+            console.warn(`⚠️ [MODO MOCK] Llamada simulada: ${endpoint}`, payload);
             setTimeout(() => {
               switch (endpoint) {
                 case 'getUserContext': resolve(MOCK_DATA.userContext); break;
@@ -131,7 +151,10 @@
         });
       };
 
-      // --- ICONOS ---
+      /**
+       * --- ICONOS (SVG) ---
+       * Colección de iconos Lucide implementados como componentes SVG.
+       */
       const Icon = ({ name, size = 20, className = "" }) => {
         const icons = {
           Home: (<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
@@ -166,16 +189,22 @@
         );
       };
 
+      /**
+       * Toast: Notificación flotante temporal.
+       */
       const Toast = ({ message, onClose }) => {
         useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
         return (
-          <div className="toast flex items-center gap-2">
+          <div className="toast flex items-center gap-2 animate-fade-in">
             <Icon name="Info" className="text-blue-400" />
             <span>{message}</span>
           </div>
         );
       };
 
+      /**
+       * SuccessModal: Diálogo de éxito al crear una solicitud.
+       */
       const SuccessModal = ({ onClose }) => {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -189,7 +218,7 @@
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">¡Solicitud Creada!</h3>
               <p className="text-gray-500 text-sm mb-6">Tu ticket ha sido registrado correctamente.</p>
-              <button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg shadow-green-600/30">
+              <button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg">
                 Entendido
               </button>
             </div>
@@ -197,25 +226,29 @@
         );
       };
 
+      /**
+       * Helpers para colores de estado.
+       */
       const getStatusTextColor = (status) => {
-        if (!status) return "text-gray-600";
-        const s = status.toString().toLowerCase();
+        const s = String(status || "").toLowerCase();
         if (s === "cerrado" || s.includes("resuelto")) return "text-green-600";
-        if (s.includes("abierto") || s.includes("soporte") || s.includes("proceso")) return "text-blue-600";
+        if (s.includes("abierto") || s.includes("proceso")) return "text-blue-600";
         if (s.includes("cancelado") || s.includes("rechazado")) return "text-red-600";
         return "text-yellow-600";
       };
 
       const getStatusBadgeColor = (status) => {
-        if (!status) return "bg-gray-100 text-gray-600";
-        const s = status.toString().toLowerCase();
+        const s = String(status || "").toLowerCase();
         if (s === "cerrado" || s.includes("resuelto")) return "bg-green-100 text-green-700";
-        if (s.includes("abierto") || s.includes("soporte") || s.includes("proceso")) return "bg-blue-100 text-blue-700";
+        if (s.includes("abierto") || s.includes("proceso")) return "bg-blue-100 text-blue-700";
         if (s.includes("cancelado") || s.includes("rechazado")) return "bg-red-100 text-red-700";
         return "bg-yellow-100 text-yellow-700";
       };
 
-      // --- ERROR BOUNDARY ---
+      /**
+       * --- ErrorBoundary ---
+       * Atrapa errores en el árbol de componentes de React para evitar que la UI se cuelgue.
+       */
       class ErrorBoundary extends React.Component {
         constructor(props) {
           super(props);
@@ -224,23 +257,16 @@
         static getDerivedStateFromError(error) {
           return { hasError: true, message: error?.message || String(error) };
         }
-        componentDidCatch(error, info) {
-          console.error("UI Crash:", error, info);
-        }
         render() {
           if (this.state.hasError) {
             return (
               <div className="p-8 max-w-3xl mx-auto">
                 <div className="bg-white border border-red-200 rounded-lg p-6 shadow-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Icon name="AlertTriangle" className="text-red-600" />
-                    <h2 className="text-lg font-bold text-gray-800">La interfaz se cayó (pero ya la atrapamos 😅)</h2>
-                  </div>
-                  <p className="text-sm text-gray-600">Detalle:</p>
-                  <pre className="mt-2 text-xs bg-gray-50 border rounded p-3 overflow-auto">{this.state.message}</pre>
-                  <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="mt-4 px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700">
-                    Borrar Caché y Recargar
-                  </button>
+                  <h2 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <Icon name="AlertTriangle" className="text-red-600" /> Error en la interfaz
+                  </h2>
+                  <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto">{this.state.message}</pre>
+                  <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-appRed text-white rounded text-sm font-bold">Reiniciar Aplicación</button>
                 </div>
               </div>
             );
@@ -249,89 +275,44 @@
         }
       }
 
-      // --- LOGIN VIEW ---
+      /**
+       * --- LoginView ---
+       * Pantalla de inicio para autenticación corporativa.
+       */
       const LoginView = ({ onSuccess, isCheckingCache, externalError, onClearError }) => {
         const [loading, setLoading] = useState(false);
-        const [localError, setLocalError] = useState(null);
-
-        // Combinamos errores locales con los externos
-        const activeError = externalError || localError;
-
-        if (isCheckingCache) {
-          return (
-            <div className="flex h-screen items-center justify-center bg-gray-100">
-              <div className="flex flex-col items-center">
-                <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-16 w-auto mb-4 opacity-50 grayscale" />
-              </div>
-            </div>
-          );
-        }
-
-        const login = async () => {
-          setLoading(true);
-          setLocalError(null);
-          if (onClearError) onClearError(); // Limpiamos error previo
-          
-          try {
-            await onSuccess(null);
-          } catch (e) {
-            console.error(e);
-            setLoading(false);
-            setLocalError(e.message || "Error desconocido al iniciar sesión.");
-          }
-        };
+        if (isCheckingCache) return <div className="flex h-screen items-center justify-center bg-gray-100"><Icon name="RefreshCw" className="animate-spin text-gray-400" size={32} /></div>;
 
         return (
-          <div className="flex flex-col h-screen bg-gray-100 font-sans">
-            <div className="flex-1 flex items-center justify-center p-4">
-              <div className="bg-white p-10 rounded-2xl shadow-xl max-w-md w-full text-center relative overflow-hidden">
-                
-                {/* Logo G4S */}
-                <div className="flex justify-center mb-6">
-                  <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-16 w-auto object-contain" />
+          <div className="flex h-screen items-center justify-center bg-gray-100 p-4">
+            <div className="bg-white p-10 rounded-2xl shadow-xl max-w-md w-full text-center">
+              <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-16 mx-auto mb-6" />
+              <h1 className="text-2xl font-bold text-gray-800 mb-1">Ticket Tracker</h1>
+              <p className="text-gray-400 mb-8 text-sm">Gestión de Tecnología & Servicios</p>
+
+              {externalError && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm text-left flex gap-2">
+                  <Icon name="AlertTriangle" size={18} className="shrink-0" /> <span>{externalError}</span>
                 </div>
+              )}
 
-                <h1 className="text-2xl font-bold text-gray-800 mb-1 tracking-tight">Ticket Tracker</h1>
-                <p className="text-gray-400 mb-8 text-sm font-medium">Gestión de Tecnología & Servicios</p>
-
-                {/* ALERTA DE ERROR PERSONALIZADA */}
-                {activeError && (
-                  <div className="mb-8 bg-red-50 border border-red-100 rounded-lg p-4 text-left animate-fade-in">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon name="AlertTriangle" className="text-appRed" size={18} />
-                      <h4 className="text-sm font-bold text-appRed">Acceso Denegado</h4>
-                    </div>
-                    <p className="text-xs text-red-600 leading-relaxed ml-6">
-                      {activeError}
-                    </p>
-                  </div>
-                )}
-
-                {loading ? (
-                  <div className="py-4">
-                    <div className="w-8 h-8 border-4 border-appBlue border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    <p className="text-xs text-gray-400 font-bold">Verificando credenciales...</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <button
-                      onClick={login}
-                      className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition shadow-md hover:shadow-lg transform active:scale-95"
-                    >
-                      <Icon name="User" size={20} /> Ingresar con Google
-                    </button>
-                  </div>
-                )}
-
-                <div className="mt-10 text-[10px] text-gray-300">© 2025 G4S Secure Solutions.</div>
-              </div>
+              <button
+                onClick={async () => { setLoading(true); try { await onSuccess(); } catch(e) { setLoading(false); } }}
+                disabled={loading}
+                className="w-full bg-appBlue hover:bg-blue-800 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition"
+              >
+                {loading ? <Icon name="RefreshCw" className="animate-spin" size={20} /> : <><Icon name="User" size={20} /> Ingresar con Google</>}
+              </button>
             </div>
           </div>
         );
       };
 
-      // --- SIDEBAR (✅ ACTUALIZADO CON BOTÓN DE REFRESCAR CLIENTE) ---
-      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSyncRequests, lastSyncDetails, isSyncing, onRefreshContext }) => {
+      /**
+       * --- Sidebar ---
+       * Navegación lateral y sección de usuario.
+       */
+      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSyncRequests, isSyncing, onRefreshContext }) => {
         const menuItems = [
           { id: "home", icon: "Home", title: "Inicio" },
           { id: "create", icon: "ClipboardList", title: "Nueva Solicitud" },
@@ -339,143 +320,44 @@
           { id: "history", icon: "History", title: "Historial Tickets" },
         ];
 
-        // Lógica de visualización del nombre de cliente
-        const clientDisplay = userContext?.assignedCustomerNames?.length > 0 
-          ? userContext.assignedCustomerNames.join(", ") 
-          : (userContext?.isAdmin ? "G4S Global" : "Sin asignar");
-
-        // Estado local para evitar spam en el botón
-        const [refreshingCtx, setRefreshingCtx] = useState(false);
-
-        // ✅ Manejador del clic con seguridad anti-spam
-        const handleCtxClick = async (e) => {
-            e.stopPropagation();
-            if (refreshingCtx) return; // Si ya está cargando, ignora nuevos clics
-
-            setRefreshingCtx(true);
-            try {
-                if (onRefreshContext) await onRefreshContext();
-            } catch (error) {
-                console.error("Error refrescando contexto", error);
-            } finally {
-                // Cooldown de 1 segundo para evitar clics frenéticos
-                setTimeout(() => {
-                    setRefreshingCtx(false);
-                }, 1000);
-            }
-        };
-
         return (
           <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-lg z-10 fixed">
             <div className="p-6 border-b border-gray-100 flex items-center gap-3 cursor-pointer" onClick={() => setView("home")}>
-              <img
-                src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
-                alt="G4S Logo"
-                className="h-8 w-auto object-contain"
-              />
-              <span className="font-bold text-gray-800 text-lg">Ticket Tracker</span>
+              <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S" className="h-8" />
+              <span className="font-bold text-gray-800 text-lg">Tracker</span>
             </div>
 
             <div className="flex-1 overflow-y-auto py-4">
               {menuItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setView(item.id)}
-                  className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${
-                    currentView === item.id ? "bg-red-50 border-appRed" : "border-transparent hover:bg-gray-50"
-                  }`}
-                >
+                <div key={item.id} onClick={() => setView(item.id)} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === item.id ? "bg-red-50 border-appRed text-appRed font-bold" : "border-transparent text-gray-600 hover:bg-gray-50"}`}>
                   <div className="flex items-center gap-3">
-                    <Icon name={item.icon} className={`${currentView === item.id ? "text-appRed" : "text-gray-400"}`} size={20} />
-                    <div className={`font-medium text-sm ${currentView === item.id ? "text-appRed font-bold" : "text-gray-600"}`}>
-                      {item.title}
-                    </div>
+                    <Icon name={item.icon} size={20} /> <span className="text-sm">{item.title}</span>
                   </div>
                 </div>
               ))}
-
               <div className="my-2 border-t border-gray-100"></div>
-
-              <div
-                onClick={() => setView("config")}
-                className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${
-                  currentView === "config" ? "bg-blue-50 border-appBlue" : "border-transparent hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <Icon name="Settings" className={`${currentView === "config" ? "text-appBlue" : "text-gray-400"}`} size={20} />
-                  <div className={`font-medium text-sm ${currentView === "config" ? "text-appBlue font-bold" : "text-gray-600"}`}>
-                    Configuración
-                  </div>
+              <div onClick={() => setView("config")} className={`px-6 py-3 cursor-pointer transition-colors border-l-4 ${currentView === "config" ? "bg-blue-50 border-appBlue text-appBlue font-bold" : "border-transparent text-gray-600 hover:bg-gray-50"}`}>
+                <div className="flex items-center gap-3">
+                  <Icon name="Settings" size={20} /> <span className="text-sm">Configuración</span>
                 </div>
               </div>
             </div>
 
-            {/* SECCIÓN USUARIO Y CLIENTE */}
             <div className="p-4 border-t bg-gray-50">
-              <div className="flex flex-col gap-2 mb-3">
-                
-                {/* Info del Cliente */}
-                <div className="flex items-center gap-2 mb-1">
-                   <div className="p-1.5 rounded bg-white border border-gray-200 text-gray-400">
-                     <Icon name="Database" size={14} />
+              <div className="flex flex-col gap-3 mb-4 text-xs">
+                <div>
+                   <div className="flex justify-between items-center text-gray-400 font-bold uppercase mb-1">
+                     <span>Cliente</span>
+                     <button onClick={onRefreshContext} className="hover:text-blue-600 transition"><Icon name="RefreshCw" size={12} /></button>
                    </div>
-                   <div className="overflow-hidden flex-1">
-                    
-                    {/* ✅ BOTÓN DE ACTUALIZACIÓN AL LADO DEL TÍTULO */}
-                    <div className="flex justify-between items-center pr-1">
-                        <div className="text-[9px] uppercase font-bold text-gray-400">Cliente Asignado</div>
-                        <button 
-                          onClick={handleCtxClick} 
-                          disabled={refreshingCtx}
-                          className={`text-gray-400 p-0.5 rounded focus:outline-none transition ${refreshingCtx ? "cursor-not-allowed opacity-50" : "hover:text-blue-600"}`}
-                          title="Actualizar Cliente Asignado"
-                        >
-                          <Icon name="RefreshCw" size={10} className={refreshingCtx ? "animate-spin text-blue-600" : ""} />
-                        </button>
-                    </div>
-
-                    <div className="text-xs font-bold text-blue-800 truncate w-full" title={clientDisplay}>
-                      {clientDisplay}
-                    </div>
-                   </div>
+                   <div className="font-bold text-blue-900 truncate">{userContext?.assignedCustomerNames?.join(", ") || "Sedes Varias"}</div>
                 </div>
-
-                {/* Info del Usuario */}
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-full bg-gray-200">
-                    <Icon name="User" size={16} className="text-gray-600" />
-                  </div>
-                  <div className="overflow-hidden flex-1">
-                    <div className="text-[10px] uppercase font-bold text-gray-500">Usuario</div>
-                    <div className="text-xs font-bold text-gray-800 truncate w-full" title={userContext?.email}>
-                      {userContext?.email || "..."}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1 mt-1">
-                  {isSyncing ? (
-                    <div className="sync-indicator text-blue-600 font-bold">
-                      <Icon name="RefreshCw" size={10} className="spin-slow" /> Actualizando...
-                    </div>
-                  ) : (
-                    <div className="sync-indicator">
-                      <Icon name="CloudLightning" size={10} /> Al día
-                    </div>
-                  )}
-                  {lastSyncRequests && (
-                    <span className="text-[9px] text-gray-400">
-                      {new Date(Number(lastSyncRequests)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  )}
+                   <div className="p-2 rounded-full bg-gray-200 text-gray-600"><Icon name="User" size={16} /></div>
+                   <div className="truncate font-bold text-gray-700">{userContext?.email}</div>
                 </div>
               </div>
-
-              <button
-                onClick={onLogout}
-                className="w-full py-2 px-3 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2"
-              >
+              <button onClick={onLogout} className="w-full py-2 bg-white border border-gray-300 rounded font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-2 transition">
                 <Icon name="LogIn" size={14} className="rotate-180" /> Salir
               </button>
             </div>
@@ -483,777 +365,173 @@
         );
       };
 
-      // --- CREATE REQUEST VIEW ---
+      /**
+       * --- CreateRequest ---
+       * Formulario complejo para la creación de nuevos tickets con adjuntos y activos.
+       */
       const CreateRequest = ({ userContext, setView, onRefresh, showToast }) => {
+        // Estado local del formulario
         const [formData, setFormData] = useState({
-          idSede: "",
-          ticketCliente: "",
-          clasificacion: "Hardware",
-          tipoServicio: "Visita técnica",
-          prioridad: "Media",
-          solicitud: "",
-          observacion: "",
+          idSede: "", ticketCliente: "", clasificacion: "Hardware",
+          tipoServicio: "Visita técnica", prioridad: "Media", solicitud: "", observacion: ""
         });
 
         const [submitting, setSubmitting] = useState(false);
         const [showSuccess, setShowSuccess] = useState(false);
-        
-        // Estado para clasificaciones dinámicas
         const [classificationOptions, setClassificationOptions] = useState([]);
         const [loadingOptions, setLoadingOptions] = useState(false);
-
-        // --- FETCH DE CLASIFICACIONES ---
-        useEffect(() => {
-          let mounted = true;
-          setLoadingOptions(true);
-          runServer('getClassificationOptions')
-            .then(opts => {
-               if(mounted && Array.isArray(opts)) {
-                 setClassificationOptions(opts);
-                 // Preseleccionar la primera opción si existe
-                 if (opts.length > 0) setFormData(prev => ({...prev, tipoServicio: opts[0]}));
-               }
-            })
-            .catch(err => console.error("Error fetching classifications", err))
-            .finally(() => mounted && setLoadingOptions(false));
-          
-          return () => { mounted = false; };
-        }, []);
-
-        // --- FECHA EN FORMATO COLOMBIA ---
-        const currentDate = useMemo(() => {
-            return new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", hour12: true });
-        }, []);
-
-        // --- ANEXOS ---
-        const fileInputRef = useRef(null);
         const [attachments, setAttachments] = useState([]);
-        const [uploadInfo, setUploadInfo] = useState({ total: 0, done: 0 });
-        const MAX_MB = 8;
-
-        // --- ACTIVOS (QR) ---
         const [activos, setActivos] = useState([]);
         const [showActivosModal, setShowActivosModal] = useState(false);
+        const fileInputRef = useRef(null);
 
-        const normalize = (v) => String(v ?? "").trim();
+        // Cargar opciones dinámicas de clasificación
+        useEffect(() => {
+          setLoadingOptions(true);
+          runServer('getClassificationOptions')
+            .then(opts => { if(Array.isArray(opts)) setClassificationOptions(opts); })
+            .finally(() => setLoadingOptions(false));
+        }, []);
 
-        const addActivoUnique = (a) => {
-          const item = {
-            idActivo: normalize(a?.idActivo),
-            nombreActivo: normalize(a?.nombreActivo),
-            qrSerial: normalize(a?.qrSerial),
-            nombreUbicacion: normalize(a?.nombreUbicacion),
-            estadoActivo: normalize(a?.estadoActivo),
-            funcionamiento: normalize(a?.funcionamiento),
-            novedades: normalize(a?.novedades),
-            idPiso: normalize(a?.idPiso),
-            idDispositivo: normalize(a?.idDispositivo),
-          };
+        const handleChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-          const key = item.qrSerial || item.idActivo;
-          if (!key) return;
-
-          setActivos((prev) => {
-            const exists = prev.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key);
-            if (exists) return prev;
-            return [...prev, item];
-          });
+        /**
+         * Manejo de archivos adjuntos.
+         */
+        const handleFileSelection = (e) => {
+          const files = Array.from(e.target.files || []);
+          const mapped = files.map(f => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file: f, tipo: f.type.startsWith("image/") ? "Foto" : "Archivo", status: "ready"
+          }));
+          setAttachments(prev => [...prev, ...mapped]);
         };
 
-        const removeActivo = (key) => {
-          setActivos((prev) => prev.filter((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) !== key));
-        };
-
-        const linkActivosToSolicitud = async (solicitudId) => {
-          if (!activos.length) return;
-          let anyOk = false;
-          let anyErr = false;
-
-          for (const a of activos) {
-            try {
-              await runServer("createSolicitudActivo", {
-                solicitudId: String(solicitudId).trim(),
-                qrSerial: a.qrSerial,
-                idActivo: a.idActivo,
-                nombreActivo: a.nombreActivo,
-                nombreUbicacion: a.nombreUbicacion,
-                estadoActivo: a.estadoActivo,
-                funcionamiento: a.funcionamiento,
-              });
-              anyOk = true;
-            } catch (e) {
-              console.warn("No se pudo vincular activo:", a, e);
-              anyErr = true;
-            }
-          }
-
-          if (anyOk && !anyErr) showToast?.("Activos vinculados al ticket.");
-          if (anyErr) showToast?.("Ticket creado. Algunos activos no se pudieron vincular.");
-        };
-
-        const fileToBase64 = (file) =>
-          new Promise((resolve, reject) => {
+        const uploadAll = async (solicitudId) => {
+          for (const att of attachments) {
             const reader = new FileReader();
-            reader.onload = () => {
-              const result = String(reader.result || "");
-              const idx = result.indexOf("base64,");
-              if (idx === -1) return reject(new Error("No se pudo leer el archivo."));
-              resolve({ base64: result.substring(idx + 7), mimeType: file.type || "application/octet-stream" });
-            };
-            reader.onerror = () => reject(new Error("Error leyendo el archivo."));
-            reader.readAsDataURL(file);
-          });
-
-        const prettySize = (bytes) => {
-          const mb = bytes / (1024 * 1024);
-          return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
-        };
-
-        const addFiles = (fileList) => {
-          const files = Array.from(fileList || []);
-          const mapped = files.map((f) => {
-            const mb = f.size / (1024 * 1024);
-            const tipoDefault = (f.type || "").startsWith("image/") ? "Foto" : "Archivo";
-            return {
-              id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
-              file: f,
-              tipo: tipoDefault,
-              status: mb > MAX_MB ? "error" : "ready",
-              error: mb > MAX_MB ? `Supera ${MAX_MB}MB` : "",
-            };
-          });
-          setAttachments((prev) => [...prev, ...mapped]);
-        };
-
-        const removeAttachment = (id) => setAttachments((prev) => prev.filter((a) => a.id !== id));
-        const updateTipo = (id, tipo) => setAttachments((prev) => prev.map((a) => (a.id === id ? { ...a, tipo } : a)));
-
-       const uploadAttachments = async (solicitudId) => {
-          const valid = attachments.filter((a) => a.status === "ready");
-          if (valid.length === 0) return;
-
-          setUploadInfo({ total: valid.length, done: 0 });
-
-          for (let i = 0; i < valid.length; i++) {
-            const att = valid[i];
-            try {
-              setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "uploading" } : a)));
-              const { base64, mimeType } = await fileToBase64(att.file);
-              
-              // --- ACTUALIZACIÓN: LIMPIEZA DE NOMBRE ---
-              // 1. Quitar tildes
-              // 2. Cambiar espacios por guiones bajos
-              // 3. Eliminar caracteres raros
-              const safeName = att.file.name
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes (á -> a)
-                .replace(/\s+/g, "_")                              // Espacios -> _
-                .replace(/[^a-zA-Z0-9._-]/g, "");                  // Solo deja letras, números, . _ -
-
-              await runServer("uploadAnexo", { 
-                solicitudId, 
-                tipoAnexo: att.tipo, 
-                fileName: safeName, // Enviamos el nombre limpio
-                mimeType, 
-                base64 
-              });
-              
-              setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "done" } : a)));
-            } catch (e) {
-              setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "error", error: e.message || String(e) } : a)));
-            } finally {
-              setUploadInfo((prev) => ({ ...prev, done: prev.done + 1 }));
-            }
-          }
-        };
-
-        const handleChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
-
-        // --- MODAL ACTIVOS ---
-        const ActivosModal = ({ onClose }) => {
-          const [qr, setQr] = useState("");
-          const [finding, setFinding] = useState(false);
-          const [error, setError] = useState(null);
-
-          const [catalog, setCatalog] = useState([]);
-          const [catalogLoading, setCatalogLoading] = useState(false);
-          const [filter, setFilter] = useState("");
-
-          const close = () => {
-            setQr("");
-            setError(null);
-            onClose?.();
-          };
-
-          const loadCatalog = async () => {
-            setCatalogLoading(true);
-            try {
-              const res = await runServer("getActivosCatalog", {});
-              const list = res?.data || [];
-              setCatalog(list);
-            } catch (e) {
-              console.warn("Catálogo no disponible:", e);
-              setCatalog([]);
-            } finally {
-              setCatalogLoading(false);
-            }
-          };
-
-          useEffect(() => { loadCatalog(); }, []);
-
-          const findByQr = async () => {
-            const q = String(qr || "").trim();
-            if (!q) { setError("Ingresa un QR."); return; }
-
-            setFinding(true);
-            setError(null);
-            try {
-              const res = await runServer("getActivoByQr", { qr: q });
-              if (!res?.found || !res?.activo) {
-                setError("No se encontró un activo con ese QR.");
-                return;
-              }
-              addActivoUnique(res.activo);
-              showToast?.("Activo agregado.");
-              setQr("");
-            } catch (e) {
-              setError(e.message || String(e));
-            } finally {
-              setFinding(false);
-            }
-          };
-
-          const filteredCatalog = useMemo(() => {
-            const q = String(filter || "").toLowerCase().trim();
-            if (!q) return catalog.slice(0, 50);
-            const f = catalog.filter((a) => {
-              const hay = `${a?.qrSerial || ""} ${a?.idActivo || ""} ${a?.nombreActivo || ""} ${a?.nombreUbicacion || ""}`.toLowerCase();
-              return hay.includes(q);
+            const base64Promise = new Promise((res) => {
+              reader.onload = () => res(reader.result.split(',')[1]);
+              reader.readAsDataURL(att.file);
             });
-            return f.slice(0, 50);
-          }, [catalog, filter]);
-
-          const alreadyAdded = (a) => {
-            const key = normalize(a?.qrSerial) || normalize(a?.idActivo);
-            if (!key) return false;
-            return activos.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key);
-          };
-
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
-                <div className="px-6 py-4 border-b flex items-center justify-between">
-                  <div>
-                    <div className="text-xs uppercase font-bold text-gray-400">Activos asociados</div>
-                    <div className="text-lg font-bold text-gray-800">Agregar activo por QR</div>
-                  </div>
-                  <button onClick={close} className="p-2 rounded hover:bg-gray-50 text-gray-500">
-                    <Icon name="X" size={18} />
-                  </button>
-                </div>
-
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="text-sm font-bold text-gray-700 mb-2">Buscar por QR Serial</div>
-                    <div className="flex gap-2">
-                      <input
-                        className="input-field"
-                        placeholder="Pega o escribe el QR Serial..."
-                        value={qr}
-                        onChange={(e) => setQr(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") findByQr(); }}
-                      />
-                      <button
-                        type="button"
-                        onClick={findByQr}
-                        disabled={finding}
-                        className="px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {finding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Icon name="Search" size={16} />}
-                        Buscar
-                      </button>
-                    </div>
-
-                    {error && (
-                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700 flex gap-2">
-                        <Icon name="AlertTriangle" size={16} className="text-red-600" />
-                        <div>{error}</div>
-                      </div>
-                    )}
-
-                    <div className="mt-6">
-                      <div className="text-sm font-bold text-gray-700 mb-2">Seleccionados ({activos.length})</div>
-                      {activos.length ? (
-                        <div className="border rounded overflow-hidden">
-                          <div className="divide-y max-h-72 overflow-y-auto">
-                            {activos.map((a, idx) => {
-                              const key = normalize(a.qrSerial) || normalize(a.idActivo) || String(idx);
-                              return (
-                                <div key={key} className="p-3 bg-white flex items-start gap-3">
-                                  <div className="mt-0.5 text-gray-400"><Icon name="Monitor" size={16} /></div>
-                                  <div className="flex-1 overflow-hidden">
-                                    <div className="text-xs font-bold text-gray-800 truncate">{a.nombreActivo || "Activo"}</div>
-                                    <div className="text-[10px] text-gray-500 truncate">
-                                      QR: <span className="font-mono">{a.qrSerial || "-"}</span> · Ubicación: {a.nombreUbicacion || "-"}
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 truncate">
-                                      Estado: {a.estadoActivo || "-"} · Funcionamiento: {a.funcionamiento || "-"}
-                                    </div>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeActivo(key)}
-                                    className="p-2 border rounded hover:bg-gray-50"
-                                    title="Quitar"
-                                  >
-                                    <Icon name="X" size={14} />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-[10px] text-gray-400 italic">Aún no has agregado activos.</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm font-bold text-gray-700">Catálogo (opcional)</div>
-                      {catalogLoading ? (
-                        <div className="text-[10px] text-blue-600 font-bold flex items-center gap-2">
-                          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando...
-                        </div>
-                      ) : (
-                        <div className="text-[10px] text-gray-400">{catalog.length ? `${catalog.length} activos` : "No disponible"}</div>
-                      )}
-                    </div>
-
-                    <input
-                      className="input-field"
-                      placeholder="Filtrar por nombre, QR, ubicación..."
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      disabled={!catalog.length}
-                    />
-
-                    <div className="mt-3 border rounded overflow-hidden bg-white">
-                      <div className="divide-y max-h-96 overflow-y-auto">
-                        {filteredCatalog.length ? (
-                          filteredCatalog.map((a, i) => {
-                            const key = normalize(a?.qrSerial) || normalize(a?.idActivo) || `c_${i}`;
-                            const disabled = alreadyAdded(a);
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => { if (!disabled) { addActivoUnique(a); showToast?.("Activo agregado."); } }}
-                                disabled={disabled}
-                                className={`w-full text-left p-3 hover:bg-gray-50 transition flex items-start gap-3 ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                              >
-                                <div className="mt-0.5 text-gray-400"><Icon name="FileText" size={16} /></div>
-                                <div className="flex-1 overflow-hidden">
-                                  <div className="text-xs font-bold text-gray-800 truncate">{a?.nombreActivo || "Activo"}</div>
-                                  <div className="text-[10px] text-gray-500 truncate">
-                                    QR: <span className="font-mono">{a?.qrSerial || "-"}</span> · Ubicación: {a?.nombreUbicacion || "-"}
-                                  </div>
-                                  <div className="text-[10px] text-gray-400 truncate">
-                                    Estado: {a?.estadoActivo || "-"} · Funcionamiento: {a?.funcionamiento || "-"}
-                                  </div>
-                                </div>
-                                {disabled && (
-                                  <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded">Agregado</span>
-                                )}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="p-6 text-center text-xs text-gray-400 italic">
-                            {catalogLoading ? "Cargando catálogo..." : "No hay resultados."}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex justify-end gap-2">
-                      <button onClick={close} className="px-4 py-2 border rounded text-sm font-bold text-gray-700 hover:bg-gray-50">
-                        Cerrar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
+            const base64 = await base64Promise;
+            await runServer("uploadAnexo", { solicitudId, tipoAnexo: att.tipo, fileName: att.file.name, mimeType: att.file.type, base64 });
+          }
         };
 
         const handleSubmit = async () => {
-          if (!formData.idSede || !formData.solicitud || !formData.observacion) {
-            alert("Por favor completa los campos obligatorios.");
-            return;
-          }
-
+          if (!formData.idSede || !formData.solicitud || !formData.observacion) return alert("Complete los campos requeridos.");
           setSubmitting(true);
-
-          // ✅ OBSERVACIÓN SIN CONCATENAR
-          const payload = { ...formData, observacion: formData.observacion };
-
           try {
-            const res = await runServer('createRequest', payload);
-
-            const solicitudId = String(
-              res?.solicitudId ||
-              res?.idSolicitud ||
-              res?.row?.['ID Solicitud'] ||
-              res?.row?.['ID Solicitud '] ||
-              res?.Rows?.[0]?.['ID Solicitud'] ||
-              res?.Rows?.[0]?.['ID Solicitud '] ||
-              ''
-            ).trim();
-
-            if (!solicitudId) throw new Error("No se pudo obtener el ID de la solicitud creada.");
-
-            try { await linkActivosToSolicitud(solicitudId); } catch (e) { console.warn("Vincular activos falló:", e); }
-            await uploadAttachments(String(solicitudId).trim());
+            const res = await runServer('createRequest', formData);
+            const solicitudId = res.solicitudId;
+            if (attachments.length) await uploadAll(solicitudId);
+            for (const a of activos) {
+              await runServer("createSolicitudActivo", { solicitudId, qrSerial: a.qrSerial, idActivo: a.idActivo });
+            }
             setShowSuccess(true);
           } catch (err) {
-            console.error(err);
-            alert("❌ Error al crear ticket: " + (err.message || err));
+            alert("Error: " + err.message);
             setSubmitting(false);
           }
         };
 
-        const handleSuccessClose = () => {
-          setShowSuccess(false);
-          setSubmitting(false);
-          if (onRefresh) onRefresh(true);
-          setView("home");
-        };
-
         return (
           <div className="p-8 max-w-4xl mx-auto animate-fade-in relative">
-            {showSuccess && <SuccessModal onClose={handleSuccessClose} />}
-            {showActivosModal && <ActivosModal onClose={() => setShowActivosModal(false)} />}
+            {showSuccess && <SuccessModal onClose={() => { setShowSuccess(false); onRefresh(); setView("home"); }} />}
 
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-medium text-gray-800">Crear Solicitud</h2>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setView("home")}
-                  disabled={submitting}
-                  className="px-4 py-2 border border-red-200 text-red-600 rounded text-sm font-medium hover:bg-red-50 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={submitting || !formData.idSede || !formData.solicitud || !formData.observacion}
-                  className="bg-appRed text-white px-6 py-2 rounded shadow hover:bg-red-700 font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Guardando...
-                    </>
-                  ) : (
-                    "Guardar"
-                  )}
-                </button>
-              </div>
+            <div className="flex justify-between items-center mb-8">
+               <h2 className="text-2xl font-bold text-gray-800">Crear Solicitud</h2>
+               <div className="flex gap-2">
+                 <button onClick={() => setView("home")} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
+                 <button onClick={handleSubmit} disabled={submitting} className="bg-appRed text-white px-6 py-2 rounded shadow hover:bg-red-700 font-bold transition flex items-center gap-2">
+                    {submitting ? <Icon name="RefreshCw" className="animate-spin" size={16} /> : "Guardar Ticket"}
+                 </button>
+               </div>
             </div>
 
-            <div className="bg-white p-8 rounded shadow-sm border border-gray-200">
-              <h3 className="section-title mt-0">Consecutivo Del Ticket</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="input-label">Ticket G4S *</label>
-                  <input type="text" className="input-field bg-gray-50 text-gray-400 cursor-not-allowed" placeholder="Generado automáticamente" disabled readOnly />
-                </div>
-                <div>
-                  <label className="input-label">Ticket (Opcional)</label>
-                  <input type="text" className="input-field" value={formData.ticketCliente} onChange={(e) => handleChange("ticketCliente", e.target.value)} />
-                </div>
-              </div>
-
-              <h3 className="section-title">Sitio Solicitud</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="input-label">Sede *</label>
-                  <select className="input-field" value={formData.idSede} onChange={(e) => handleChange("idSede", e.target.value)}>
-                    <option value="">Seleccione Sede...</option>
-                    {userContext?.allowedClientIds?.map((id) => (
-                      <option key={id} value={id}>
-                        {userContext?.clientNames?.[id] ? userContext.clientNames[id] : id}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="input-label">Fecha creación cliente *</label>
-                  <div className="relative">
-                    <input type="text" className="input-field bg-gray-50 text-gray-600" value={currentDate} readOnly />
-                    <div className="absolute right-3 top-2.5 text-gray-400">
-                      <Icon name="Clock" size={16} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <h3 className="section-title">Motivo Del Servicio</h3>
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="input-label">Solicitud *</label>
-                  <input type="text" className="input-field" value={formData.solicitud} onChange={(e) => handleChange("solicitud", e.target.value)} />
-                </div>
-
-                <div>
-                  <label className="input-label">Clasificación Solicitud</label>
-                  <select className="input-field" value={formData.clasificacion} onChange={(e) => handleChange("clasificacion", e.target.value)}>
-                    <option value="Hardware">Hardware</option>
-                    <option value="Software">Software</option>
-                    <option value="Redes">Redes</option>
-                    <option value="Acceso">Acceso</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="input-label">Clasificación *</label>
-                  <div className="flex flex-wrap">
-                    {loadingOptions && <span className="text-xs text-gray-400 animate-pulse">Cargando opciones...</span>}
-                    {!loadingOptions && classificationOptions.length === 0 && <span className="text-xs text-red-400">Sin opciones disponibles</span>}
-                    
-                    {/* Render dinámico de opciones */}
-                    {classificationOptions.map((t, idx) => {
-                       // Lógica para redondear bordes si están "pegados" visualmente (estilo grupo)
-                       let radiusClass = "group-single";
-                       
-                       // Si quieres que parezcan unidos:
-                       if (classificationOptions.length > 1) {
-                         if (idx === 0) radiusClass = "group-start";
-                         else if (idx === classificationOptions.length - 1) radiusClass = "group-end";
-                         else radiusClass = "";
-                       }
-                       
-                       return (
-                        <button
-                          type="button"
-                          key={t}
-                          onClick={() => handleChange("tipoServicio", t)}
-                          className={`btn-option ${formData.tipoServicio === t ? "selected" : ""} ${radiusClass}`}
-                        >
-                          {t}
-                        </button>
-                       )
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="input-label">Observación</label>
-                  <textarea className="input-field h-24 resize-y" value={formData.observacion} onChange={(e) => handleChange("observacion", e.target.value)}></textarea>
-                </div>
-
-                <div>
-                  <label className="input-label">Prioridad Solicitud</label>
-                  <div className="flex">
-                    {["Baja", "Media", "Alta"].map((p, idx, arr) => {
-                        let radiusClass = "group-single";
-                        if (arr.length > 1) {
-                            if (idx === 0) radiusClass = "group-start";
-                            else if (idx === arr.length - 1) radiusClass = "group-end";
-                            else radiusClass = "";
-                        }
-                        return (
-                          <button
-                            type="button"
-                            key={p}
-                            onClick={() => handleChange("prioridad", p)}
-                            className={`btn-option ${formData.prioridad === p ? "selected-red" : ""} ${radiusClass}`}
-                          >
-                            {p}
-                          </button>
-                        );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <h3 className="section-title">Adicionales Solicitud</h3>
-
-              <div className="space-y-3">
-                {/* ANEXOS */}
-                <div className="p-3 bg-gray-50 rounded border border-gray-100">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 font-medium">Anexos de la solicitud: Foto, Archivo o Dibujo</span>
-
-                    <div className="flex items-center gap-2">
-                      {uploadInfo.total > 0 && (
-                        <span className="text-[10px] font-bold text-gray-500">
-                          Subiendo {uploadInfo.done}/{uploadInfo.total}
-                        </span>
-                      )}
-
-                      <button
-                        type="button"
-                        disabled={submitting}
-                        className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100 disabled:opacity-50"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Nuevo
-                      </button>
-                    </div>
-                  </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      addFiles(e.target.files);
-                      e.target.value = "";
-                    }}
-                  />
-
-                  {attachments.length > 0 ? (
-                    <div className="mt-3 bg-white border rounded">
-                      <div className="divide-y">
-                        {attachments.map((a) => (
-                          <div key={a.id} className="p-2 flex items-center gap-2">
-                            <div className="text-gray-500">
-                              <Icon name="FileText" size={16} />
-                            </div>
-
-                            <div className="flex-1 overflow-hidden">
-                              <div className="text-xs font-bold text-gray-700 truncate">{a.file.name}</div>
-                              <div className="text-[10px] text-gray-400">{prettySize(a.file.size)}</div>
-                              {a.status === "error" && <div className="text-[10px] text-red-600 font-bold">{a.error}</div>}
-                              {a.status === "uploading" && <div className="text-[10px] text-blue-600 font-bold">Subiendo...</div>}
-                              {a.status === "done" && <div className="text-[10px] text-green-600 font-bold">OK</div>}
-                            </div>
-
-                            <select
-                              className="text-[10px] border rounded px-2 py-1 bg-white"
-                              value={a.tipo}
-                              disabled={submitting || a.status === "uploading" || a.status === "done"}
-                              onChange={(e) => updateTipo(a.id, e.target.value)}
-                            >
-                              <option value="Archivo">Archivo</option>
-                              <option value="Foto">Foto</option>
-                              <option value="Dibujo">Dibujo</option>
-                            </select>
-
-                            <button
-                              type="button"
-                              disabled={submitting || a.status === "uploading"}
-                              onClick={() => removeAttachment(a.id)}
-                              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-50"
-                              title="Quitar"
-                            >
-                              <Icon name="X" size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-[10px] text-gray-400 italic">Puedes agregar varios archivos (máx {MAX_MB}MB c/u).</div>
-                  )}
-                </div>
-
-                {/* QR ACTIVOS (oculto) */}
-                <div className="p-3 bg-gray-50 rounded border border-gray-100 hidden">
-                  <div className="flex justify-between items-center">
-                    <div className="flex flex-col">
-                      <span className="text-sm text-gray-600 font-medium">Activos asociados a la solicitud (QR)</span>
-                      <span className="text-[10px] text-gray-400">{activos.length ? `${activos.length} activo(s) agregado(s)` : "Sin activos aún."}</span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100 disabled:opacity-50"
-                      onClick={() => setShowActivosModal(true)}
-                    >
-                      Nuevo
-                    </button>
-                  </div>
-                  {/* ... lógica interna de activos ... */}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // --- CONFIG VIEW ---
-      const ConfigurationView = ({ userContext, onForceSync, onClearCache, isSyncing, lastSyncRequests, lastSyncDetails, syncReport }) => {
-        return (
-          <div className="p-8 max-w-4xl mx-auto animate-fade-in">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
-              <button onClick={onForceSync} disabled={isSyncing} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm">
-                <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} />
-                {isSyncing ? "Sincronizando..." : "Forzar Sincronización Completa"}
-              </button>
-            </div>
-            
-            <div className="flex items-center gap-2 mb-2 text-sm text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
-              <Icon name="ClipboardList" size={16} className="text-gray-600" />
-              <span>Sincronización Solicitudes: {lastSyncRequests ? <strong>{new Date(Number(lastSyncRequests)).toLocaleString()}</strong> : "Pendiente"}</span>
-            </div>
-            <div className="flex items-center gap-2 mb-8 text-sm text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
-              <Icon name="Database" size={16} className="text-gray-600" />
-              <span>Sincronización Tablas Anexas: {lastSyncDetails ? <strong>{new Date(Number(lastSyncDetails)).toLocaleString()}</strong> : "Pendiente"}</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Tarjeta Usuario */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Icon name="User" size={32} /></div>
+            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 space-y-8">
+              {/* Sección Sitio */}
+              <div>
+                <h3 className="section-title mt-0">Ubicación y Sede</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <div className="text-xs uppercase font-bold text-gray-500">Cuenta Activa</div>
-                    <div className="text-lg font-bold text-gray-800">{userContext?.email}</div>
-                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1"><Icon name="ShieldCheck" size={12} /> {userContext?.role}</div>
+                    <label className="input-label">Sede de Servicio *</label>
+                    <select className="input-field" value={formData.idSede} onChange={(e) => handleChange("idSede", e.target.value)}>
+                      <option value="">Seleccione una sede...</option>
+                      {userContext?.allowedClientIds?.map(id => (
+                        <option key={id} value={id}>{userContext.clientNames[id] || id}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="input-label">Ticket Externo (Opcional)</label>
+                    <input type="text" className="input-field" placeholder="ID Ticket del Cliente" value={formData.ticketCliente} onChange={(e) => handleChange("ticketCliente", e.target.value)} />
                   </div>
                 </div>
-                <button onClick={onClearCache} className="w-full mt-2 py-2 px-3 bg-red-50 border border-red-200 text-red-600 rounded hover:bg-red-100 text-sm font-bold flex items-center justify-center gap-2 transition">
-                  <Icon name="Trash2" size={14} /> Reiniciar Datos Locales (Reset)
-                </button>
               </div>
 
-              {/* Tarjeta Reporte Sync */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-700 flex items-center gap-2"><Icon name="Database" size={18} className="text-blue-600" /> Datos Locales</h3>
-                  {isSyncing && <span className="text-xs text-blue-600 font-bold animate-pulse">Descargando...</span>}
+              {/* Sección Motivo */}
+              <div>
+                <h3 className="section-title">Detalle del Servicio</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="input-label">Solicitud *</label>
+                    <input type="text" className="input-field" placeholder="Breve descripción del problema" value={formData.solicitud} onChange={(e) => handleChange("solicitud", e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div>
+                       <label className="input-label">Tipo de Clasificación</label>
+                       <select className="input-field" value={formData.clasificacion} onChange={(e) => handleChange("clasificacion", e.target.value)}>
+                         <option value="Hardware">Hardware</option>
+                         <option value="Software">Software</option>
+                         <option value="Redes">Redes</option>
+                         <option value="Acceso">Acceso</option>
+                         <option value="Otro">Otro</option>
+                       </select>
+                     </div>
+                     <div>
+                       <label className="input-label">Prioridad</label>
+                       <div className="flex">
+                         {["Baja", "Media", "Alta"].map((p, i, a) => (
+                           <button key={p} type="button" onClick={() => handleChange("prioridad", p)} className={`btn-option flex-1 ${formData.prioridad === p ? "selected-red" : ""} ${i===0?"group-start":i===a.length-1?"group-end":""}`}>{p}</button>
+                         ))}
+                       </div>
+                     </div>
+                  </div>
+                  <div>
+                    <label className="input-label">Observaciones Técnicas *</label>
+                    <textarea className="input-field h-24" placeholder="Escriba aquí los detalles adicionales..." value={formData.observacion} onChange={(e) => handleChange("observacion", e.target.value)}></textarea>
+                  </div>
                 </div>
-                <div className="bg-gray-50 rounded border border-gray-100 overflow-hidden">
-                   {syncReport ? (
-                    <div className="divide-y divide-gray-100 text-sm">
-                      <div className="flex justify-between items-center px-4 py-2 bg-white">
-                        <span className="text-gray-600 flex items-center gap-2"><Icon name="ClipboardList" size={14}/> Solicitudes</span>
-                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.requests} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
-                      </div>
-                       <div className="flex justify-between items-center px-4 py-2 bg-white">
-                        <span className="text-gray-600 flex items-center gap-2"><Icon name="FileText" size={14}/> Observaciones</span>
-                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.obs} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
-                      </div>
-                       <div className="flex justify-between items-center px-4 py-2 bg-white">
-                        <span className="text-gray-600 flex items-center gap-2"><Icon name="History" size={14}/> Historial</span>
-                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.hist} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
-                      </div>
-                       <div className="flex justify-between items-center px-4 py-2 bg-white">
-                        <span className="text-gray-600 flex items-center gap-2"><Icon name="Download" size={14}/> Anexos & Archivos</span>
-                        <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.anx} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
-                      </div>
+              </div>
+
+              {/* Sección Adjuntos */}
+              <div>
+                <h3 className="section-title">Adjuntos y Activos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                    <div className="flex justify-between items-center mb-4">
+                       <span className="text-sm font-bold text-gray-600">Archivos ({attachments.length})</span>
+                       <button onClick={() => fileInputRef.current.click()} className="text-xs font-bold text-appRed hover:underline">+ Agregar</button>
                     </div>
-                   ) : (
-                     <div className="p-4 text-center text-xs text-gray-400 italic">Sin datos. Sincroniza para ver detalles.</div>
-                   )}
+                    <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelection} />
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {attachments.map(a => (
+                        <div key={a.id} className="flex items-center justify-between text-xs bg-white p-2 rounded shadow-sm">
+                           <span className="truncate w-40">{a.file.name}</span>
+                           <button onClick={() => setAttachments(prev => prev.filter(x => x.id !== a.id))} className="text-gray-400 hover:text-red-500"><Icon name="X" size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                    <div className="flex justify-between items-center mb-4">
+                       <span className="text-sm font-bold text-gray-600">Activos QR ({activos.length})</span>
+                       <button onClick={() => alert("Función de vinculación de activos disponible próximamente.")} className="text-xs font-bold text-appRed hover:underline">+ Escanear</button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 italic">Vincule los activos escaneando su código QR.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1261,437 +539,264 @@
         );
       };
 
-      // --- HOME DASHBOARD ---
-      const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
+      /**
+       * --- RequestDetail ---
+       * Visualización de un ticket existente.
+       */
+      const RequestDetail = ({ requestId, onBack, preloadedData }) => {
+        const [data, setData] = useState(null);
+        useEffect(() => {
+          runServer("getRequestDetail", { id: requestId }).then(setData);
+        }, [requestId]);
+
+        if (!data) return <div className="p-20 text-center"><Icon name="RefreshCw" className="animate-spin mx-auto mb-4" size={32} /> Cargando ticket...</div>;
+
+        const openAnexo = (id) => window.open(`${SCRIPT_URL}?v=archivo&id=${id}`, "_blank");
+
+        return (
+          <div className="p-8 max-w-7xl mx-auto animate-fade-in">
+            <button onClick={onBack} className="mb-6 text-gray-500 hover:text-gray-800 flex items-center gap-2 font-bold text-sm">
+              <Icon name="ChevronRight" size={16} className="rotate-180" /> Volver al Historial
+            </button>
+            <div className="grid grid-cols-12 gap-8">
+              <div className="col-span-12 md:col-span-8">
+                <div className="bg-white rounded-xl shadow-sm border p-6">
+                  <h3 className="font-bold text-gray-700 uppercase text-xs mb-6 border-b pb-2">Datos de la Solicitud</h3>
+                  <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                    {Object.entries(data.header).map(([k, v]) => (
+                      (v && v !== "0") && <div key={k}>
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{k}</div>
+                        <div className="text-sm text-gray-800 font-medium break-words">{String(v)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-12 md:col-span-4 space-y-6">
+                <div className="bg-white p-6 rounded-xl shadow-sm border text-center">
+                   <div className="text-gray-400 text-xs font-bold mb-1 uppercase">Estado</div>
+                   <div className={`text-2xl font-black uppercase ${getStatusTextColor(data.header.Estado)}`}>{data.header.Estado}</div>
+                   <div className="text-[10px] text-gray-400 mt-1">Ticket: {data.header["Ticket G4S"] || "N/A"}</div>
+                </div>
+                {/* Adjuntos */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border">
+                   <h3 className="font-bold text-gray-700 text-xs uppercase mb-4">Documentos y Anexos</h3>
+                   <div className="space-y-2">
+                     {data.documents?.length ? data.documents.map((doc, i) => (
+                       <button key={i} onClick={() => openAnexo(doc["ID Solicitudes anexos"])} className="w-full text-left p-3 border rounded-lg hover:bg-gray-50 flex items-center gap-3 transition">
+                         <Icon name="FileText" className="text-red-500 shrink-0" />
+                         <div className="flex-1 overflow-hidden">
+                           <div className="text-xs font-bold truncate">{doc.Nombre || "Archivo"}</div>
+                           <div className="text-[10px] text-gray-400">{doc["Tipo anexo"]}</div>
+                         </div>
+                         <Icon name="Download" size={14} className="text-gray-300" />
+                       </button>
+                     )) : <p className="text-xs text-gray-400 italic">No hay adjuntos registrados.</p>}
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      /**
+       * --- RequestList ---
+       * Listado tabular de tickets con filtros.
+       */
+      const RequestList = ({ setView, setSelectedRequest, initialData, onRefresh, refreshing }) => {
+        const [filter, setFilter] = useState("Todo");
+        const [search, setSearch] = useState("");
+        const requests = initialData?.data || [];
+
+        const filtered = useMemo(() => {
+          return requests.filter(r => {
+            const matchesFilter = filter === "Todo" || (filter === "Abierto" && r.Estado !== "Cerrado") || (filter === "Cerrado" && r.Estado === "Cerrado");
+            const matchesSearch = !search || JSON.stringify(r).toLowerCase().includes(search.toLowerCase());
+            return matchesFilter && matchesSearch;
+          });
+        }, [requests, filter, search]);
+
+        return (
+          <div className="p-8 flex flex-col h-screen">
+             <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                   {["Todo", "Abierto", "Cerrado"].map(f => (
+                     <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${filter === f ? "bg-gray-800 text-white" : "bg-white border text-gray-600 hover:bg-gray-50"}`}>{f}</button>
+                   ))}
+                </div>
+                <div className="relative w-64">
+                   <Icon name="Search" className="absolute left-3 top-2 text-gray-400" size={16} />
+                   <input className="w-full pl-10 pr-4 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+             </div>
+
+             <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex-1 overflow-y-auto">
+               <table className="w-full text-left text-sm">
+                 <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold border-b">
+                   <tr>
+                     <th className="px-6 py-4">Ticket</th>
+                     <th className="px-6 py-4">Fecha</th>
+                     <th className="px-6 py-4">Solicitud</th>
+                     <th className="px-6 py-4">Sede</th>
+                     <th className="px-6 py-4 text-right">Estado</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y">
+                   {filtered.map((r, i) => (
+                     <tr key={i} onClick={() => { setSelectedRequest(r); setView("detail"); }} className="hover:bg-blue-50 cursor-pointer transition">
+                       <td className="px-6 py-4 font-bold text-blue-700">{r["Ticket G4S"] || r["ID Solicitud"].substr(0,8)}</td>
+                       <td className="px-6 py-4 text-gray-500">{new Date(r["Fecha creación cliente"]).toLocaleDateString()}</td>
+                       <td className="px-6 py-4 font-medium truncate max-w-xs">{r.Solicitud}</td>
+                       <td className="px-6 py-4 text-gray-400">{r["ID Sede"]}</td>
+                       <td className="px-6 py-4 text-right"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(r.Estado)}`}>{r.Estado}</span></td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+               {filtered.length === 0 && <div className="p-20 text-center text-gray-400 italic">No se encontraron tickets.</div>}
+             </div>
+          </div>
+        );
+      };
+
+      /**
+       * --- HomeDashboard ---
+       * Panel principal de métricas.
+       */
+      const HomeDashboard = ({ userContext, requests, setView }) => {
         const stats = useMemo(() => {
           const total = requests.length;
-          const pending = requests.filter((r) => (r.Estado || "").trim() !== "Cerrado").length;
-          const completed = requests.filter((r) => (r.Estado || "").trim() === "Cerrado").length;
-          return { total, pending, completed };
+          const open = requests.filter(r => (r.Estado || "").toLowerCase() !== "cerrado").length;
+          return { total, open, closed: total - open };
         }, [requests]);
 
         return (
           <div className="p-8 max-w-6xl mx-auto animate-fade-in">
-            <div className="mb-8">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-gray-800">Hola, {userContext.email.split("@")[0]}</h1>
-                {isSyncing && (
-                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-xs font-bold text-blue-600">Sincronizando...</span>
-                  </div>
-                )}
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Hola, {userContext.email.split("@")[0]}</h1>
+            <p className="text-gray-500 mb-10">Bienvenido al portal de gestión corporativa de G4S.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Tickets Totales</div>
+                <div className="text-4xl font-black text-gray-800">{stats.total}</div>
               </div>
-              <p className="text-gray-500">Bienvenido al portal de Gestión de Tecnología.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <div onClick={() => setView("history")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                <div className="flex justify-between items-start mb-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Icon name="FileText" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Total Tickets</span></div>
-                <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
-                <div className="text-sm text-gray-500">Solicitudes totales</div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-yellow-400">
+                <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Pendientes</div>
+                <div className="text-4xl font-black text-yellow-600">{stats.open}</div>
               </div>
-              <div onClick={() => setView("process")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                <div className="flex justify-between items-start mb-4"><div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg"><Icon name="Clock" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Abiertos</span></div>
-                <div className="text-3xl font-bold text-gray-800">{stats.pending}</div>
-                <div className="text-sm text-gray-500">Tickets en curso (No Cerrados)</div>
-              </div>
-              <div onClick={() => setView("history")} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition transform hover:-translate-y-1">
-                <div className="flex justify-between items-start mb-4"><div className="p-3 bg-green-50 text-green-600 rounded-lg"><Icon name="CheckCircle" size={24} /></div><span className="text-xs font-bold text-gray-400 uppercase">Cerrados</span></div>
-                <div className="text-3xl font-bold text-gray-800">{stats.completed}</div>
-                <div className="text-sm text-gray-500">Tickets finalizados</div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-green-400">
+                <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Completados</div>
+                <div className="text-4xl font-black text-green-600">{stats.closed}</div>
               </div>
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <button onClick={() => setView("create")} className="flex items-center gap-4 p-6 bg-gradient-to-r from-appRed to-red-700 text-white rounded-xl shadow hover:shadow-lg transition text-left col-span-2 md:col-span-1">
-                <div className="bg-white/20 p-3 rounded-full"><Icon name="ClipboardList" size={32} /></div>
-                <div><div className="text-lg font-bold">Crear nuevo Ticket</div><div className="text-white/80 text-sm">Reportar un fallo o solicitar servicio.</div></div>
+
+            <button onClick={() => setView("create")} className="bg-gradient-to-br from-appRed to-red-800 text-white p-8 rounded-3xl shadow-xl shadow-red-200 flex items-center gap-6 hover:scale-[1.03] transition transform group w-full md:w-auto">
+               <div className="bg-white/20 p-4 rounded-2xl group-hover:rotate-12 transition-transform"><Icon name="ClipboardList" size={48} /></div>
+               <div className="text-left">
+                  <div className="text-2xl font-bold">Crear nueva Solicitud</div>
+                  <div className="text-red-100 opacity-80">Reporte técnico o requerimiento de servicio</div>
+               </div>
+            </button>
+          </div>
+        );
+      };
+
+      /**
+       * --- ConfigurationView ---
+       * Panel de configuración y reporte de sincronización masiva.
+       */
+      const ConfigurationView = ({ userContext, onForceSync, onClearCache, isSyncing, lastSyncRequests, lastSyncDetails, syncReport }) => {
+        return (
+          <div className="p-8 max-w-4xl mx-auto animate-fade-in">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800">Configuración</h2>
+              <button onClick={onForceSync} disabled={isSyncing} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 shadow-sm">
+                <Icon name="RefreshCw" size={16} className={isSyncing ? "animate-spin" : ""} />
+                {isSyncing ? "Sincronizando..." : "Sincronizar Todo (Offline)"}
               </button>
             </div>
-          </div>
-        );
-      };
 
-      // --- REQUEST DETAIL (✅ AHORA CON FORMATO DE FECHA CO & PROXY FILE OPEN) ---
-      const RequestDetail = ({ requestId, onBack, preloadedData, cachedDetails }) => {
-        const cache = cachedDetails?.[requestId] || null;
-        
-        const [data, setData] = useState(
-          cache
-            ? { 
-                header: preloadedData, 
-                services: cache.services || [], 
-                history: cache.history || [], 
-                docs: cache.documents || [], 
-                activos: cache.activos || [] 
-              }
-            : (preloadedData ? { header: preloadedData, services: [], history: [], docs: [], activos: [] } : null)
-        );
-        const [loading, setLoading] = useState(!cache);
-        const [error, setError] = useState(null);
-        
-        useEffect(() => {
-          if (!cache) {
-            setLoading(true);
-            runServer("getRequestDetail", { id: requestId })
-              .then((res) => {
-                setData({
-                  header: res.header || preloadedData,
-                  services: res.services || [],
-                  history: res.history || [],
-                  docs: res.documents || [],
-                  activos: res.activos || [] 
-                });
-              })
-              .catch((e) => !preloadedData && setError(e.message))
-              .finally(() => setLoading(false));
-          }
-        }, [requestId, cache]);
-
-        if (!data && loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
-        if (error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
-
-        const pickAny = (obj, keys) => { if (!obj) return ""; const objKeys = Object.keys(obj); for (const k of keys) { const direct = obj?.[k]; if (direct !== undefined && direct !== null && String(direct).trim() !== "") return direct; const altKey = objKeys.find((x) => String(x).trim() === String(k).trim()); const alt = altKey ? obj?.[altKey] : ""; if (alt !== undefined && alt !== null && String(alt).trim() !== "") return alt; } return ""; };
-        const pick = (obj, keys) => { for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && String(v).trim() !== "") return v; } return ""; };
-        
-        // Formato Colombia
-        const fmtDate = (v) => { 
-            if (!v) return "-"; 
-            const d = new Date(v); 
-            if (isNaN(d.getTime())) return String(v); 
-            return new Intl.DateTimeFormat("es-CO", {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: true,
-                timeZone: "America/Bogota"
-            }).format(d);
-        };
-        
-        // ✅ FUNCIÓN DE APERTURA DE ANEXOS USANDO PROXY (Sin pedir acceso a Drive)
-        const openAnexo = (doc) => {
-          // 1. Obtenemos el ID único del anexo en la base de datos
-          const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID"]) || "").trim();
-          
-          if (!anexoId) {
-             alert("Error: Identificador de anexo no encontrado.");
-             return;
-          }
-
-          // 2. Construimos la URL "Puente" usando la variable global SCRIPT_URL
-          const proxyUrl = `${SCRIPT_URL}?v=archivo&id=${encodeURIComponent(anexoId)}`;
-
-          // 3. Abrimos esa URL en nueva pestaña
-          window.open(proxyUrl, "_blank");
-        };
-
-        const Card = ({ title, children, count }) => (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-700 text-sm uppercase flex justify-between">
-              <span>{title}</span>
-              {count !== undefined && <span className="bg-gray-100 text-gray-600 px-2 rounded-full text-xs flex items-center">{count}</span>}
-            </div>
-            <div className="p-0">{children}</div>
-          </div>
-        );
-
-        return (
-          <div className="p-6 max-w-7xl mx-auto animate-fade-in">
-            <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm">
-              <Icon name="ChevronRight" className="rotate-180" size={16} /> Volver
-            </button>
-            <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-12 md:col-span-8 space-y-4">
-                <Card title="Detalle Técnico">
-                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
-                    {Object.entries(data.header || {}).map(([key, value]) => {
-                      if (!value || value === "0" || key.includes("_rownumber") || key === "Estado" || key === "ID Solicitud") return null;
-                      
-                      const isDate = key.toLowerCase().includes("fecha");
-                      const displayVal = isDate ? fmtDate(value) : value;
-
-                      return (
-                        <div key={key} className="border-b border-gray-50 pb-2 last:border-0">
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide break-words">{key}</div>
-                          <div className="text-sm text-gray-700 break-words font-medium">{displayVal}</div>
-                        </div>
-                      );
-                    })}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                <div className="flex items-center gap-6 mb-8">
+                  <div className="h-20 w-20 bg-blue-100 rounded-3xl flex items-center justify-center text-blue-600 font-black text-2xl">G4S</div>
+                  <div>
+                    <div className="text-xs uppercase font-bold text-gray-500 mb-1">Cuenta Activa</div>
+                    <div className="text-xl font-bold text-gray-800 truncate w-48">{userContext?.email}</div>
+                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold mt-3"><Icon name="ShieldCheck" size={14} /> {userContext?.role}</div>
                   </div>
-                </Card>
-              </div>
-              <div className="col-span-12 md:col-span-4 space-y-4">
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
-                  <div className="text-gray-400 text-xs font-bold mb-1">ESTADO TICKET</div>
-                  <div className={`text-2xl font-black mb-2 uppercase ${getStatusTextColor(data.header?.["Estado"])}`}>{data.header?.["Estado"] || "Desconocido"}</div>
-                  <div className="text-gray-500 text-xs bg-gray-100 inline-block px-2 py-1 rounded">Ticket #: {data.header?.["Ticket G4S"] || data.header?.["ID Solicitud"] || "N/A"}</div>
                 </div>
-                
-                <Card title="Observaciones" count={data.services?.length || 0}>
-                  {data.services && data.services.length > 0 ? (
-                    <ul className="divide-y divide-gray-100">
-                      {data.services.map((s, i) => (
-                        <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
-                          <span className="font-medium text-gray-700">{pick(s, ["Observación", "Observacion"]) || "(Sin detalle)"}</span>
-                          <span className="text-[10px] text-gray-400">{fmtDate(pick(s, ["Fecha Actualización"]))}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>)}
-                </Card>
-
-                <Card title="Activos Asociados" count={data.activos?.length || 0}>
-                  {data.activos && data.activos.length > 0 ? (
-                    <ul className="divide-y divide-gray-100">
-                      {data.activos.map((a, i) => (
-                        <li key={i} className="px-4 py-2 hover:bg-gray-50">
-                          <div className="flex items-center gap-2 mb-1">
-                             <Icon name="Monitor" size={16} className="text-gray-500" />
-                             <span className="text-xs font-bold text-gray-700">{pick(a, ["Nombre Activo", "Nombre"])}</span>
-                          </div>
-                          <div className="text-[10px] text-gray-500 ml-6">
-                            QR: <span className="font-mono bg-gray-100 px-1 rounded">{pick(a, ["QR", "QR Serial"])}</span>
-                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400 italic">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay activos vinculados.</div>)}
-                </Card>
-                
-                <Card title="Anexos" count={data.docs?.length || 0}>
-                  {data.docs && data.docs.length > 0 ? (
-                    <ul className="divide-y divide-gray-100">
-                      {data.docs.map((doc, i) => (
-                        <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
-                          <div className="text-red-500"><Icon name="FileText" size={16} /></div>
-                          <div className="flex-1 overflow-hidden">
-                            <div className="text-gray-700 text-xs truncate font-medium">{pick(doc, ["Nombre"]) || "Documento"}</div>
-                            <div className="text-[10px] text-gray-400">{pick(doc, ["Tipo anexo"])} · {fmtDate(pick(doc, ["Fecha Actualización"]))}</div>
-                          </div>
-                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc); }} className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50">
-                            Abrir
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>)}
-                </Card>
-
-                {/* ✅ MODIFICACIÓN EN EL HISTORIAL PARA LEER 'Estado actual' */}
-                <Card title="Historial" count={data.history?.length || 0}>
-                  <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                    {data.history && data.history.map((h, i) => (
-                      <li key={i} className="px-4 py-2 hover:bg-gray-50">
-                        <div className="text-xs font-bold text-gray-700">{pick(h, ["Estado actual", "Estado Actual", "Estado"])}</div>
-                        <div className="text-[10px] text-gray-400">{fmtDate(pick(h, ["Fecha Actualización"]))}</div>
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
+                <button onClick={onClearCache} className="w-full py-3 px-4 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition flex items-center justify-center gap-2">
+                  <Icon name="Trash2" size={18} /> Limpiar Datos y Salir
+                </button>
               </div>
-            </div>
-          </div>
-        );
-      };
 
-      // --- REQUEST LIST ---
-      const RequestList = ({ setView, setSelectedRequest, initialData, onRefresh, refreshing }) => {
-        const [filter, setFilter] = useState("Todo");
-        const [search, setSearch] = useState("");
-        const [requests, setRequests] = useState(initialData?.data || []);
-        const [filteredRequests, setFilteredRequests] = useState([]);
-        const [page, setPage] = useState(1);
-
-        useEffect(() => { if (initialData) setRequests(initialData.data || []); }, [initialData]);
-
-        useEffect(() => {
-          let result = requests;
-          if (filter === "Abierto") result = result.filter((req) => (req["Estado"] || "").trim() !== "Cerrado");
-          if (filter === "Cerrado") result = result.filter((req) => (req["Estado"] || "").trim() === "Cerrado");
-          if (search) {
-            const q = search.toLowerCase();
-            result = result.filter((req) => (String(req["Ticket G4S"]) + String(req["ID Solicitud"]) + String(req["Estado"]) + String(req["Clasificación"])).toLowerCase().includes(q));
-          }
-          setFilteredRequests(result);
-          setPage(1);
-        }, [requests, filter, search]);
-
-        const paginatedData = filteredRequests.slice((page - 1) * 50, page * 50);
-        const totalPages = Math.ceil(filteredRequests.length / 50);
-
-        return (
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <div className="relative w-64">
-                <div className="absolute left-3 top-2.5 text-gray-400"><Icon name="Search" size={16} /></div>
-                <input type="text" className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-appBlue" placeholder="Buscar ticket..." value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={onRefresh} disabled={refreshing} className="p-2 text-gray-500 hover:text-blue-600 transition border rounded bg-white" title="Actualizar Datos"><Icon name="RefreshCw" size={18} className={refreshing ? "animate-spin text-blue-600" : ""} /></button>
-                <span className="text-xs font-bold text-gray-500">Total: {filteredRequests.length}</span>
-              </div>
-            </div>
-            <div className="flex gap-2 mb-4">
-              {["Todo", "Abierto", "Cerrado"].map((f) => (
-                <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold transition ${filter === f ? "bg-gray-800 text-white" : "bg-white border text-gray-600"}`}>{f}</button>
-              ))}
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex-1 flex flex-col">
-              <div className="grid grid-cols-12 gap-2 p-3 border-b bg-gray-50 text-xs font-bold text-gray-400 uppercase">
-                <div className="col-span-2">Ticket G4S</div>
-                <div className="col-span-2">Fecha</div>
-                <div className="col-span-3">Solicitante</div>
-                <div className="col-span-3">Clasificación</div>
-                <div className="col-span-2 text-right">Estado</div>
-              </div>
-              <div className="overflow-y-auto flex-1">
-                {paginatedData.length === 0 ? <div className="p-10 text-center text-gray-400 italic">No hay tickets coincidentes.</div> :
-                  paginatedData.map((req, i) => (
-                    <div key={i} onClick={() => { setSelectedRequest(req); setView("detail"); }} className="grid grid-cols-12 gap-2 p-3 border-b hover:bg-gray-50 cursor-pointer text-sm items-center transition-colors">
-                      <div className="col-span-2 font-bold text-blue-600 truncate">{req["Ticket G4S"] || req["ID Solicitud"] || "N/A"}</div>
-                      <div className="col-span-2 text-xs text-gray-500">{req["Fecha creación cliente"] ? new Date(req["Fecha creación cliente"]).toLocaleDateString() : "-"}</div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req["Usuario Actualización"] || req["Responsable"] || "Desconocido"}</span></div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-medium">{req["Clasificación"] || "General"}</span><span className="text-[10px] text-gray-400 uppercase">{req["Prioridad Solicitud"] || "-"}</span></div>
-                      <div className="col-span-2 text-right"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getStatusBadgeColor(req["Estado"])}`}>{req["Estado"] || "Desconocido"}</span></div>
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                 <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider"><Icon name="Database" size={18} className="text-blue-600" /> Estado de Almacenamiento Local</h3>
+                 {syncReport ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-lg">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="ClipboardList" size={16}/> Tickets</span>
+                        <span className="font-black text-gray-800">{syncReport.requests}</span>
+                      </div>
+                       <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-lg">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="FileText" size={16}/> Observaciones</span>
+                        <span className="font-black text-gray-800">{syncReport.obs}</span>
+                      </div>
+                       <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-lg">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="History" size={16}/> Historial</span>
+                        <span className="font-black text-gray-800">{syncReport.hist}</span>
+                      </div>
+                       <div className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-lg">
+                        <span className="text-gray-600 flex items-center gap-2"><Icon name="Download" size={16}/> Anexos</span>
+                        <span className="font-black text-gray-800">{syncReport.anx}</span>
+                      </div>
                     </div>
-                  ))
-                }
+                 ) : <div className="p-10 text-center text-xs text-gray-400 italic">No hay datos sincronizados para uso offline.</div>}
               </div>
-              {totalPages > 1 && (
-                <div className="p-2 border-t flex justify-between bg-gray-50 items-center">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Anterior</button>
-                  <span className="text-xs font-bold text-gray-600">Pág {page} de {totalPages}</span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-xs px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">Siguiente</button>
-                </div>
-              )}
             </div>
           </div>
         );
       };
 
-      // --- MAIN APP ---
+      /**
+       * --- App ---
+       * Componente raíz y orquestador del estado global de la aplicación.
+       * Implementa el sistema de caché masiva y sincronización por lotes.
+       */
       const App = () => {
         const [userCtx, setUserCtx] = useState(null);
-        const [initialData, setInitialData] = useState(null); 
+        const [initialData, setInitialData] = useState({ data: [], total: 0 });
         const [detailsCache, setDetailsCache] = useState({}); 
-        const [view, setView] = useState("create");
+        const [view, setView] = useState("home");
         const [selectedRequest, setSelectedRequest] = useState(null);
         
         const [isSyncing, setIsSyncing] = useState(false);
-        const [syncStep, setSyncStep] = useState(""); 
         const [lastSyncRequests, setLastSyncRequests] = useState(null);
         const [lastSyncDetails, setLastSyncDetails] = useState(null);
         const [syncReport, setSyncReport] = useState(null); 
         
         const [toast, setToast] = useState(null);
-        const [loginError, setLoginError] = useState(null); 
+        const [loginError, setLoginError] = useState(null);
         const [isCheckingCache, setIsCheckingCache] = useState(true);
 
         const showToast = (msg) => setToast(msg);
 
-        // --- MANEJO DE LOCALSTORAGE ---
-        const CACHE_KEY_REQUESTS = (email) => `cache_data_it_${email}`;
-        const CACHE_KEY_DETAILS = (email) => `cache_details_it_${email}`;
-        const CACHE_KEY_CONTEXT = (email) => `cache_context_it_${email}`;
+        // --- GESTIÓN DE CACHÉ LOCAL (LocalStorage) ---
+        const getCacheKey = (type, email) => `g4s_${type}_${email?.toLowerCase()}`;
 
         const loadFromCache = (email) => {
-          if (!email) return { requests: null, details: null, ctx: null };
-          const safeEmail = email.toLowerCase();
-          
-          let requests = null, details = null, ctx = null;
           try {
-            const r = localStorage.getItem(CACHE_KEY_REQUESTS(safeEmail));
-            if (r) requests = JSON.parse(r);
-            
-            const d = localStorage.getItem(CACHE_KEY_DETAILS(safeEmail));
-            if (d) details = JSON.parse(d);
-
-            const c = localStorage.getItem(CACHE_KEY_CONTEXT(safeEmail));
-            if (c) ctx = JSON.parse(c);
-          } catch(e) { console.error("Cache load error", e); }
-          
-          return { requests, details, ctx };
-        };
-
-        const saveRequestsToCache = (email, data) => {
-          if (!email) return;
-          const ts = Date.now();
-          localStorage.setItem(CACHE_KEY_REQUESTS(email.toLowerCase()), JSON.stringify({ data, timestamp: ts }));
-          setLastSyncRequests(ts);
-        };
-
-        const saveDetailsToCache = (email, cacheMap) => {
-          if (!email) return;
-          const ts = Date.now();
-          try {
-            localStorage.setItem(CACHE_KEY_DETAILS(email.toLowerCase()), JSON.stringify({ data: cacheMap, timestamp: ts }));
-            setLastSyncDetails(ts);
-          } catch (e) {
-            console.warn("Storage Full?", e);
-            showToast("⚠️ Memoria llena: No se pudieron guardar todos los detalles offline.");
-          }
-        };
-
-        const clearLocalCache = () => {
-          localStorage.clear();
-          showToast("Datos eliminados. Recargando...");
-          setTimeout(() => window.location.reload(), 1000);
-        };
-
-        const refreshData = async (manual = false, emailOverride = null) => {
-          const email = emailOverride || (userCtx ? userCtx.email : null);
-          if (!email || isSyncing) return;
-
-          setIsSyncing(true);
-          setSyncStep("requests");
-          if (manual) showToast("1/2 Descargando Solicitudes...");
-
-          try {
-            // PASO 1: SOLICITUDES
-            const reqData = await runServer("getRequests", {});
-            setInitialData(reqData);
-            saveRequestsToCache(email, reqData);
-
-            // PASO 2: TABLAS ANEXAS
-            if (reqData.data && reqData.data.length > 0) {
-              setSyncStep("details");
-              if (manual) showToast(`2/2 Descargando tablas anexas (${reqData.data.length} tickets)...`);
-              
-              const allIds = reqData.data.map(r => r["ID Solicitud"]).filter(Boolean);
-              const chunkSize = 40;
-              let newDetails = { ...detailsCache }; 
-              
-              const chunkPromises = [];
-              for (let i = 0; i < allIds.length; i += chunkSize) {
-                const chunk = allIds.slice(i, i + chunkSize);
-                chunkPromises.push(runServer("getBatchRequestDetails", { ids: chunk }));
-              }
-              
-              const parallelBatchSize = 5;
-              for (let i = 0; i < chunkPromises.length; i += parallelBatchSize) {
-                 const currentBatch = chunkPromises.slice(i, i + parallelBatchSize);
-                 const results = await Promise.all(currentBatch);
-                 results.forEach(res => { newDetails = { ...newDetails, ...res }; });
-                 console.log(`Lote paralelo ${i / parallelBatchSize + 1} completado.`);
-              }
-
-              setDetailsCache(newDetails);
-              saveDetailsToCache(email, newDetails);
-              updateSyncReport(reqData.data.length, newDetails);
-            } else {
-               setLastSyncDetails(Date.now());
-               updateSyncReport(0, {});
-            }
-
-            if (manual) showToast("✅ Sincronización completa.");
-
-          } catch (e) {
-            console.error("Sync Error", e);
-            if (manual) showToast("❌ Error de conexión: " + e.message);
-          } finally {
-            setIsSyncing(false);
-            setSyncStep("");
-          }
+            const reqs = localStorage.getItem(getCacheKey("reqs", email));
+            const dets = localStorage.getItem(getCacheKey("dets", email));
+            const ctx = localStorage.getItem(getCacheKey("ctx", email));
+            return {
+              requests: reqs ? JSON.parse(reqs) : null,
+              details: dets ? JSON.parse(dets) : null,
+              context: ctx ? JSON.parse(ctx) : null
+            };
+          } catch(e) { return {}; }
         };
 
         const updateSyncReport = (reqCount, detailsMap) => {
@@ -1704,143 +809,121 @@
           setSyncReport({ requests: reqCount, obs, hist, anx });
         };
 
-        // ✅ MANEJADOR PARA REFRESCAR SOLO EL CONTEXTO (CLIENTES/PERMISOS)
-        const handleRefreshContext = async () => {
-          if (!userCtx || !userCtx.email) return;
-          showToast("Actualizando permisos de cliente...");
+        /**
+         * Sincronización masiva de datos (Tickets y Tablas Anexas).
+         * Implementa descarga por lotes (batching) y procesamiento paralelo.
+         */
+        const refreshData = async (manual = false, emailOverride = null) => {
+          const email = emailOverride || userCtx?.email;
+          if (!email || isSyncing) return;
+
+          setIsSyncing(true);
+          if (manual) showToast("Iniciando sincronización completa...");
+
           try {
-            // Llamamos con ignoreCache: true
-            const newCtx = await runServer("getUserContext", { ignoreCache: true });
-            
-            // Actualizamos estado y almacenamiento local
-            setUserCtx(newCtx);
-            localStorage.setItem("last_active_email_it", newCtx.email);
-            localStorage.setItem(CACHE_KEY_CONTEXT(newCtx.email), JSON.stringify(newCtx));
-            
-            showToast("✅ Clientes actualizados.");
-            // Refrescar datos automáticamente con los nuevos permisos
-            refreshData(false, newCtx.email); 
-          } catch (e) {
-            console.error("Error refresh context", e);
-            showToast("❌ Error actualizando permisos.");
-          }
-        };
+            // 1. Descargar listado de solicitudes
+            const reqData = await runServer("getRequests");
+            setInitialData(reqData);
+            const ts = Date.now();
+            localStorage.setItem(getCacheKey("reqs", email), JSON.stringify({ data: reqData, timestamp: ts }));
+            setLastSyncRequests(ts);
 
-        const handleLoginAttempt = async (email) => {
-          let targetEmail = email ? email.toLowerCase() : localStorage.getItem("last_active_email_it");
-          let cacheFound = false;
-
-          if (targetEmail) {
-            const { requests, details, ctx } = loadFromCache(targetEmail);
-            if (ctx && requests?.data) {
-              const hasClients = ctx.allowedClientIds && ctx.allowedClientIds.length > 0;
-              const isAdmin = ctx.isAdmin;
-
-              if (hasClients || isAdmin) {
-                  console.log(`⚡ Carga Instantánea para: ${targetEmail}`);
-                  setUserCtx(ctx);
-                  setInitialData(requests.data);
-                  setLastSyncRequests(requests.timestamp);
-                  
-                  if (details?.data) {
-                    setDetailsCache(details.data);
-                    setLastSyncDetails(details.timestamp);
-                    updateSyncReport(requests.data.data.length, details.data);
-                  }
-                  
-                  setView("home");
-                  cacheFound = true;
+            // 2. Descargar detalles por lotes (Paralelizado)
+            if (reqData.data && reqData.data.length > 0) {
+              const allIds = reqData.data.map(r => r["ID Solicitud"]).filter(Boolean);
+              const CHUNK_SIZE = 40;
+              const chunks = [];
+              for (let i = 0; i < allIds.length; i += CHUNK_SIZE) chunks.push(allIds.slice(i, i + CHUNK_SIZE));
+              
+              let newDetails = {};
+              // Procesar lotes de 5 en 5 para no saturar el servidor
+              for (let i = 0; i < chunks.length; i += 5) {
+                 const batchResults = await Promise.all(chunks.slice(i, i + 5).map(chunk => runServer("getBatchRequestDetails", { ids: chunk })));
+                 batchResults.forEach(res => { newDetails = { ...newDetails, ...res }; });
               }
-            }
-          }
 
-          setIsCheckingCache(false);
-          
-          try {
-            if (!cacheFound) setIsSyncing(true);
-            const serverCtx = await runServer("getUserContext", {});
-            const realEmail = (serverCtx.email || "").toLowerCase();
-            
-            // 1. Validar existencia usuario
-            if (!serverCtx.isValidUser) {
-                 throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
+              setDetailsCache(newDetails);
+              localStorage.setItem(getCacheKey("dets", email), JSON.stringify({ data: newDetails, timestamp: ts }));
+              setLastSyncDetails(ts);
+              updateSyncReport(reqData.data.length, newDetails);
             }
 
-            // 2. Validar Clientes Asignados (Si no es admin)
-            if (!serverCtx.isAdmin && (!serverCtx.allowedClientIds || serverCtx.allowedClientIds.length === 0)) {
-                 throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
-            }
-            
-            localStorage.setItem("last_active_email_it", realEmail);
-            localStorage.setItem(CACHE_KEY_CONTEXT(realEmail), JSON.stringify(serverCtx));
-            setUserCtx(serverCtx);
-
-            if (!cacheFound) {
-              setView("home");
-              refreshData(true, realEmail); 
-            } else {
-              refreshData(false, realEmail);
-            }
+            if (manual) showToast("✅ Datos actualizados correctamente.");
           } catch (e) {
-            console.error("Login Error", e);
-            if (!cacheFound) {
-                 setLoginError(e.message);
-            }
-            setIsSyncing(false);
-          }
+            if (manual) showToast("❌ Error al sincronizar: " + e.message);
+          } finally { setIsSyncing(false); }
         };
 
-        useEffect(() => { 
-          const lastEmail = localStorage.getItem("last_active_email_it"); 
-          if (lastEmail) handleLoginAttempt(null); 
-          else setIsCheckingCache(false); 
+        const handleRefreshContext = async () => {
+          if (!userCtx) return;
+          showToast("Actualizando permisos...");
+          try {
+            const newCtx = await runServer("getUserContext", { ignoreCache: true });
+            setUserCtx(newCtx);
+            localStorage.setItem(getCacheKey("ctx", newCtx.email), JSON.stringify(newCtx));
+            localStorage.setItem("last_user_it", newCtx.email);
+            showToast("✅ Permisos actualizados.");
+            refreshData(false, newCtx.email);
+          } catch(e) { showToast("❌ Error al actualizar permisos."); }
+        };
+
+        const handleLoginAttempt = async () => {
+          setLoginError(null);
+          try {
+            const serverCtx = await runServer("getUserContext");
+            if (!serverCtx.isValidUser) throw new Error("Acceso no autorizado.");
+            
+            setUserCtx(serverCtx);
+            localStorage.setItem(getCacheKey("ctx", serverCtx.email), JSON.stringify(serverCtx));
+            localStorage.setItem("last_user_it", serverCtx.email);
+            setView("home");
+            refreshData(true, serverCtx.email);
+          } catch (e) { setLoginError(e.message); }
+        };
+
+        // Carga inicial (desde caché si existe)
+        useEffect(() => {
+          const lastUser = localStorage.getItem("last_user_it");
+          if (lastUser) {
+            const cache = loadFromCache(lastUser);
+            if (cache.context && cache.requests) {
+              setUserCtx(cache.context);
+              setInitialData(cache.requests.data);
+              setLastSyncRequests(cache.requests.timestamp);
+              if (cache.details) {
+                setDetailsCache(cache.details.data);
+                setLastSyncDetails(cache.details.timestamp);
+                updateSyncReport(cache.requests.data.data.length, cache.details.data);
+              }
+              setView("home");
+              refreshData(false, lastUser); // Sync silencioso en BG
+            }
+          }
+          setIsCheckingCache(false);
         }, []);
 
-        if (!userCtx) return (
-            <LoginView 
-                onSuccess={() => handleLoginAttempt(null)} 
-                isCheckingCache={isCheckingCache} 
-                externalError={loginError}
-                onClearError={() => setLoginError(null)}
-            />
-        );
+        if (!userCtx) return <LoginView onSuccess={handleLoginAttempt} isCheckingCache={isCheckingCache} externalError={loginError} />;
 
         return (
-          <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
+          <div className="flex min-h-screen bg-gray-100 text-gray-800">
             <Sidebar 
-              currentView={view} 
-              setView={setView} 
-              onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }} 
-              userContext={userCtx} 
-              lastSyncRequests={lastSyncRequests} 
-              lastSyncDetails={lastSyncDetails} 
-              isSyncing={isSyncing}
+              currentView={view} setView={setView} userContext={userCtx}
+              isSyncing={isSyncing} lastSyncRequests={lastSyncRequests}
+              onLogout={() => { localStorage.clear(); window.location.reload(); }}
               onRefreshContext={handleRefreshContext} 
             />
-            <div className="flex-1 ml-64 overflow-y-auto">
-              {view === "home" ? (
-                <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} />
-              ) : view === "detail" && selectedRequest ? (
-                <RequestDetail 
-                  requestId={selectedRequest["ID Solicitud"]} 
-                  preloadedData={selectedRequest} 
-                  cachedDetails={detailsCache} 
-                  onBack={() => setView("history")} 
-                />
-              ) : view === "create" ? (
-                <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />
-              ) : view === "config" ? (
+            <div className="flex-1 ml-64 overflow-y-auto h-screen">
+              {view === "home" && <HomeDashboard userContext={userCtx} requests={initialData.data} setView={setView} />}
+              {view === "create" && <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />}
+              {view === "detail" && <RequestDetail requestId={selectedRequest?.["ID Solicitud"]} onBack={() => setView("history")} preloadedData={selectedRequest} />}
+              {(view === "history" || view === "process") && <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />}
+              {view === "config" && (
                 <ConfigurationView 
-                  userContext={userCtx} 
-                  onForceSync={() => refreshData(true)} 
-                  onClearCache={clearLocalCache} 
-                  isSyncing={isSyncing} 
-                  lastSyncRequests={lastSyncRequests} 
-                  lastSyncDetails={lastSyncDetails} 
-                  syncReport={syncReport} 
+                  userContext={userCtx} onForceSync={() => refreshData(true)}
+                  onClearCache={() => { localStorage.clear(); window.location.reload(); }}
+                  isSyncing={isSyncing} lastSyncRequests={lastSyncRequests}
+                  lastSyncDetails={lastSyncDetails} syncReport={syncReport}
                 />
-              ) : (
-                <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />
               )}
             </div>
             {toast && <Toast message={toast} onClose={() => setToast(null)} />}

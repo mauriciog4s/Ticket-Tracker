@@ -218,11 +218,13 @@ function _getChildrenFast(sheetName, parentKeys) {
  * ------------------------------------------------------------------
  */
 function doGet(e) {
+  // ✅ ROUTER DE ARCHIVOS (MODO PROXY)
   if (e.parameter && e.parameter.v === 'archivo' && e.parameter.id) {
     return _renderFileView(e.parameter.id);
   }
 
   const template = HtmlService.createTemplateFromFile('Index');
+  // ✅ IMPORTANTE: Inyectamos la URL del script para el frontend
   template.scriptUrl = ScriptApp.getService().getUrl();
   
   return template
@@ -254,7 +256,7 @@ function apiHandler(request) {
     if (!userEmail) throw new Error("No se pudo verificar la identidad del usuario.");
 
     switch (endpoint) {
-      case 'getUserContext': return getUserContext(userEmail);
+      case 'getUserContext': return getUserContext(userEmail, payload?.ignoreCache);
       case 'getRequests': return getRequests(userEmail);
       case 'getRequestDetail': return getRequestDetail(userEmail, payload);
       
@@ -299,7 +301,7 @@ function _sanitizeFileName(name) {
   return n.normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
           .replace(/[/\\]/g, '_')
           .replace(/[<>:"|?*]/g, '')
-          .replace(/\s+/g, '_') // IMPORTANTE: Espacios a guion bajo
+          .replace(/\s+/g, '_') 
           .slice(0, 120) || 'anexo';
 }
 
@@ -316,11 +318,16 @@ function _ensurePathFromRoot(root, parts) {
 }
 
 // ------------------------------------------------------------------
-// ✅ FUNCIÓN CORREGIDA: GUARDA URL PÚBLICA (/view) PARA APPSHEET
+// ✅ FUNCIÓN UPLOAD V4: CARPETAS FIJAS POR TIPO (IDS ESPECÍFICOS)
 // ------------------------------------------------------------------
 function uploadAnexo(email, payload) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
+
+  // --- IDs DE CARPETAS PROPORCIONADOS ---
+  const IMAGES_FOLDER_ID = '1tzYk9jiQ7Lp_bSZylMn0vuzfWZt4xTHb'; // Carpeta para Fotos/Dibujos
+  const DOCS_FOLDER_ID   = '1-CBsinL67dJUPfr8WXtKP1wM93B6zPDX'; // Carpeta para Documentos
+  // ----------------------------------------
 
   const solicitudId = String(payload?.solicitudId || '').trim();
   const tipoAnexo = String(payload?.tipoAnexo || 'Archivo').trim();
@@ -333,73 +340,65 @@ function uploadAnexo(email, payload) {
 
   const headerFound = _findRowObjectByKey('Solicitudes', solicitudId, ['ID Solicitud', 'ID Solicitudes']);
   if (!headerFound) throw new Error("Solicitud padre no encontrada.");
-  const solicitudObj = headerFound.obj;
+  
+  const maxBytes = 10 * 1024 * 1024;
+  const bytes = Utilities.base64Decode(base64);
+  if (bytes.length > maxBytes) throw new Error("Archivo demasiado grande (máx 10MB).");
 
-  const idSede = String(_getField(solicitudObj, ['ID Sede'])).trim();
+  // Limpieza de nombre
+  const safeFileName = _sanitizeFileName(fileNameInput).replace(/\s+/g, '_'); 
+  const shortId = solicitudId.replace(/-/g, '').slice(0, 8);
+  const rand = Math.floor(Math.random() * 900000) + 100000;
+  
+  const extMatch = safeFileName.match(/\.([0-9a-z]+)$/i);
+  const ext = extMatch ? extMatch[1] : (mimeType.includes('image') ? 'jpg' : 'pdf');
+  const baseName = safeFileName.replace(/\.[^/.]+$/, "").replace(/\./g, "_");
+  
+  const finalName = `${shortId}_${tipoAnexo}_${rand}_${baseName}.${ext}`;
 
-  if (!context.isAdmin) {
-    if (idSede && !context.allowedClientIds.includes(idSede)) {
-      throw new Error("No tiene permisos para anexar archivos a este ticket.");
-    }
-  }
+  const blob = Utilities.newBlob(bytes, mimeType, finalName);
 
   return _withLock(() => {
-    let clientFolderName = "General"; 
+    let file;
+    let storedPath;
 
-    if (idSede) {
-      const sedeFound = _findRowObjectByKey('Sedes', idSede, ['ID Sede', 'Id Sede', 'Sede', 'IDSede']);
-      if (sedeFound) {
-        const idCliente = String(_getField(sedeFound.obj, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim();
-        if (idCliente) {
-          const clienteFound = _findRowObjectByKey('Clientes', idCliente, ['ID Cliente', 'Id Cliente', 'Cliente']);
-          if (clienteFound) {
-            const nombre = _getField(clienteFound.obj, ['Nombre cliente', 'Nombre Cliente', 'Nombre', 'RazonSocial', 'Razón Social']);
-            if (nombre) {
-              clientFolderName = String(nombre).trim().replace(/[/\\]/g, "-");
-            }
-          }
+    if (tipoAnexo === 'Foto' || tipoAnexo === 'Dibujo' || mimeType.startsWith('image/')) {
+        // --- MODO FOTO: Guardar en carpeta específica IMAGES_FOLDER_ID ---
+        
+        try {
+          const targetFolder = DriveApp.getFolderById(IMAGES_FOLDER_ID);
+          file = targetFolder.createFile(blob);
+          
+          // OJO: Para que AppSheet vea la foto, escribimos: "NombreCarpeta/NombreArchivo"
+          // Esto asume que la carpeta IMAGES_FOLDER_ID está en la ubicación correcta para AppSheet
+          storedPath = `${targetFolder.getName()}/${finalName}`;
+          
+        } catch (e) {
+          throw new Error("No se pudo acceder a la carpeta de Imágenes definida. Verifique el ID.");
         }
-      }
+        
+    } else {
+        // --- MODO DOCUMENTO: Guardar en carpeta específica DOCS_FOLDER_ID ---
+        
+        try {
+          const targetFolder = DriveApp.getFolderById(DOCS_FOLDER_ID);
+          file = targetFolder.createFile(blob);
+          
+          // Para documentos usamos URL completa para descarga web
+          storedPath = `https://drive.google.com/file/d/${file.getId()}/view`;
+          
+        } catch (e) {
+          throw new Error("No se pudo acceder a la carpeta de Documentos definida. Verifique el ID.");
+        }
     }
 
-    const maxBytes = 10 * 1024 * 1024;
-    const bytes = Utilities.base64Decode(base64);
-    if (bytes.length > maxBytes) throw new Error("Archivo demasiado grande (máx 10MB).");
-
-    const safeFileName = _sanitizeFileName(fileNameInput);
-
-    const root = _getRootFolderForFiles();
-    let currentFolder = _ensurePathFromRoot(root, ['Info', 'Clientes']);
-    currentFolder = _ensureFolder(currentFolder, clientFolderName);
-    const targetFolder = _ensureFolder(currentFolder, 'Anexos');
-
-    const shortId = solicitudId.replace(/-/g, '').slice(0, 8);
-    const rand = Math.floor(Math.random() * 900000) + 100000;
-    
-    // Extensión y nombre base limpio
-    const extMatch = safeFileName.match(/\.([0-9a-z]+)$/i);
-    const ext = extMatch ? extMatch[1] : (mimeType.includes('image') ? 'jpg' : 'pdf');
-    const baseName = safeFileName.replace(/\.[^/.]+$/, "").replace(/\./g, "_");
-    
-    const finalName = `${shortId}.${tipoAnexo}.${rand}.${baseName}.${ext}`;
-
-    const blob = Utilities.newBlob(bytes, mimeType, finalName);
-    const file = targetFolder.createFile(blob);
-
+    // Permisos (Intento de hacerlos visibles para lectores)
     try {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch(e) {}
-
-    // ✅ LÓGICA INTELIGENTE DE URL
-    const fileId = file.getId();
-    let storedPath = `https://drive.google.com/file/d/${fileId}/view`; // Por defecto, visor (PDFs, etc)
-
-    // Si es imagen, usamos export=view para que AppSheet muestre la miniatura
-    // El frontend se encargará de convertir esto para evitar la descarga
-    if (tipoAnexo === 'Foto' || tipoAnexo === 'Dibujo' || mimeType.startsWith('image/')) {
-        storedPath = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    } catch(e) {
+      try { file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); } catch(e2) {}
     }
-    
+
     const anexoUuid = Utilities.getUuid();
     const now = new Date();
 
@@ -546,11 +545,14 @@ function _findSolicitudHeaderFast(key) {
 
 // LOGICA NEGOCIO
 
-function getUserContext(email) {
+function getUserContext(email, ignoreCache = false) {
   const cache = CacheService.getScriptCache();
   const cacheKey = `ctx_it_v5_${Utilities.base64Encode(email)}`; 
-  const cachedData = cache.get(cacheKey);
-  if (cachedData) return JSON.parse(cachedData);
+  
+  if (!ignoreCache) {
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) return JSON.parse(cachedData);
+  }
 
   try {
     let context = {
@@ -701,7 +703,7 @@ function getRequestDetail(email, { id }) {
 }
 
 // ------------------------------------------------------------------
-// ✅ MODIFICACIÓN APLICADA: CREACIÓN DE HISTORIAL AL CREAR TICKET
+// ✅ CREATE REQUEST ACTUALIZADO CON API DE APPSHEET
 // ------------------------------------------------------------------
 function createRequest(email, payload) {
   const context = getUserContext(email);
@@ -747,17 +749,28 @@ function createRequest(email, payload) {
       "Estado": "Creado",
       "ID Sede": String(payload.idSede).trim(),
       "Ticket Cliente": payload.ticketCliente || "",
-      "Clasificación": payload.clasificacion,
+      
+      // ✅ MAPEADO CORRECTO SEGÚN SOLICITUD
+      "Clasificación Solicitud": payload.clasificacion, 
+      "Clasificación": payload.tipoServicio,
+      "Técnicos Clientes": "Por disponibilidad", // Valor fijo solicitado
+
       "Prioridad Solicitud": payload.prioridad,
       "Solicitud": payload.solicitud,
       "Observación": payload.observacion,
-      "Clasificación visita": payload.tipoServicio,
       "Usuario Actualización": email
     };
 
-    appendDataToSheet('Solicitudes', newRow);
+    // --- INTEGRACIÓN DE LA API PARA ACTIVAR CORREOS ---
+    const apiResult = enviarAppSheetAPI('Solicitudes', newRow);
 
-    // --- AGREGADO: CREAR REGISTRO INICIAL EN HISTORIAL ---
+    // Respaldo de seguridad
+    if (!apiResult || (apiResult && apiResult.RestServerErrorMessage)) {
+      console.warn("API falló, usando guardado directo como respaldo.");
+      appendDataToSheet('Solicitudes', newRow);
+    }
+    // ------------------------------------------------
+
     try {
       const historyRow = {
         "ID Estado": Utilities.getUuid(),
@@ -770,7 +783,6 @@ function createRequest(email, payload) {
     } catch (e) {
       console.warn("No se pudo guardar el historial inicial:", e);
     }
-    // ----------------------------------------------------
 
     _invalidateDetailCache(email, uuid);
 
@@ -818,7 +830,6 @@ function getAnexoDownload(email, { anexoId }) {
 
   const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
   
-  // ✅ Si ya es una URL de drive con /view, la devolvemos directo
   if (pathValue.includes("drive.google.com")) {
      return { mode: "url", url: pathValue, fileName: _getField(row, ['Nombre']) };
   }
@@ -831,13 +842,9 @@ function getAnexoDownload(email, { anexoId }) {
   }
 
   const file = resolved.file;
-  // Fallback a URL pública para web
   return { mode: "url", url: `https://drive.google.com/file/d/${file.getId()}/view`, fileName: file.getName() };
 }
 
-// ------------------------------------------------------------------
-// ✅ MODIFICACIÓN TAMBIÉN PARA DIBUJOS (URL VIEW)
-// ------------------------------------------------------------------
 function createSolicitudActivo(email, payload) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
@@ -879,7 +886,6 @@ function createSolicitudActivo(email, payload) {
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       } catch(e) {}
 
-      // ✅ CAMBIO A URL DIRECTA TAMBIÉN PARA DIBUJOS
       dibujoPath = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
     }
 
@@ -969,7 +975,6 @@ function getBatchRequestDetails(email, { ids }) {
   const allServices = getDataFromSheet('Observaciones historico');
   const allHistory = getDataFromSheet('Estados historico');
   const allDocs = getDataFromSheet('Solicitudes anexos');
-  // ✅ AÑADIDO: Obtener también los activos asociados
   const allActivos = getDataFromSheet('Solicitudes activos');
 
   const result = {};
@@ -1008,17 +1013,15 @@ function getBatchRequestDetails(email, { ids }) {
   return result;
 }
 
-// ------------------------------------------------------------------
-// ✅ MODIFICACIÓN: OPCIONES DE CLASIFICACIÓN HARDCODED
-// ------------------------------------------------------------------
 function getClassificationOptions(email) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
-  
-  // Retorno directo de las dos opciones solicitadas
   return ["Visita técnica", "Visita comercial"];
 }
 
+// ------------------------------------------------------------------
+// ✅ MODO PROXY V5: CORRECCIÓN DE RUTAS RELATIVAS (INTERFAZ ORIGINAL COMPLETA)
+// ------------------------------------------------------------------
 function _renderFileView(anexoId) {
   try {
     const found = _findRowObjectByKey('Solicitudes anexos', anexoId, [
@@ -1028,26 +1031,41 @@ function _renderFileView(anexoId) {
     if (!found) return HtmlService.createHtmlOutput("<h1>Archivo no encontrado en la base de datos.</h1>");
     const row = found.obj;
     const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
-    const fileName = _getField(row, ['Nombre']) || "Archivo";
+    const fileName = _getField(row, ['Nombre']) || "Archivo_G4S";
 
-    // Si es URL directa de Drive, redirigir
-    if (pathValue.includes("drive.google.com")) {
-       return HtmlService.createHtmlOutput(`<script>window.location.href="${pathValue}";</script>`);
+    let file = null;
+
+    if (pathValue.includes("drive.google.com") || pathValue.includes("/d/")) {
+        const idMatch = pathValue.match(/\/d\/([a-zA-Z0-9_-]+)/) || pathValue.match(/id=([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) {
+            try { file = DriveApp.getFileById(idMatch[1]); } catch(e) {}
+        }
+    } else {
+        const parts = pathValue.split('/');
+        const exactFileName = parts[parts.length - 1]; 
+
+        if (exactFileName) {
+            const filesIt = DriveApp.getFilesByName(exactFileName);
+            if (filesIt.hasNext()) {
+                file = filesIt.next();
+            }
+        }
     }
 
-    const resolved = _resolveDriveFileFromAppSheetPath(pathValue);
-    
-    if (resolved.kind === "url") {
-      return HtmlService.createHtmlOutput(`<script>window.location.href="${resolved.url}";</script>`);
+    if (!file) {
+       return HtmlService.createHtmlOutput(`
+         <div style='font-family:sans-serif;text-align:center;padding:40px;'>
+           <h1>Archivo no encontrado en Drive</h1>
+           <p>No se pudo localizar el archivo físico: <b>${fileName}</b></p>
+         </div>
+       `);
     }
 
-    const file = resolved.file;
-    if (file.getSize() > 10 * 1024 * 1024) {
+    if (file.getSize() > 8 * 1024 * 1024) { 
       return HtmlService.createHtmlOutput(`
         <div style="font-family:sans-serif;text-align:center;margin-top:50px;">
-          <h1>Archivo demasiado grande</h1>
-          <p>El archivo supera el límite de visualización rápida.</p>
-          <a href="https://drive.google.com/uc?export=download&id=${file.getId()}" target="_blank" style="background:#0033A0;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Intentar descarga directa</a>
+          <h2>Archivo Grande</h2>
+          <a href="https://drive.google.com/uc?export=download&id=${file.getId()}" style="background:#0033A0;color:white;padding:15px;text-decoration:none;">Descargar</a>
         </div>
       `);
     }
@@ -1056,37 +1074,92 @@ function _renderFileView(anexoId) {
     const base64 = Utilities.base64Encode(blob.getBytes());
     const mimeType = blob.getContentType();
 
-    let contentHtml = '';
-    
-    if (mimeType.includes('image')) {
-      contentHtml = `<img src="data:${mimeType};base64,${base64}" style="max-width:100%;box-shadow:0 4px 6px rgba(0,0,0,0.1);">`;
-    } else if (mimeType.includes('pdf')) {
-      contentHtml = `<iframe src="data:${mimeType};base64,${base64}" style="width:100%;height:100vh;border:none;"></iframe>`;
-    } else {
-      contentHtml = `
-        <div style="text-align:center;padding:50px;font-family:sans-serif;">
-          <h2>Archivo: ${fileName}</h2>
-          <p>Este formato no tiene vista previa web.</p>
-          <a download="${fileName}" href="data:${mimeType};base64,${base64}" style="background:#D32F2F;color:white;padding:15px 30px;text-decoration:none;border-radius:5px;font-weight:bold;">Descargar Ahora</a>
-        </div>
-      `;
-    }
-
-    return HtmlService.createHtmlOutput(`
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${fileName} - G4S</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>body{margin:0;padding:0;background:#f3f4f6;display:flex;justify-content:center;min-height:100vh;}</style>
+        <title>G4S - ${fileName}</title>
+        <style>
+          body { margin: 0; padding: 0; background-color: #f3f4f6; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
+          .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+          .btn { background: #D32F2F; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; }
+          .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #D32F2F; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 15px auto; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
       </head>
       <body>
-        ${contentHtml}
+        <div class="card">
+          <div id="loader"><div class="spinner"></div><h3>Procesando...</h3></div>
+          <div id="content" style="display:none;">
+            <h3>Listo</h3>
+            <p>${fileName}</p>
+            <button id="dlBtn" class="btn">Guardar Archivo</button>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            const rawBase64 = "${base64}";
+            const byteCharacters = atob(rawBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
+            const blob = new Blob([new Uint8Array(byteNumbers)], {type: "${mimeType}"});
+            const url = URL.createObjectURL(blob);
+            const btn = document.getElementById('dlBtn');
+            btn.onclick = function() {
+              const a = document.createElement('a'); a.href = url; a.download = "${fileName}"; a.click();
+            };
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            setTimeout(() => btn.click(), 800);
+          };
+        </script>
       </body>
       </html>
-    `);
+    `;
+
+    return HtmlService.createHtmlOutput(html);
 
   } catch (e) {
-    return HtmlService.createHtmlOutput(`<h3>Error abriendo archivo: ${e.message}</h3>`);
+    return HtmlService.createHtmlOutput(`<h3>Error de Sistema: ${e.message}</h3>`);
+  }
+}
+
+/**
+ * ------------------------------------------------------------------
+ * ✅ FUNCIÓN PUENTE: API DE APPSHEET
+ * ------------------------------------------------------------------
+ */
+function enviarAppSheetAPI(tableName, rowData) {
+  const appId = "c0817cfb-b068-4a46-ae3b-228c0385a486"; 
+  const accessKey = "V2-gaw9Q-LcMsx-wfJof-pFCgC-u6igd-FMxtR-23Zr1-V3O4K"; 
+  
+  const url = `https://api.appsheet.com/api/v1/apps/${appId}/tables/${tableName}/Action`;
+  
+  const payload = {
+    "Action": "Add",
+    "Properties": { 
+       "Locale": "es-CO", 
+       "Timezone": "SA Pacific Standard Time",
+       "RunAsUserEmail": rowData["Usuario Actualización"] 
+    },
+    "Rows": [ rowData ]
+  };
+  
+  const options = {
+    "method": "post",
+    "contentType": "application/json",
+    "headers": { "ApplicationAccessKey": accessKey },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const resText = response.getContentText();
+    console.log("Respuesta AppSheet API: " + resText);
+    return JSON.parse(resText);
+  } catch (e) {
+    console.error("Error en la API de AppSheet: " + e);
+    return null;
   }
 }

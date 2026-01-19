@@ -1,11 +1,8 @@
-
-
-````markdown
 # G4S Ticket Tracker – Web App (Apps Script + React)
 
 Versión web (Google Apps Script + React + Tailwind) del **G4S Ticket Tracker**, migrada desde una app original en AppSheet.
 
-La aplicación permite que los usuarios corporativos gestionen **tickets de servicio**, vean **historial**, **observaciones** y descarguen **anexos** (PDF, imágenes, etc.) almacenados en Google Drive / AppSheet, todo con control de permisos basado en su correo.
+La aplicación permite que los usuarios corporativos gestionen **tickets de servicio**, vean **historial**, **observaciones**, vinculen **activos (Assets)** y descarguen **anexos** (PDF, imágenes, etc.) almacenados en Google Drive, todo con control de permisos basado en su correo institucional.
 
 ---
 
@@ -22,38 +19,24 @@ La aplicación permite que los usuarios corporativos gestionen **tickets de serv
 
 - 🎫 **Gestión de tickets**
   - Listado de solicitudes con filtros: **Todo / Abierto / Cerrado**.
-  - Vista de **detalle técnico** del ticket (similar al panel de AppSheet).
-  - Creación de nuevos tickets con:
-    - Selección de sede
-    - Clasificación, tipo de servicio, prioridad
-    - Campos personalizados (observación, ticket cliente)
+  - Búsqueda en tiempo real y paginación.
+  - Vista de **detalle técnico** completo (Header, Observaciones, Historial, Anexos, Activos).
+  - Creación de nuevos tickets con clasificación, prioridad y adjuntos.
 
-- 🧮 **Backend en Google Sheets**
-  - Todas las entidades se leen/escriben desde hojas de cálculo:
-    - `Solicitudes`
-    - `Estados historico`
-    - `Observaciones historico`
-    - `Solicitudes anexos`
-    - `Permisos`
-    - `Usuarios filtro`
-    - `Clientes`
-    - `Sedes`
-  - Generación de IDs con `Utilities.getUuid()`.
-  - Generación de Ticket G4S dinámico (prefijo por cliente + consecutivo + random).
+- 🔍 **Gestión de Activos (QR)**
+  - Vinculación de activos a tickets mediante escaneo o búsqueda de QR.
+  - Catálogo de activos sincronizado desde Google Sheets.
 
-- 📎 **Anexos integrados (AppSheet + Drive)**
-  - Soporte para archivos gestionados originalmente por AppSheet.
-  - Construcción de URLs públicas usando:
-    - `gettablefileurl` de AppSheet cuando la columna `Archivo` trae rutas tipo:  
-      `/Info/Clientes//Anexos/d9ae3f49.Archivo.153136.pdf`
-    - Búsqueda de archivo en Drive por nombre como fallback.
-  - Los anexos se muestran en el panel como lista descargable.
+- 📎 **Anexos y Archivos**
+  - Subida de **Fotos, Dibujos y Documentos** directamente a carpetas específicas de Drive.
+  - Sistema de visualización vía **Proxy** para evitar problemas de permisos de terceros.
+  - Soporte para rutas originales de AppSheet y archivos directos de Drive.
 
 - 📊 **UI moderna**
-  - React 18 (UMD) + Tailwind CDN.
-  - Dashboard con tarjetas de métricas básicas (Total, Abiertos, Cerrados).
-  - Sidebar con navegación: Inicio, Nueva solicitud, Tickets Activos, Historial, Configuración.
-  - Modal de éxito al crear solicitudes.
+  - React 18 (UMD) + Tailwind CDN + Babel standalone.
+  - Dashboard con métricas (Total, Abiertos, Cerrados).
+  - Sidebar interactivo con información del cliente y estado de sincronización.
+  - Almacenamiento local (Cache) para carga instantánea.
 
 ---
 
@@ -61,194 +44,79 @@ La aplicación permite que los usuarios corporativos gestionen **tickets de serv
 
 ### Backend – `Code.gs`
 
-- Mapeo de IDs de spreadsheets:
+El backend gestiona la persistencia en 5 Spreadsheets distintos y centraliza la lógica de negocio.
 
+- **Mapeo de IDs de spreadsheets:**
   ```js
-  const MAIN_SPREADSHEET_ID      = '...';
+  const MAIN_SPREADSHEET_ID        = '...';
   const PERMISSIONS_SPREADSHEET_ID = '...';
-  const CLIENTS_SPREADSHEET_ID   = '...';
-  const SEDES_SPREADSHEET_ID     = '...';
+  const CLIENTS_SPREADSHEET_ID     = '...';
+  const SEDES_SPREADSHEET_ID       = '...';
+  const ACTIVOS_SPREADSHEET_ID     = '...';
 
   const SHEET_CONFIG = {
     'Solicitudes': MAIN_SPREADSHEET_ID,
     'Estados historico': MAIN_SPREADSHEET_ID,
     'Observaciones historico': MAIN_SPREADSHEET_ID,
+    'Estados': MAIN_SPREADSHEET_ID,
     'Solicitudes anexos': MAIN_SPREADSHEET_ID,
+    'Solicitudes activos': MAIN_SPREADSHEET_ID,
     'Permisos': PERMISSIONS_SPREADSHEET_ID,
     'Usuarios filtro': PERMISSIONS_SPREADSHEET_ID,
     'Clientes': CLIENTS_SPREADSHEET_ID,
-    'Sedes': SEDES_SPREADSHEET_ID
+    'Sedes': SEDES_SPREADSHEET_ID,
+    'Activos': ACTIVOS_SPREADSHEET_ID
   };
-````
-
-* Endpoints expuestos vía `google.script.run`:
-
-  ```js
-  function apiHandler(request) {
-    const userEmail = Session.getActiveUser().getEmail();
-    const { endpoint, payload } = request;
-
-    switch (endpoint) {
-      case 'getUserContext':  return getUserContext(userEmail);
-      case 'getRequests':     return getRequests(userEmail);
-      case 'getRequestDetail':return getRequestDetail(userEmail, payload);
-      case 'createRequest':   return createRequest(userEmail, payload);
-      default: throw new Error('Endpoint desconocido');
-    }
-  }
   ```
 
-* Helpers de acceso a Sheets:
+- **Endpoints expuestos vía `apiHandler`:**
+  - `getUserContext`: Obtiene rol y sedes permitidas.
+  - `getRequests`: Lista de tickets filtrados.
+  - `getRequestDetail`: Detalle completo de un ticket.
+  - `createRequest`: Crea ticket e integra con **AppSheet API** para disparar correos.
+  - `uploadAnexo`: Sube archivos a carpetas específicas de Drive.
+  - `getAnexoDownload`: Resuelve la URL de descarga.
+  - `createSolicitudActivo`: Vincula un activo QR al ticket.
+  - `getSolicitudActivos`: Lista activos de un ticket.
+  - `getActivosCatalog`: Catálogo completo de activos.
+  - `getActivoByQr`: Busca activo específico por QR.
+  - `getClassificationOptions`: Opciones dinámicas de clasificación.
+  - `getBatchRequestDetails`: Sincronización masiva para modo offline/cache.
 
-  * `getDataFromSheet(sheetName)` → lee datos como arreglo de objetos.
-  * `appendDataToSheet(sheetName, objectData)` → inserta nueva fila.
-
-* Lógica de negocio:
-
-  * `getUserContext(email)` → arma contexto (rol, sedes permitidas, nombres de sedes).
-  * `getRequests(email)` → devuelve tickets filtrados por sede y ordenados por fecha.
-  * `getRequestDetail(email, { id })` → devuelve:
-
-    * `header` (detalle de la solicitud)
-    * `services` (observaciones)
-    * `history` (estados históricos)
-    * `documents` (anexos ya enriquecidos con URL).
-
-* Manejo de anexos:
-
-  ```js
-  const APPSHEET_APP_NAME   = 'AppSolicitudes-5916254';
-  const APPSHEET_ATTACH_TABLE = 'Solicitudes anexos';
-
-  function buildAttachmentUrlFromRecord(record) {
-    const archivoKey = Object.keys(record).find(k =>
-      String(k).trim().toLowerCase() === 'archivo'
-    );
-    if (!archivoKey) return '';
-    return getAttachmentUrlFromPath(record[archivoKey]);
-  }
-
-  function getAttachmentUrlFromPath(path) {
-    path = String(path || '').trim();
-    if (!path) return '';
-
-    // Si ya viene una URL
-    if (/^https?:\/\//i.test(path)) return path;
-
-    const cache = CacheService.getScriptCache();
-    const cacheKey = 'att_v2_' + Utilities.base64Encode(path);
-    const cached = cache.get(cacheKey);
-    if (cached) return cached;
-
-    // 1) Ruta AppSheet → gettablefileurl
-    if (path.indexOf('/Info/') === 0 || path.indexOf('Info/Clientes') !== -1) {
-      const base      = 'https://www.appsheet.com/template/gettablefileurl';
-      const appName   = encodeURIComponent(APPSHEET_APP_NAME);
-      const tableName = encodeURIComponent(APPSHEET_ATTACH_TABLE);
-      const fileName  = encodeURIComponent(path);
-
-      const url = `${base}?appName=${appName}&tableName=${tableName}&fileName=${fileName}`;
-      cache.put(cacheKey, url, 21600);
-      return url;
-    }
-
-    // 2) Fallback → buscar en Drive por nombre
-    const parts    = path.split('/');
-    const fileName = parts[parts.length - 1];
-    if (fileName) {
-      const files = DriveApp.getFilesByName(fileName);
-      if (files.hasNext()) {
-        const file  = files.next();
-        const url   = `https://drive.google.com/file/d/${file.getId()}/view?usp=drivesdk`;
-        cache.put(cacheKey, url, 21600);
-        return url;
-      }
-    }
-
-    return '';
-  }
-  ```
+- **Sistema de Archivos (Proxy Mode):**
+  Para garantizar que los usuarios puedan ver archivos sin errores de CORS o permisos de "Drive Viewer", la app implementa un router:
+  `?v=archivo&id=...` → `_renderFileView(id)`
+  Este método descarga el blob desde el servidor y lo sirve al cliente como una descarga directa o visualización.
 
 ### Frontend – `Index.html`
 
-* React 18 y ReactDOM 18 vía CDN.
-* Babel standalone para usar JSX directamente en Apps Script.
-* Tailwind configurado inline.
-
-Componentes principales:
-
-* `LoginView` – pantalla inicial y loading.
-* `Sidebar` – navegación lateral.
-* `HomeDashboard` – métricas generales y acciones rápidas.
-* `CreateRequest` – formulario de creación de ticket.
-* `RequestList` – listado filtrable/searchable de tickets.
-* `RequestDetail` – vista de detalle técnico con:
-
-  * Observaciones
-  * Anexos (ícono + link de descarga)
-  * Historial de estados
-* `ConfigurationView` – datos del usuario y botón de resync.
-
-Comunicación con backend:
-
-```js
-const runServer = (endpoint, payload = {}) =>
-  new Promise((resolve, reject) => {
-    if (typeof google === 'undefined' || !google.script) {
-      reject(new Error('Ejecutar en GAS'));
-      return;
-    }
-    google.script.run
-      .withSuccessHandler(res => {
-        if (res && res.error) reject(new Error(res.message));
-        else resolve(res);
-      })
-      .withFailureHandler(err => reject(err))
-      .apiHandler({ endpoint, payload });
-  });
-```
+- **Tecnologías:** React 18, Tailwind CSS, Babel (JSX en el cliente).
+- **Comunicación:** `runServer(endpoint, payload)` envuelve a `google.script.run`.
+- **Persistencia:** Uso intensivo de `localStorage` para cachear tickets y detalles, permitiendo navegación instantánea.
 
 ---
 
 ## 🚀 Cómo desplegar
 
-1. Crear un proyecto en **Google Apps Script**.
-2. Crear los archivos:
-
-   * `Code.gs` → pegar el backend.
-   * `Index.html` → pegar el frontend.
-3. Configurar los IDs de los spreadsheets en `Code.gs`:
-
-   * `MAIN_SPREADSHEET_ID`
-   * `PERMISSIONS_SPREADSHEET_ID`
-   * `CLIENTS_SPREADSHEET_ID`
-   * `SEDES_SPREADSHEET_ID`
-4. Revisar que las hojas tengan exactamente los nombres usados en `SHEET_CONFIG`.
-5. Opcional (pero recomendado para anexos AppSheet):
-
-   * En la app de AppSheet, desactivar la opción:
-     **Security → Options → Require Image and File URL Signing**
-     (o ajustar según la configuración usada).
-6. Publicar como:
-
-   * **Deploy → Test deployments / New deployment → Web app**
-   * Ejecutar como: **Me (owner)**
-   * Acceso: **Usuarios de la organización** (o lo que aplique).
+1.  Crear un proyecto en **Google Apps Script**.
+2.  Subir los archivos `Code.gs` e `Index.html`.
+3.  **Configurar IDs en `Code.gs`**:
+    - Los 5 IDs de Spreadsheets mencionados arriba.
+    - `IMAGES_FOLDER_ID`: Carpeta de Google Drive para fotos.
+    - `DOCS_FOLDER_ID`: Carpeta de Google Drive para documentos/PDFs.
+4.  **Permisos de Carpeta**: Las carpetas de Drive deben tener permisos de lectura para los usuarios (o estar dentro de una unidad compartida).
+5.  **AppSheet API**: Si se desea el envío de correos original, configurar el `appId` y `accessKey` en la función `enviarAppSheetAPI`.
+6.  **Publicar**:
+    - Deploy → New deployment → Web app.
+    - Execute as: **Me** (Owner).
+    - Who has access: **Anyone within [Organization]**.
 
 ---
 
 ## 🧰 Stack tecnológico
 
-* **Frontend**
-
-  * React 18 (UMD)
-  * ReactDOM 18
-  * Tailwind CSS (CDN)
-* **Backend**
-
-  * Google Apps Script (JavaScript)
-  * Google Sheets (como base de datos ligera)
-  * Google Drive (almacenamiento de archivos)
-* **Integración externa**
-
-  * AppSheet (rutas y almacenamiento original de anexos)
+-   **Frontend**: React 18, ReactDOM 18, Tailwind CSS (CDN), Babel.
+-   **Backend**: Google Apps Script (V8 Engine).
+-   **Base de Datos**: Google Sheets (Multi-spreadsheet).
+-   **Almacenamiento**: Google Drive.
+-   **Integraciones**: AppSheet API (disparadores de flujos).

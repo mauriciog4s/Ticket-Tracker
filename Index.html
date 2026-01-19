@@ -337,6 +337,7 @@
           { id: "create", icon: "ClipboardList", title: "Nueva Solicitud" },
           { id: "process", icon: "Monitor", title: "Tickets Activos" },
           { id: "history", icon: "History", title: "Historial Tickets" },
+          { id: "assets", icon: "Database", title: "Activos" },
         ];
 
         // Lógica de visualización del nombre de cliente
@@ -1261,6 +1262,34 @@
         );
       };
 
+      // --- ASSETS VIEW ---
+      const AssetsView = () => {
+        return (
+          <div className="p-8 max-w-6xl mx-auto animate-fade-in">
+            <div className="mb-8 text-center md:text-left">
+              <h1 className="text-3xl font-bold text-gray-800">Activos</h1>
+              <p className="text-gray-500">Gestión y control de inventario tecnológico.</p>
+            </div>
+
+            <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-200 text-center flex flex-col items-center">
+              <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 text-gray-300">
+                <Icon name="Database" size={64} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-3">Sección en Construcción</h2>
+              <p className="text-gray-500 max-w-lg leading-relaxed">
+                Estamos preparando este espacio para alojar nuevas herramientas de consulta, auditoría y trazabilidad de activos. ¡Vuelve pronto!
+              </p>
+
+              <div className="mt-8 flex gap-4">
+                <div className="px-4 py-2 bg-gray-100 rounded-lg text-xs font-bold text-gray-400 uppercase tracking-widest">Consultas</div>
+                <div className="px-4 py-2 bg-gray-100 rounded-lg text-xs font-bold text-gray-400 uppercase tracking-widest">QR Scanning</div>
+                <div className="px-4 py-2 bg-gray-100 rounded-lg text-xs font-bold text-gray-400 uppercase tracking-widest">Historial</div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       // --- HOME DASHBOARD ---
       const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
         const stats = useMemo(() => {
@@ -1820,6 +1849,8 @@
             <div className="flex-1 ml-64 overflow-y-auto">
               {view === "home" ? (
                 <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} />
+              ) : view === "assets" ? (
+                <AssetsView />
               ) : view === "detail" && selectedRequest ? (
                 <RequestDetail 
                   requestId={selectedRequest["ID Solicitud"]} 

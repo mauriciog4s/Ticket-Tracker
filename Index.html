@@ -64,6 +64,11 @@
   </head>
 
   <body>
+    <!-- ✅ GUARDAMOS LA URL DEL SCRIPT EN UNA VARIABLE GLOBAL PARA EL PROXY -->
+    <script>
+      var SCRIPT_URL = "<?= scriptUrl ?>";
+    </script>
+
     <div id="root"></div>
 
     <script type="text/babel">
@@ -325,8 +330,8 @@
         );
       };
 
-      // --- SIDEBAR ---
-      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSyncRequests, lastSyncDetails, isSyncing }) => {
+      // --- SIDEBAR (✅ ACTUALIZADO CON BOTÓN DE REFRESCAR CLIENTE) ---
+      const Sidebar = ({ currentView, setView, onLogout, userContext, lastSyncRequests, lastSyncDetails, isSyncing, onRefreshContext }) => {
         const menuItems = [
           { id: "home", icon: "Home", title: "Inicio" },
           { id: "create", icon: "ClipboardList", title: "Nueva Solicitud" },
@@ -338,6 +343,27 @@
         const clientDisplay = userContext?.assignedCustomerNames?.length > 0 
           ? userContext.assignedCustomerNames.join(", ") 
           : (userContext?.isAdmin ? "G4S Global" : "Sin asignar");
+
+        // Estado local para evitar spam en el botón
+        const [refreshingCtx, setRefreshingCtx] = useState(false);
+
+        // ✅ Manejador del clic con seguridad anti-spam
+        const handleCtxClick = async (e) => {
+            e.stopPropagation();
+            if (refreshingCtx) return; // Si ya está cargando, ignora nuevos clics
+
+            setRefreshingCtx(true);
+            try {
+                if (onRefreshContext) await onRefreshContext();
+            } catch (error) {
+                console.error("Error refrescando contexto", error);
+            } finally {
+                // Cooldown de 1 segundo para evitar clics frenéticos
+                setTimeout(() => {
+                    setRefreshingCtx(false);
+                }, 1000);
+            }
+        };
 
         return (
           <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-lg z-10 fixed">
@@ -395,7 +421,20 @@
                      <Icon name="Database" size={14} />
                    </div>
                    <div className="overflow-hidden flex-1">
-                    <div className="text-[9px] uppercase font-bold text-gray-400">Cliente Asignado</div>
+                    
+                    {/* ✅ BOTÓN DE ACTUALIZACIÓN AL LADO DEL TÍTULO */}
+                    <div className="flex justify-between items-center pr-1">
+                        <div className="text-[9px] uppercase font-bold text-gray-400">Cliente Asignado</div>
+                        <button 
+                          onClick={handleCtxClick} 
+                          disabled={refreshingCtx}
+                          className={`text-gray-400 p-0.5 rounded focus:outline-none transition ${refreshingCtx ? "cursor-not-allowed opacity-50" : "hover:text-blue-600"}`}
+                          title="Actualizar Cliente Asignado"
+                        >
+                          <Icon name="RefreshCw" size={10} className={refreshingCtx ? "animate-spin text-blue-600" : ""} />
+                        </button>
+                    </div>
+
                     <div className="text-xs font-bold text-blue-800 truncate w-full" title={clientDisplay}>
                       {clientDisplay}
                     </div>
@@ -1273,7 +1312,7 @@
         );
       };
 
-      // --- REQUEST DETAIL (✅ AHORA CON FORMATO DE FECHA CO) ---
+      // --- REQUEST DETAIL (✅ AHORA CON FORMATO DE FECHA CO & PROXY FILE OPEN) ---
       const RequestDetail = ({ requestId, onBack, preloadedData, cachedDetails }) => {
         const cache = cachedDetails?.[requestId] || null;
         
@@ -1319,7 +1358,7 @@
         const fmtDate = (v) => { 
             if (!v) return "-"; 
             const d = new Date(v); 
-            if (isNaN(d.getTime())) return String(v); // Si no es fecha válida, devolver string original
+            if (isNaN(d.getTime())) return String(v); 
             return new Intl.DateTimeFormat("es-CO", {
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -1328,62 +1367,21 @@
             }).format(d);
         };
         
-        // 1. GENERADOR DE URL DE RESPALDO (APPSHEET)
-        const buildAppSheetFileUrl = (filePathOrUrl) => {
-          const p = String(filePathOrUrl || "").trim();
-          if (!p) return "";
-          if (/^https?:\/\//i.test(p)) return p;
-          
-          const params = new URLSearchParams();
-          params.set("appName", "AppSolicitudes-5916254"); 
-          params.set("tableName", "Solicitudes anexos");
-          params.set("fileName", p);
-          params.set("appVersion", "1.000737");
-          
-          return `https://www.appsheet.com/template/gettablefileurl?${params.toString()}`;
-        };
-
-        // 2. LÓGICA DE APERTURA ROBUSTA (SIMPLIFICADA y MEJORADA)
-        const openAnexo = async (doc) => {
+        // ✅ FUNCIÓN DE APERTURA DE ANEXOS USANDO PROXY (Sin pedir acceso a Drive)
+        const openAnexo = (doc) => {
+          // 1. Obtenemos el ID único del anexo en la base de datos
           const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID"]) || "").trim();
-          let pathValue = String(pickAny(doc, ["Archivo", "Archivo ", "Foto", "Dibujo", "QR"]) || "").trim();
-          const fileName = String(pickAny(doc, ["Nombre"]) || "Anexo").trim();
-
-          // 1. Si no hay path, error
-          if (!pathValue) { alert("Ruta de archivo no encontrada."); return; }
-
-          // 2. Extraer ID de Drive si existe (soporta URLs completas o parciales)
-          const idMatch = pathValue.match(/\/d\/([a-zA-Z0-9_-]+)/) || pathValue.match(/id=([a-zA-Z0-9_-]+)/);
           
-          if (idMatch && idMatch[1]) {
-            // Es un archivo de Drive: Forzar modo VISUALIZACIÓN (/view)
-            const viewUrl = `https://drive.google.com/file/d/${idMatch[1]}/view`;
-            window.open(viewUrl, "_blank");
-            return;
+          if (!anexoId) {
+             alert("Error: Identificador de anexo no encontrado.");
+             return;
           }
 
-          // 3. Si es una ruta relativa (Legacy), pedir URL al backend
-          // Esto maneja los archivos antiguos que se guardaron como "Info/..."
-          try {
-             const res = await runServer("getAnexoDownload", { anexoId });
-             if (res && res.url) {
-                // Si el backend devuelve URL de Drive, asegurar que sea /view
-                const backendIdMatch = res.url.match(/\/d\/([a-zA-Z0-9_-]+)/) || res.url.match(/id=([a-zA-Z0-9_-]+)/);
-                if (backendIdMatch && backendIdMatch[1]) {
-                    window.open(`https://drive.google.com/file/d/${backendIdMatch[1]}/view`, "_blank");
-                } else {
-                    window.open(res.url, "_blank");
-                }
-             } else {
-                // Fallback AppSheet URL generator (solo si todo lo demas falla)
-                const fallbackUrl = buildAppSheetFileUrl(pathValue);
-                window.open(fallbackUrl, "_blank");
-             }
-          } catch(e) {
-             console.warn(e);
-             // Intento final desesperado
-             window.open(pathValue, "_blank"); 
-          }
+          // 2. Construimos la URL "Puente" usando la variable global SCRIPT_URL
+          const proxyUrl = `${SCRIPT_URL}?v=archivo&id=${encodeURIComponent(anexoId)}`;
+
+          // 3. Abrimos esa URL en nueva pestaña
+          window.open(proxyUrl, "_blank");
         };
 
         const Card = ({ title, children, count }) => (
@@ -1408,7 +1406,6 @@
                     {Object.entries(data.header || {}).map(([key, value]) => {
                       if (!value || value === "0" || key.includes("_rownumber") || key === "Estado" || key === "ID Solicitud") return null;
                       
-                      // DETECTAR SI ES FECHA Y FORMATEAR
                       const isDate = key.toLowerCase().includes("fecha");
                       const displayVal = isDate ? fmtDate(value) : value;
 
@@ -1707,6 +1704,28 @@
           setSyncReport({ requests: reqCount, obs, hist, anx });
         };
 
+        // ✅ MANEJADOR PARA REFRESCAR SOLO EL CONTEXTO (CLIENTES/PERMISOS)
+        const handleRefreshContext = async () => {
+          if (!userCtx || !userCtx.email) return;
+          showToast("Actualizando permisos de cliente...");
+          try {
+            // Llamamos con ignoreCache: true
+            const newCtx = await runServer("getUserContext", { ignoreCache: true });
+            
+            // Actualizamos estado y almacenamiento local
+            setUserCtx(newCtx);
+            localStorage.setItem("last_active_email_it", newCtx.email);
+            localStorage.setItem(CACHE_KEY_CONTEXT(newCtx.email), JSON.stringify(newCtx));
+            
+            showToast("✅ Clientes actualizados.");
+            // Refrescar datos automáticamente con los nuevos permisos
+            refreshData(false, newCtx.email); 
+          } catch (e) {
+            console.error("Error refresh context", e);
+            showToast("❌ Error actualizando permisos.");
+          }
+        };
+
         const handleLoginAttempt = async (email) => {
           let targetEmail = email ? email.toLowerCase() : localStorage.getItem("last_active_email_it");
           let cacheFound = false;
@@ -1795,7 +1814,8 @@
               userContext={userCtx} 
               lastSyncRequests={lastSyncRequests} 
               lastSyncDetails={lastSyncDetails} 
-              isSyncing={isSyncing} 
+              isSyncing={isSyncing}
+              onRefreshContext={handleRefreshContext} 
             />
             <div className="flex-1 ml-64 overflow-y-auto">
               {view === "home" ? (

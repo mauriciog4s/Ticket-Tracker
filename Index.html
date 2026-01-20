@@ -1517,18 +1517,17 @@
           setLoading(true);
           runServer('getAssetsData', { action: 'getClients' })
             .then(filteredClients => {
-              setClients(filteredClients);
-              setLoading(false);
+              setClients(filteredClients || []);
               // Preselección si hay clientes y ninguno seleccionado
-              if (filteredClients.length > 0 && !selClient) {
+              if (filteredClients?.length > 0 && !selClient) {
                 setSelClient(filteredClients[0].id_cliente);
               }
             })
             .catch(err => { 
               console.error(err); 
-              setLoading(false); 
               setClients([]);
-            });
+            })
+            .finally(() => setLoading(false));
         }, [userContext]);
 
         useEffect(() => {
@@ -1537,11 +1536,12 @@
             setLoading(true); 
             runServer('getAssetsData', { action: 'getSites', payload: { clientId: selClient } })
               .then(d => {
-                setSites(d);
-                setLoading(false);
+                setSites(d || []);
                 // Preselección si solo hay una sede
-                if (d.length === 1) setSelSite(d[0].id_sede);
-              });
+                if (d?.length === 1) setSelSite(d[0].id_sede);
+              })
+              .catch(err => console.error("Error sites:", err))
+              .finally(() => setLoading(false));
           }
         }, [selClient]);
 
@@ -1551,11 +1551,12 @@
             setLoading(true); 
             runServer('getAssetsData', { action: 'getFloors', payload: { siteId: selSite } })
               .then(d => {
-                setFloors(d);
-                setLoading(false);
+                setFloors(d || []);
                 // Preselección si solo hay un piso
-                if (d.length === 1) setSelFloor(d[0].id_piso);
-              });
+                if (d?.length === 1) setSelFloor(d[0].id_piso);
+              })
+              .catch(err => console.error("Error floors:", err))
+              .finally(() => setLoading(false));
           }
         }, [selSite]);
 
@@ -1567,7 +1568,9 @@
             setFloorInfo(currentFloor);
             if (currentFloor?.imagen_plano_url) setViewMode('map'); else setViewMode('grid');
             runServer('getAssetsData', { action: 'getAssets', payload: { floorId: selFloor } })
-              .then(d => { setAssets(d); setLoading(false); });
+              .then(d => { setAssets(d || []); })
+              .catch(err => console.error("Error assets:", err))
+              .finally(() => setLoading(false));
           }
         }, [selFloor]);
 

@@ -236,7 +236,7 @@ function _getChildrenFast(sheetName, parentKeys) {
 function doGet(e) {
   // ✅ ROUTER DE ARCHIVOS (MODO PROXY)
   if (e.parameter && e.parameter.v === 'archivo' && e.parameter.id) {
-    return _renderFileView(e.parameter.id);
+    return _renderFileView(e.parameter.id).setFaviconUrl('https://www.g4s.com/favicon.ico');
   }
 
   const template = HtmlService.createTemplateFromFile('Index');
@@ -246,6 +246,7 @@ function doGet(e) {
   return template
     .evaluate()
     .setTitle('G4S Ticket Tracker')
+    .setFaviconUrl('https://www.g4s.com/favicon.ico')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }

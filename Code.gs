@@ -4,11 +4,19 @@
  * ------------------------------------------------------------------
  */
 
-const BQ_CREDENTIALS = {
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC8pIXxJuXj2kgo\n3eJ0CuRG7QdZXazXTfTFt04VL6B9b2q+kHyR8UDefeg3LhaYq19jxazqoMvqFsQV\nU/tTCLzKYL+Yew4vy5NOkmENqXmtrjBHmxPqBoHk2R+7aR52RnGkGPcmNAmqcjv4\nCUjgCCq2ko4VDKIQav6/6Psrg1FoaQy4p1lJXZZVTJBU3vUfUIKzlLu7zOrmdZ/K\nUyK+nXSR5Sw6DeE5pf5ElG3QQ9KgjZ/FnzG9gRRWozdW8IgghY6Lw0efyE72ijjf\n873V0K8FqhqDYd1r9stCj05zl07UHqqLXx1ik8YcIxQQR63kcMkqLmysJZx/axds\naDRAvGQbAgMBAAECggEASgqdU/C7jLoxVnD4oCliPgBswQPGgl9jsnLnH+Oor3Ma\nx584daPmnS14Bqh9UAD7mNKOsyzXvJKg9eoXnBiy2RAuQ3AROmtB7zX/B/i7/JKA\n+qoAn/tb4nHiRZHV1gCCPDFcWE9Wd+MMbKdgRiaOdUiCofpqZd1JDhQo+YQ6YKsl\nFZdXPb9SxOFZOxDLjQY64/FV9gn3qFXBbMYf53yNmzd3l6aH/ERgWw3N9YZEgnFM\nBjKn6AN0JSsFLcacjtvgjNDE47U9jO5vdSKu0aFO+vDFBmlewou36i5S9AYLYyAQ\nNC5RDDQ/+WfPv3rGD7D4Nc9JGgK2PbEHRQypmDDNsQKBgQD3AzUE87voHefjH8xw\nWXlRd1H6+0OXt6BwohtSKJmoUvnmbtSjujSppT0EpQzdnrKJ5migbHu3xofaimcH\nmaeqTohuxtQq6E6Yly3kRGexlCAoj0LEW/Hmk1sIiuwI4ukqO6ZiCshMue8pErpE\n5Shb+2xR48nThaeHl8oqrfilCQKBgQDDgaGdKefwE/FCkMgM3ucB12SkHa37Whc9\nPn7YwrcqRC7ZkAvzkzRB/NcyW95fUcD8dYYvHyCHiksMxocwmJ38CbRJWibQlb3y\nMevWes60iAX4NjM1pWWIzADg8MUnncFlUZPWN/b7uxPzMrY1bijtxumGrme0jLwt\nfgOc6CkNAwKBgFhw3IXmYswsEP/APemoD4j8qOytFDl5NMe/MvsKsGGVPAamfhoV\nLI/lKuDD28Rp8tDvH1z5Gp7lRXUZAuS0vlR7A9xt8j9ep+14i6TkXSA2wgDjsmst\n5IHDFuALJZHU9Nj7PIp0A9184UWaf/j096tfbRww6+2BOEeTMH5xhcpJAoGAF9FD\nDxJ73xOO4L0ioe7F1cOXzyaOe4CONDfY3C9cgRmtW3PhANt+EkvrK4dln9cl25u1\nrSftnpWKbxQAhDsThBDqlcUV1XNooIjUYlyzseqgT4zK0E5GAFRaBw1N93WQifdW\nO1K2FBTGaWpUKE4zTkRdTrsQhz5d7mzbo9HkrmECgYAxR0UNwZeSLe+yZhdeK3cv\qz55RbNeHwrhE10PE49CwlUDDdTHk2qK7raAV+LMFEz2Lq8umXxx2OgJSEip3ty4\noVA5qOjr5M62v1wTbrDpmi2ItWXxuzH+oHVW3MBS4jnrbZzsoZ0ZF855xbgfAEwI\nDAygge9kB/HNsXs2OMufAw==\n-----END PRIVATE KEY-----\n",
-  "client_email": "tz1-bigquery@g4s-shared-tz1.iam.gserviceaccount.com",
-  "project_id": "g4s-shared-tz1"
-};
+/**
+ * Obtiene la configuración de BigQuery desde ScriptProperties o valores por defecto.
+ * Se recomienda almacenar la clave privada en ScriptProperties por seguridad (BQ_PRIVATE_KEY).
+ * @returns {Object} Objeto con las credenciales de BigQuery.
+ */
+function _getBQConfig() {
+  const props = PropertiesService.getScriptProperties().getProperties();
+  return {
+    private_key: props.BQ_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC8pIXxJuXj2kgo\n3eJ0CuRG7QdZXazXTfTFt04VL6B9b2q+kHyR8UDefeg3LhaYq19jxazqoMvqFsQV\nU/tTCLzKYL+Yew4vy5NOkmENqXmtrjBHmxPqBoHk2R+7aR52RnGkGPcmNAmqcjv4\nCUjgCCq2ko4VDKIQav6/6Psrg1FoaQy4p1lJXZZVTJBU3vUfUIKzlLu7zOrmdZ/K\nUyK+nXSR5Sw6DeE5pf5ElG3QQ9KgjZ/FnzG9gRRWozdW8IgghY6Lw0efyE72ijjf\n873V0K8FqhqDYd1r9stCj05zl07UHqqLXx1ik8YcIxQQR63kcMkqLmysJZx/axds\naDRAvGQbAgMBAAECggEASgqdU/C7jLoxVnD4oCliPgBswQPGgl9jsnLnH+Oor3Ma\nx584daPmnS14Bqh9UAD7mNKOsyzXvJKg9eoXnBiy2RAuQ3AROmtB7zX/B/i7/JKA\n+qoAn/tb4nHiRZHV1gCCPDFcWE9Wd+MMbKdgRiaOdUiCofpqZd1JDhQo+YQ6YKsl\nFZdXPb9SxOFZOxDLjQY64/FV9gn3qFXBbMYf53yNmzd3l6aH/ERgWw3N9YZEgnFM\nBjKn6AN0JSsFLcacjtvgjNDE47U9jO5vdSKu0aFO+vDFBmlewou36i5S9AYLYyAQ\nNC5RDDQ/+WfPv3rGD7D4Nc9JGgK2PbEHRQypmDDNsQKBgQD3AzUE87voHefjH8xw\nWXlRd1H6+0OXt6BwohtSKJmoUvnmbtSjujSppT0EpQzdnrKJ5migbHu3xofaimcH\nmaeqTohuxtQq6E6Yly3kRGexlCAoj0LEW/Hmk1sIiuwI4ukqO6ZiCshMue8pErpE\n5Shb+2xR48nThaeHl8oqrfilCQKBgQDDgaGdKefwE/FCkMgM3ucB12SkHa37Whc9\nPn7YwrcqRC7ZkAvzkzRB/NcyW95fUcD8dYYvHyCHiksMxocwmJ38CbRJWibQlb3y\nMevWes60iAX4NjM1pWWIzADg8MUnncFlUZPWN/b7uxPzMrY1bijtxumGrme0jLwt\nfgOc6CkNAwKBgFhw3IXmYswsEP/APemoD4j8qOytFDl5NMe/MvsKsGGVPAamfhoV\nLI/lKuDD28Rp8tDvH1z5Gp7lRXUZAuS0vlR7A9xt8j9ep+14i6TkXSA2wgDjsmst\n5IHDFuALJZHU9Nj7PIp0A9184UWaf/j096tfbRww6+2BOEeTMH5xhcpJAoGAF9FD\nDxJ73xOO4L0ioe7F1cOXzyaOe4CONDfY3C9cgRmtW3PhANt+EkvrK4dln9cl25u1\nrSftnpWKbxQAhDsThBDqlcUV1XNooIjUYlyzseqgT4zK0E5GAFRaBw1N93WQifdW\nO1K2FBTGaWpUKE4zTkRdTrsQhz5d7mzbo9HkrmECgYAxR0UNwZeSLe+yZhdeK3cv\qz55RbNeHwrhE10PE49CwlUDDdTHk2qK7raAV+LMFEz2Lq8umXxx2OgJSEip3ty4\noVA5qOjr5M62v1wTbrDpmi2ItWXxuzH+oHVW3MBS4jnrbZzsoZ0ZF855xbgfAEwI\nDAygge9kB/HNsXs2OMufAw==\n-----END PRIVATE KEY-----\n",
+    client_email: props.BQ_CLIENT_EMAIL || "tz1-bigquery@g4s-shared-tz1.iam.gserviceaccount.com",
+    project_id: props.BQ_PROJECT_ID || "g4s-shared-tz1"
+  };
+}
 
 const DATASET_ID = "ControlTower";
 
@@ -557,7 +565,7 @@ function _findSolicitudHeaderFast(key) {
 
 function getUserContext(email, ignoreCache = false) {
   const cache = CacheService.getScriptCache();
-  const cacheKey = `ctx_it_v5_${Utilities.base64Encode(email)}`; 
+  const cacheKey = `ctx_it_v6_${Utilities.base64Encode(email)}`;
   
   if (!ignoreCache) {
     const cachedData = cache.get(cacheKey);
@@ -569,6 +577,7 @@ function getUserContext(email, ignoreCache = false) {
       email: email,
       role: 'Usuario',
       allowedClientIds: [],
+      allowedCustomerIds: [],
       clientNames: {},
       assignedCustomerNames: [],
       isValidUser: false,
@@ -599,6 +608,7 @@ function getUserContext(email, ignoreCache = false) {
       const id = row['Cliente'];
       if (id) assignedClientIds.push(String(id));
     });
+    context.allowedCustomerIds = assignedClientIds;
 
     if (assignedClientIds.length > 0) {
       const allClientes = getDataFromSheet('Clientes');
@@ -1176,19 +1186,21 @@ function enviarAppSheetAPI(tableName, rowData) {
 
 // --- UTILIDADES DE CONEXIÓN BIGQUERY (OAuth2) ---
 function _getBQService() {
+  const config = _getBQConfig();
   return OAuth2.createService('BigQueryApp')
     .setTokenUrl('https://oauth2.googleapis.com/token')
-    .setPrivateKey(BQ_CREDENTIALS.private_key)
-    .setIssuer(BQ_CREDENTIALS.client_email)
+    .setPrivateKey(config.private_key)
+    .setIssuer(config.client_email)
     .setPropertyStore(PropertiesService.getScriptProperties())
     .setScope('https://www.googleapis.com/auth/bigquery');
 }
 
 function _runBQQuery(query) {
+  const config = _getBQConfig();
   const service = _getBQService();
   if (!service.hasAccess()) throw new Error('Error de Autenticación BigQuery: ' + service.getLastError());
 
-  const url = `https://bigquery.googleapis.com/bigquery/v2/projects/${BQ_CREDENTIALS.project_id}/queries`;
+  const url = `https://bigquery.googleapis.com/bigquery/v2/projects/${config.project_id}/queries`;
   const response = UrlFetchApp.fetch(url, {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + service.getAccessToken() },
@@ -1212,38 +1224,62 @@ function _runBQQuery(query) {
  * LÓGICA DE ACTIVOS (BIGQUERY)
  * ------------------------------------------------------------------
  */
-function getAssetsData(email, { action, payload }) {
+/**
+ * Manejador central para obtener datos de Activos desde BigQuery.
+ * Incluye validación de permisos y protección contra inyección SQL.
+ *
+ * @param {string} email Email del usuario para validar contexto.
+ * @param {Object} params Parámetros de la acción (action y payload).
+ * @returns {Array} Resultados de la consulta a BigQuery.
+ */
+function getAssetsData(email, { action, payload = {} }) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
-  const projectId = BQ_CREDENTIALS.project_id;
+  const config = _getBQConfig();
+  const projectId = config.project_id;
+
+  // Helper para escapar comillas simples y prevenir inyección SQL básica
+  const esc = (v) => String(v || '').replace(/'/g, "''");
 
   try {
     switch (action) {
       case 'getClients':
-        return _runBQQuery(`
-          SELECT DISTINCT id_cliente, nombre_cliente
-          FROM \`${projectId}.${DATASET_ID}.DIM_CLIENTES\`
-          ORDER BY nombre_cliente
-        `);
+        let clientQuery = `SELECT DISTINCT id_cliente, nombre_cliente FROM \`${projectId}.${DATASET_ID}.DIM_CLIENTES\``;
+
+        if (!context.isAdmin) {
+          if (!context.allowedCustomerIds || context.allowedCustomerIds.length === 0) return [];
+          const ids = context.allowedCustomerIds.map(id => `'${esc(id)}'`).join(',');
+          clientQuery += ` WHERE id_cliente IN (${ids})`;
+        }
+
+        clientQuery += ` ORDER BY nombre_cliente`;
+        return _runBQQuery(clientQuery);
 
       case 'getSites':
+        if (!payload.clientId) throw new Error("clientId es requerido.");
+        // Validación de permisos para el cliente solicitado
+        if (!context.isAdmin && !context.allowedCustomerIds.some(id => String(id).trim().toLowerCase() === String(payload.clientId).trim().toLowerCase())) {
+          throw new Error("No tiene permisos para este cliente.");
+        }
         return _runBQQuery(`
           SELECT id_sede, nombre_sede
           FROM \`${projectId}.${DATASET_ID}.DIM_SEDES\`
-          WHERE id_cliente = '${payload.clientId}'
+          WHERE id_cliente = '${esc(payload.clientId)}'
           ORDER BY nombre_sede
         `);
 
       case 'getFloors':
+        if (!payload.siteId) throw new Error("siteId es requerido.");
         return _runBQQuery(`
           SELECT id_piso, nombre_piso, imagen_plano_url
           FROM \`${projectId}.${DATASET_ID}.DIM_PISOS\`
-          WHERE id_sede = '${payload.siteId}'
+          WHERE id_sede = '${esc(payload.siteId)}'
           ORDER BY nombre_piso
         `);
 
       case 'getAssets':
+        if (!payload.floorId) throw new Error("floorId es requerido.");
         return _runBQQuery(`
           SELECT
             A.id_activo,
@@ -1261,7 +1297,7 @@ function getAssetsData(email, { action, payload }) {
           FROM \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` A
           LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_DISPOSITIVOS\` D
             ON A.id_dispositivo = D.id_dispositivo
-          WHERE A.id_piso = '${payload.floorId}'
+          WHERE A.id_piso = '${esc(payload.floorId)}'
           LIMIT 2000
         `);
 

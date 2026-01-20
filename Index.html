@@ -30,10 +30,20 @@
       ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
       
       body { font-family: Roboto, system-ui, -apple-system, Segoe UI, sans-serif; background-color: #f3f4f6; }
+
+      /* Loader Spinner Pro */
+      .loader-pro { border: 3px solid #f3f3f3; border-top: 3px solid #ce1126; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+
+      /* Cursor para el mapa */
+      .grab-cursor { cursor: grab; }
+      .grab-cursor:active { cursor: grabbing; }
       
       /* Animations */
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+      @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+      .animate-slideIn { animation: slideIn 0.3s ease-out forwards; }
       
       .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
       @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -77,10 +87,10 @@
 
       // --- CONFIGURACIÓN ACTIVOS ---
       const APPSHEET_CONFIG = {
-          appName: "AppAutomatizacion-3428007",
-          tableName: "Activos"
+          appName: "AppAutomatizacion-3428007", 
+          tableName: "Activos" 
       };
-      const PISOS_TABLE_NAME = "Pisos";
+      const PISOS_TABLE_NAME = "Pisos"; 
 
       // --- GENERADOR URL APPSHEET ---
       const getAppSheetUrl = (fileName, overrideTable = null, isImage = true) => {
@@ -110,6 +120,7 @@
           isValidUser: true,
           isAdmin: false,
           allowedClientIds: ["SEDE-001", "SEDE-002"],
+          allowedCustomerIds: ["CLI-001"],
           assignedCustomerNames: ["Banco Demo"], 
           clientNames: { "SEDE-001": "Sede Principal", "SEDE-002": "Sucursal Norte" }
         },
@@ -152,7 +163,7 @@
                 case 'getActivoByQr': resolve({ found: false }); break;
                 case 'createSolicitudActivo': resolve({ success: true }); break;
                 case 'getClassificationOptions': resolve(MOCK_DATA.classificationOptions); break;
-                case 'getAssetsData':
+                case 'getAssetsData': 
                   if (payload.action === 'getClients') resolve([{ id_cliente: 'CLI-001', nombre_cliente: 'Cliente Demo BQ' }]);
                   if (payload.action === 'getSites') resolve([{ id_sede: 'SEDE-BQ-1', nombre_sede: 'Sede Demo BQ' }]);
                   if (payload.action === 'getFloors') resolve([{ id_piso: 'PISO-1', nombre_piso: 'Piso 1', imagen_plano_url: 'plano.png' }]);
@@ -1329,7 +1340,7 @@
           useEffect(() => { setScale(1); setPosition({ x: 0, y: 0 }); }, [imageUrl]);
 
           return (
-              <div
+              <div 
                   ref={containerRef}
                   className="w-full h-full bg-gray-200 overflow-hidden relative cursor-grab active:cursor-grabbing flex items-center justify-center"
                   onWheel={handleWheel}
@@ -1338,8 +1349,8 @@
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
               >
-                  <div
-                      style={{
+                  <div 
+                      style={{ 
                           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                           transformOrigin: "center center",
                           transition: isDragging ? 'none' : 'transform 0.1s ease-out'
@@ -1347,12 +1358,12 @@
                       className="relative shadow-xl inline-block bg-white"
                   >
                       <img src={imageUrl} className="max-w-none block pointer-events-none select-none" style={{ height: '800px' }} alt="Plano"/>
-
+                      
                       {assets.map(asset => {
                           if (!asset.coord_x || !asset.coord_y) return null;
                           return (
-                              <div
-                                  key={asset.id_activo}
+                              <div 
+                                  key={asset.id_activo} 
                                   onClick={(e) => { e.stopPropagation(); onAssetClick(asset); }}
                                   className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 border-white shadow-lg cursor-pointer flex items-center justify-center text-[10px] text-white hover:scale-125 transition-transform z-10 hover:z-20
                                       ${asset.estado_activo === 'Operativo' ? 'bg-green-600' : 'bg-red-600'}`}
@@ -1431,7 +1442,7 @@
 
         return (
           <div className="mb-4 border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-200">
-            <div
+            <div 
               className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-100 select-none"
               onClick={() => setIsOpen(!isOpen)}
             >
@@ -1454,21 +1465,21 @@
                   const lowerVal = valStr.toLowerCase();
                   const isImage = lowerVal.includes('.jpg') || lowerVal.includes('.jpeg') || lowerVal.includes('.png') || valStr.includes('_Images/');
                   const isPdf = lowerVal.includes('.pdf');
-
+                  
                   return (
                       <div key={k} className="flex justify-between items-center text-xs border-b border-gray-50 pb-2 last:border-0 last:pb-0">
                           <span className="text-gray-500 font-medium w-1/2 pr-2 break-words">{k.replace(/_/g, ' ')}</span>
                           <span className="text-gray-900 font-semibold w-1/2 text-right break-words flex justify-end">
                               {isImage ? (
-                                  <button
-                                      onClick={() => onLinkClick(valStr, true)}
+                                  <button 
+                                      onClick={() => onLinkClick(valStr, true)} 
                                       className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-800 border border-blue-200 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"
                                   >
                                       <i className="fas fa-camera"></i> Ver Foto
                                   </button>
                               ) : isPdf ? (
-                                  <button
-                                      onClick={() => onLinkClick(valStr, false)}
+                                  <button 
+                                      onClick={() => onLinkClick(valStr, false)} 
                                       className="bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-800 border border-orange-200 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"
                                   >
                                       <i className="fas fa-file-pdf"></i> Ver Archivo
@@ -1494,43 +1505,43 @@
         const [assets, setAssets] = useState([]);
         const [selClient, setSelClient] = useState('');
         const [selSite, setSelSite] = useState('');
-        const [selFloor, setSelFloor] = useState('');
-        const [floorInfo, setFloorInfo] = useState(null);
+        const [selFloor, setSelFloor] = useState(''); 
+        const [floorInfo, setFloorInfo] = useState(null); 
         const [selAsset, setSelAsset] = useState(null);
         const [loading, setLoading] = useState(false);
-        const [viewMode, setViewMode] = useState('grid');
+        const [viewMode, setViewMode] = useState('grid'); 
         const [previewFile, setPreviewFile] = useState(null);
 
-        // Carga Inicial de Clientes con Filtrado por Contexto
+        // Carga Inicial de Clientes (el filtrado se realiza en el servidor)
         useEffect(() => {
           setLoading(true);
           runServer('getAssetsData', { action: 'getClients' })
-            .then(allClients => {
-              // Filtrar por los IDs permitidos en el contexto del usuario
-              const filtered = allClients.filter(c =>
-                userContext.isAdmin || (userContext.allowedClientIds && userContext.allowedClientIds.some(id => String(id).includes(String(c.id_cliente))))
-              );
-              setClients(filtered);
+            .then(filteredClients => {
+              setClients(filteredClients);
               setLoading(false);
             })
-            .catch(err => { console.error(err); setLoading(false); });
+            .catch(err => { 
+              console.error(err); 
+              setLoading(false); 
+              setClients([]);
+            });
         }, [userContext]);
 
         useEffect(() => {
           setSites([]); setFloors([]); setAssets([]); setSelSite(''); setSelFloor(''); setSelAsset(null);
-          if (selClient) {
-            setLoading(true);
+          if (selClient) { 
+            setLoading(true); 
             runServer('getAssetsData', { action: 'getSites', payload: { clientId: selClient } })
-              .then(d => { setSites(d); setLoading(false); });
+              .then(d => { setSites(d); setLoading(false); }); 
           }
         }, [selClient]);
 
         useEffect(() => {
           setFloors([]); setAssets([]); setSelFloor(''); setSelAsset(null);
-          if (selSite) {
-            setLoading(true);
+          if (selSite) { 
+            setLoading(true); 
             runServer('getAssetsData', { action: 'getFloors', payload: { siteId: selSite } })
-              .then(d => { setFloors(d); setLoading(false); });
+              .then(d => { setFloors(d); setLoading(false); }); 
           }
         }, [selSite]);
 
@@ -1560,7 +1571,7 @@
                  <div className="p-2 bg-appBlue/10 rounded-lg text-appBlue">
                     <Icon name="Database" size={24} />
                  </div>
-                 <h1 className="font-bold text-gray-700 text-lg hidden sm:block">Portal de Activos</h1>
+                 <h1 className="font-bold text-gray-700 text-lg hidden sm:block">Activos</h1>
                </div>
                <div className="flex gap-2 w-full md:w-auto">
                  <select className="border rounded px-3 py-2 text-sm w-full md:w-48 bg-gray-50 outline-none focus:border-appRed" value={selClient} onChange={e => setSelClient(e.target.value)}><option value="">1. Cliente</option>{clients.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.nombre_cliente}</option>)}</select>
@@ -1570,11 +1581,14 @@
             </div>
 
             <div className="flex-1 relative overflow-hidden flex bg-slate-100">
-              {loading && <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center backdrop-blur-sm"><div className="w-10 h-10 border-4 border-appRed border-t-transparent rounded-full animate-spin"></div></div>}
+              {loading && <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center backdrop-blur-sm"><div className="loader-pro"></div></div>}
 
               <div className="flex-1 overflow-y-auto p-4 relative">
                  {!selFloor ? (
-                   <div className="h-full flex flex-col items-center justify-center text-gray-400"><i className="fas fa-layer-group text-4xl mb-2"></i><p>Selecciona cliente, sede y piso para comenzar</p></div>
+                   <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2321/2321387.png" className="w-24 h-24 opacity-20 mb-4 grayscale" />
+                    <p className="font-medium text-gray-400">Selecciona cliente, sede y piso para comenzar</p>
+                   </div>
                  ) : (
                    <>
                      <div className="absolute top-4 right-6 z-10 flex bg-white rounded shadow border overflow-hidden">
@@ -1602,7 +1616,7 @@
 
                      {/* VISTA MAPA */}
                      {viewMode === 'map' && (
-                       <MapViewer
+                       <MapViewer 
                           imageUrl={getAppSheetUrl(floorInfo.imagen_plano_url, PISOS_TABLE_NAME)}
                           assets={assets}
                           onAssetClick={setSelAsset}
@@ -1619,7 +1633,7 @@
                     <h2 className="font-bold text-gray-800 text-sm uppercase">Detalle del Activo</h2>
                     <button onClick={() => setSelAsset(null)} className="text-gray-400 hover:text-red-600 transition-colors"><Icon name="X" size={24} /></button>
                   </div>
-
+                  
                   <div className="flex-1 overflow-y-auto p-5 scroll-smooth">
                      <div className="flex gap-4 mb-6">
                         <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border cursor-pointer hover:opacity-80" onClick={() => openPreview(selAsset.foto_1, true)}>
@@ -1642,20 +1656,20 @@
                        </div>
                      )}
 
-                     <JsonBlock
-                          title="Ficha Técnica"
-                          data={selAsset.specs}
-                          icon="fa-microchip"
-                          color="text-blue-600"
-                          onLinkClick={(f, isImg) => openPreview(f, isImg)}
+                     <JsonBlock 
+                          title="Ficha Técnica" 
+                          data={selAsset.specs} 
+                          icon="fa-microchip" 
+                          color="text-blue-600" 
+                          onLinkClick={(f, isImg) => openPreview(f, isImg)} 
                       />
-                     <JsonBlock
-                          title="Mantenimiento / Protocolo"
-                          data={selAsset.protocol}
-                          icon="fa-clipboard-check"
-                          color="text-green-600"
-                          date={selAsset.fecha_actualizacion}
-                          onLinkClick={(f, isImg) => openPreview(f, isImg)}
+                     <JsonBlock 
+                          title="Mantenimiento / Protocolo" 
+                          data={selAsset.protocol} 
+                          icon="fa-clipboard-check" 
+                          color="text-green-600" 
+                          date={selAsset.fecha_actualizacion} 
+                          onLinkClick={(f, isImg) => openPreview(f, isImg)} 
                       />
                   </div>
                 </div>
@@ -1663,7 +1677,7 @@
             </div>
 
             {previewFile && (
-               <FileModal
+               <FileModal 
                   fileUrl={previewFile.url}
                   type={previewFile.type}
                   onClose={() => setPreviewFile(null)}

@@ -1279,7 +1279,7 @@ function getAssetsData(email, { action, payload = {} }) {
       case 'getFloors':
         if (!payload.siteId) throw new Error("siteId es requerido.");
         return _runBQQuery(`
-          SELECT id_piso, nombre_piso, tipo_de_piso as tipo_piso, imagen_plano_url
+          SELECT id_piso, nombre_piso, nivel, imagen_plano_url
           FROM \`${projectId}.${DATASET_ID}.DIM_PISOS\` 
           WHERE id_sede = '${esc(payload.siteId)}' 
           ORDER BY nombre_piso

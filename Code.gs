@@ -246,6 +246,7 @@ function doGet(e) {
   return template
     .evaluate()
     .setTitle('G4S Ticket Tracker')
+    .setFaviconUrl('https://www.g4s.com/favicon.ico')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -1058,7 +1059,7 @@ function _renderFileView(anexoId) {
       'ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID'
     ]);
     
-    if (!found) return HtmlService.createHtmlOutput("<h1>Archivo no encontrado en la base de datos.</h1>");
+    if (!found) return HtmlService.createHtmlOutput("<h1>Archivo no encontrado en la base de datos.</h1>").setFaviconUrl('https://www.g4s.com/favicon.ico');
     const row = found.obj;
     const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
     const fileName = _getField(row, ['Nombre']) || "Archivo_G4S";
@@ -1088,7 +1089,7 @@ function _renderFileView(anexoId) {
            <h1>Archivo no encontrado en Drive</h1>
            <p>No se pudo localizar el archivo físico: <b>${fileName}</b></p>
          </div>
-       `);
+       `).setFaviconUrl('https://www.g4s.com/favicon.ico');
     }
 
     if (file.getSize() > 8 * 1024 * 1024) { 
@@ -1097,7 +1098,7 @@ function _renderFileView(anexoId) {
           <h2>Archivo Grande</h2>
           <a href="https://drive.google.com/uc?export=download&id=${file.getId()}" style="background:#0033A0;color:white;padding:15px;text-decoration:none;">Descargar</a>
         </div>
-      `);
+      `).setFaviconUrl('https://www.g4s.com/favicon.ico');
     }
 
     const blob = file.getBlob();
@@ -1147,10 +1148,10 @@ function _renderFileView(anexoId) {
       </html>
     `;
 
-    return HtmlService.createHtmlOutput(html);
+    return HtmlService.createHtmlOutput(html).setFaviconUrl('https://www.g4s.com/favicon.ico');
 
   } catch (e) {
-    return HtmlService.createHtmlOutput(`<h3>Error de Sistema: ${e.message}</h3>`);
+    return HtmlService.createHtmlOutput(`<h3>Error de Sistema: ${e.message}</h3>`).setFaviconUrl('https://www.g4s.com/favicon.ico');
   }
 }
 

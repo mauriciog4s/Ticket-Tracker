@@ -23,9 +23,11 @@ La aplicación permite que los usuarios corporativos gestionen **tickets de serv
   - Vista de **detalle técnico** completo (Header, Observaciones, Historial, Anexos, Activos).
   - Creación de nuevos tickets con clasificación, prioridad y adjuntos.
 
-- 🔍 **Gestión de Activos (QR)**
-  - Vinculación de activos a tickets mediante escaneo o búsqueda de QR.
-  - Catálogo de activos sincronizado desde Google Sheets.
+- 🔍 **Gestión de Activos (BigQuery Integration)**
+  - Módulo avanzado de inventario conectado directamente a **Google BigQuery**.
+  - Navegación jerárquica: **Cliente > Sede > Piso**.
+  - **Vista Dual**: Alternancia entre vista de **Cuadrícula (Grid)** con fotos y **Mapa Interactivo (Plano)**.
+  - **Ficha Técnica**: Visualización de datos técnicos y protocolos de mantenimiento en formato JSON estructurado.
 
 - 📎 **Anexos y Archivos**
   - Subida de **Fotos, Dibujos y Documentos** directamente a carpetas específicas de Drive.
@@ -40,59 +42,49 @@ La aplicación permite que los usuarios corporativos gestionen **tickets de serv
 
 ---
 
+## 🔄 Novedades y Cambios (vs Branch-origin)
+
+Con respecto a la versión original (`Branch-origin`), se han implementado las siguientes mejoras y cambios estructurales:
+
+### 1. Migración de Activos a BigQuery
+Originalmente, los activos se gestionaban mediante Google Sheets. En la versión actual:
+- Se integra la librería **OAuth2** para conexión segura con BigQuery.
+- Consultas optimizadas a tablas de inventario (`DIM_CLIENTES`, `DIM_SEDES`, `DIM_PISOS`, `DIM_ACTIVOS`).
+- Implementación de seguridad con escape de caracteres (`esc()`) para prevenir inyección SQL.
+
+### 2. Nuevo Módulo de Visualización de Activos (`AssetsView`)
+- **Navegación inteligente**: Auto-selección de Cliente/Sede/Piso cuando solo existe una opción disponible.
+- **Interactividad en Planos**: Localización visual de activos sobre mapas de calor o planos de planta.
+- **Paneles Laterales**: Detalles expandibles sin perder el contexto de la navegación.
+
+### 3. Mejoras en el Contexto de Usuario
+- Actualización del motor de caché a **v6**.
+- Inclusión de `allowedCustomerIds` para un filtrado de seguridad más robusto a nivel de base de datos.
+
+---
+
 ## 🧱 Arquitectura general
 
 ### Backend – `Code.gs`
 
-El backend gestiona la persistencia en 5 Spreadsheets distintos y centraliza la lógica de negocio.
+El backend gestiona la persistencia en 5 Spreadsheets y una conexión a BigQuery.
 
-- **Mapeo de IDs de spreadsheets:**
-  ```js
-  const MAIN_SPREADSHEET_ID        = '...';
-  const PERMISSIONS_SPREADSHEET_ID = '...';
-  const CLIENTS_SPREADSHEET_ID     = '...';
-  const SEDES_SPREADSHEET_ID       = '...';
-  const ACTIVOS_SPREADSHEET_ID     = '...';
+- **Conectividad BigQuery:**
+  - `_getBQConfig()`: Centraliza credenciales (Service Account). Se recomienda el uso de `ScriptProperties` para `BQ_PRIVATE_KEY`.
+  - `_runBQQuery(query)`: Ejecuta SQL estándar y retorna objetos mapeados.
 
-  const SHEET_CONFIG = {
-    'Solicitudes': MAIN_SPREADSHEET_ID,
-    'Estados historico': MAIN_SPREADSHEET_ID,
-    'Observaciones historico': MAIN_SPREADSHEET_ID,
-    'Estados': MAIN_SPREADSHEET_ID,
-    'Solicitudes anexos': MAIN_SPREADSHEET_ID,
-    'Solicitudes activos': MAIN_SPREADSHEET_ID,
-    'Permisos': PERMISSIONS_SPREADSHEET_ID,
-    'Usuarios filtro': PERMISSIONS_SPREADSHEET_ID,
-    'Clientes': CLIENTS_SPREADSHEET_ID,
-    'Sedes': SEDES_SPREADSHEET_ID,
-    'Activos': ACTIVOS_SPREADSHEET_ID
-  };
-  ```
-
-- **Endpoints expuestos vía `apiHandler`:**
-  - `getUserContext`: Obtiene rol y sedes permitidas.
-  - `getRequests`: Lista de tickets filtrados.
-  - `getRequestDetail`: Detalle completo de un ticket.
-  - `createRequest`: Crea ticket e integra con **AppSheet API** para disparar correos.
-  - `uploadAnexo`: Sube archivos a carpetas específicas de Drive.
-  - `getAnexoDownload`: Resuelve la URL de descarga.
-  - `createSolicitudActivo`: Vincula un activo QR al ticket.
-  - `getSolicitudActivos`: Lista activos de un ticket.
-  - `getActivosCatalog`: Catálogo completo de activos.
-  - `getActivoByQr`: Busca activo específico por QR.
-  - `getClassificationOptions`: Opciones dinámicas de clasificación.
-  - `getBatchRequestDetails`: Sincronización masiva para modo offline/cache.
-
-- **Sistema de Archivos (Proxy Mode):**
-  Para garantizar que los usuarios puedan ver archivos sin errores de CORS o permisos de "Drive Viewer", la app implementa un router:
-  `?v=archivo&id=...` → `_renderFileView(id)`
-  Este método descarga el blob desde el servidor y lo sirve al cliente como una descarga directa o visualización.
+- **Endpoints principales:**
+  - `getUserContext`: (v6) Obtiene rol, sedes y clientes permitidos.
+  - `getAssetsData`: Manejador central para la lógica de inventario en BigQuery.
+  - `apiHandler`: Router central que ahora incluye soporte para datos de activos.
 
 ### Frontend – `Index.html`
 
-- **Tecnologías:** React 18, Tailwind CSS, Babel (JSX en el cliente).
-- **Comunicación:** `runServer(endpoint, payload)` envuelve a `google.script.run`.
-- **Persistencia:** Uso intensivo de `localStorage` para cachear tickets y detalles, permitiendo navegación instantánea.
+- **Componentes destacados:**
+  - `AssetsView`: Componente principal del nuevo módulo de activos.
+  - `MapViewer`: Renderiza el plano del piso y posiciona los activos dinámicamente (`coord_x`, `coord_y`).
+  - `JsonBlock`: Formateador elegante para datos técnicos y protocolos.
+  - `FileModal`: Visor integrado de imágenes y documentos PDF.
 
 ---
 
@@ -100,23 +92,17 @@ El backend gestiona la persistencia en 5 Spreadsheets distintos y centraliza la 
 
 1.  Crear un proyecto en **Google Apps Script**.
 2.  Subir los archivos `Code.gs` e `Index.html`.
-3.  **Configurar IDs en `Code.gs`**:
-    - Los 5 IDs de Spreadsheets mencionados arriba.
-    - `IMAGES_FOLDER_ID`: Carpeta de Google Drive para fotos.
-    - `DOCS_FOLDER_ID`: Carpeta de Google Drive para documentos/PDFs.
-4.  **Permisos de Carpeta**: Las carpetas de Drive deben tener permisos de lectura para los usuarios (o estar dentro de una unidad compartida).
-5.  **AppSheet API**: Si se desea el envío de correos original, configurar el `appId` y `accessKey` en la función `enviarAppSheetAPI`.
-6.  **Publicar**:
-    - Deploy → New deployment → Web app.
-    - Execute as: **Me** (Owner).
-    - Who has access: **Anyone within [Organization]**.
+3.  **Configurar IDs en `Code.gs`** (Spreadsheets y carpetas de Drive).
+4.  **Configurar BigQuery**:
+    - Añadir la librería `OAuth2` (ID: `1B7_5B191Pn9ua_69CPv99Cof78Xh3XkBy9Wjy3YV59_t6Ksh9k5I8I54`).
+    - Configurar `BQ_PRIVATE_KEY`, `BQ_CLIENT_EMAIL` y `BQ_PROJECT_ID` en las **Propiedades del Script**.
+5.  **Publicar**:
+    - Deploy → New deployment → Web app (Execute as: Me, Access: Anyone within Org).
 
 ---
 
 ## 🧰 Stack tecnológico
 
--   **Frontend**: React 18, ReactDOM 18, Tailwind CSS (CDN), Babel.
--   **Backend**: Google Apps Script (V8 Engine).
--   **Base de Datos**: Google Sheets (Multi-spreadsheet).
--   **Almacenamiento**: Google Drive.
--   **Integraciones**: AppSheet API (disparadores de flujos).
+-   **Frontend**: React 18, Tailwind CSS, Font Awesome 6.4.0.
+-   **Backend**: Google Apps Script, BigQuery (SQL).
+-   **Seguridad**: OAuth2, Row-level filtering por email.

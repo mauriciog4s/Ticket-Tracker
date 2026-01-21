@@ -456,7 +456,7 @@
                   className="h-6 w-auto object-contain"
                 />
               </div>
-              <span className="font-black text-slate-800 text-lg tracking-tight">Tracker</span>
+              <span className="font-black text-slate-800 text-lg tracking-tight">Ticket Tracker</span>
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 space-y-1">
@@ -899,7 +899,7 @@
                           </div>
                         </div>
                       ) : (
-                        <div className="text-[10px] text-gray-400 italic">Aún no has agregado activos.</div>
+                        <div className="text-[10px] text-gray-400">Aún no has agregado activos.</div>
                       )}
                     </div>
                   </div>
@@ -955,7 +955,7 @@
                             );
                           })
                         ) : (
-                          <div className="p-6 text-center text-xs text-gray-400 italic">
+                          <div className="p-6 text-center text-xs text-gray-400">
                             {catalogLoading ? "Cargando catálogo..." : "No hay resultados."}
                           </div>
                         )}
@@ -1255,7 +1255,7 @@
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-2 text-[10px] text-gray-400 italic">Puedes agregar varios archivos (máx {MAX_MB}MB c/u).</div>
+                    <div className="mt-2 text-[10px] text-gray-400">Puedes agregar varios archivos (máx {MAX_MB}MB c/u).</div>
                   )}
                 </div>
 
@@ -1361,7 +1361,7 @@
                       </div>
                     </div>
                    ) : (
-                     <div className="p-4 text-center text-xs text-gray-400 italic">Sin datos. Sincroniza para ver detalles.</div>
+                     <div className="p-4 text-center text-xs text-gray-400">Sin datos. Sincroniza para ver detalles.</div>
                    )}
                 </div>
               </div>
@@ -1828,8 +1828,8 @@
           <div className="p-10 max-w-7xl mx-auto animate-fade-up">
             <div className="mb-10 flex justify-between items-end">
               <div>
-                <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-2">Hola, {userContext.email.split("@")[0]} 👋</h1>
-                <p className="text-slate-500 font-medium italic">Bienvenido al portal de Gestión de Tecnología.</p>
+                <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-2">Hola, {userContext.email.split("@")[0]}</h1>
+                <p className="text-slate-500 font-medium">Bienvenido al portal de Gestión de Tecnología.</p>
               </div>
               {isSyncing && (
                 <div className="flex items-center gap-3 glass px-5 py-2 rounded-2xl shadow-sm border-blue-100 mb-2">
@@ -1875,13 +1875,13 @@
                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Icon name="ClipboardList" size={120} /></div>
                    <div className="p-3 bg-white/20 rounded-2xl w-fit mb-6"><Icon name="ClipboardList" size={24} /></div>
                    <h3 className="text-2xl font-black mb-1">Nuevo Ticket</h3>
-                   <p className="text-red-50 text-sm font-medium opacity-80 italic">Reportar un fallo ahora</p>
+                   <p className="text-red-50 text-sm font-medium opacity-80">Reportar un fallo ahora</p>
                 </div>
                 <div onClick={() => setView("assets")} className="glass p-8 rounded-3xl shadow-xl shadow-slate-200 cursor-pointer hover:scale-[1.03] transition-all group relative overflow-hidden">
                    <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500"><Icon name="Database" size={120} /></div>
                    <div className="p-3 bg-slate-100 text-slate-600 rounded-2xl w-fit mb-6"><Icon name="Database" size={24} /></div>
                    <h3 className="text-2xl font-black text-slate-800 mb-1">Inventario</h3>
-                   <p className="text-slate-400 text-sm font-medium italic">Explorar activos y sedes</p>
+                   <p className="text-slate-400 text-sm font-medium">Explorar activos y sedes</p>
                 </div>
               </div>
             </div>
@@ -2045,7 +2045,7 @@
                         </li>
                       ))}
                     </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay observaciones.</div>)}
+                  ) : (<div className="p-4 text-center text-xs text-gray-400">No hay observaciones.</div>)}
                 </Card>
 
                 <Card title="Activos Asociados" count={data.activos?.length || 0}>
@@ -2059,12 +2059,12 @@
                           </div>
                           <div className="text-[10px] text-gray-500 ml-6">
                             QR: <span className="font-mono bg-gray-100 px-1 rounded">{pick(a, ["QR", "QR Serial"])}</span>
-                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400 italic">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
+                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
                           </div>
                         </li>
                       ))}
                     </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay activos vinculados.</div>)}
+                  ) : (<div className="p-4 text-center text-xs text-gray-400">No hay activos vinculados.</div>)}
                 </Card>
                 
                 <Card title="Anexos" count={data.docs?.length || 0}>
@@ -2083,7 +2083,7 @@
                         </li>
                       ))}
                     </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400 italic">No hay adjuntos.</div>)}
+                  ) : (<div className="p-4 text-center text-xs text-gray-400">No hay adjuntos.</div>)}
                 </Card>
 
                 {/* ✅ MODIFICACIÓN EN EL HISTORIAL PARA LEER 'Estado actual' */}
@@ -2165,7 +2165,7 @@
                 <div className="col-span-2 text-right">Estado</div>
               </div>
               <div className="overflow-y-auto flex-1">
-                {paginatedData.length === 0 ? <div className="p-10 text-center text-slate-400 italic">No hay tickets coincidentes.</div> :
+                {paginatedData.length === 0 ? <div className="p-10 text-center text-slate-400">No hay tickets coincidentes.</div> :
                   paginatedData.map((req, i) => (
                     <div key={i} onClick={() => { setSelectedRequest(req); setView("detail"); }} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer text-sm items-center transition-all group active:scale-[0.99]">
                       <div className="col-span-2 font-black text-appBlue truncate group-hover:underline">{req["Ticket G4S"] || req["ID Solicitud"] || "N/A"}</div>

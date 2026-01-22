@@ -1010,10 +1010,11 @@
           }
         };
 
-        const handleSuccessClose = () => {
+        const handleSuccessClose = async () => {
           setShowSuccess(false);
           setSubmitting(false);
-          if (onRefresh) onRefresh(true);
+          // ✅ PRIORIDAD: Refrescar datos inmediatamente para asegurar visibilidad en el listado
+          if (onRefresh) await onRefresh(true);
           setView("home");
         };
 

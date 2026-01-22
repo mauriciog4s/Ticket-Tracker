@@ -793,12 +793,15 @@ function createRequest(email, payload) {
     };
 
     // --- INTEGRACIÓN DE LA API PARA ACTIVAR CORREOS ---
-    const apiResult = enviarAppSheetAPI('Solicitudes', newRow);
+    // ✅ PRIORIDAD: Guardado directo para asegurar disponibilidad inmediata y evitar latencia de AppSheet
+    appendDataToSheet('Solicitudes', newRow);
+    SpreadsheetApp.flush(); // Aseguramos que los cambios se persistan antes de seguir
 
-    // Respaldo de seguridad
-    if (!apiResult || (apiResult && apiResult.RestServerErrorMessage)) {
-      console.warn("API falló, usando guardado directo como respaldo.");
-      appendDataToSheet('Solicitudes', newRow);
+    // ✅ SECUNDARIO: Notificación a AppSheet para disparar automatizaciones (emails)
+    try {
+      enviarAppSheetAPI('Solicitudes', newRow);
+    } catch (e) {
+      console.warn("Notificación a AppSheet API falló o detectó duplicado, pero el ticket ya está en la hoja:", e);
     }
     // ------------------------------------------------
 

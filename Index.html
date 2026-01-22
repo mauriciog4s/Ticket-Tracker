@@ -2020,7 +2020,7 @@
                       return (
                         <div key={key} className="group transition-all">
                           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-appBlue transition-colors">{key}</div>
-                          <div className="text-sm text-slate-700 font-bold leading-relaxed">{displayVal}</div>
+                          <div className="text-sm text-slate-700 font-bold leading-relaxed break-words whitespace-pre-wrap">{displayVal}</div>
                           <div className="h-[1px] bg-slate-50 w-full mt-2 group-hover:bg-slate-200 transition-all"></div>
                         </div>
                       );
@@ -2041,8 +2041,8 @@
                     <ul className="divide-y divide-gray-100">
                       {data.services.map((s, i) => (
                         <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
-                          <span className="font-medium text-gray-700">{pick(s, ["Observación", "Observacion"]) || "(Sin detalle)"}</span>
-                          <span className="text-[10px] text-gray-400">{fmtDate(pick(s, ["Fecha Actualización"]))}</span>
+                          <span className="font-medium text-gray-700 break-words whitespace-pre-wrap">{pick(s, ["Observación", "Observacion"]) || "(Sin detalle)"}</span>
+                          <span className="text-[10px] text-gray-400 shrink-0 ml-2">{fmtDate(pick(s, ["Fecha Actualización"]))}</span>
                         </li>
                       ))}
                     </ul>
@@ -2054,13 +2054,13 @@
                     <ul className="divide-y divide-gray-100">
                       {data.activos.map((a, i) => (
                         <li key={i} className="px-4 py-2 hover:bg-gray-50">
-                          <div className="flex items-center gap-2 mb-1">
-                             <Icon name="Monitor" size={16} className="text-gray-500" />
-                             <span className="text-xs font-bold text-gray-700">{pick(a, ["Nombre Activo", "Nombre"])}</span>
+                          <div className="flex items-start gap-2 mb-1">
+                             <div className="mt-0.5 shrink-0"><Icon name="Monitor" size={16} className="text-gray-500" /></div>
+                             <span className="text-xs font-bold text-gray-700 break-words whitespace-pre-wrap">{pick(a, ["Nombre Activo", "Nombre"])}</span>
                           </div>
                           <div className="text-[10px] text-gray-500 ml-6">
                             QR: <span className="font-mono bg-gray-100 px-1 rounded">{pick(a, ["QR", "QR Serial"])}</span>
-                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
+                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400 break-words whitespace-pre-wrap">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
                           </div>
                         </li>
                       ))}
@@ -2075,7 +2075,7 @@
                         <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
                           <div className="text-red-500"><Icon name="FileText" size={16} /></div>
                           <div className="flex-1 overflow-hidden">
-                            <div className="text-gray-700 text-xs truncate font-medium">{pick(doc, ["Nombre"]) || "Documento"}</div>
+                            <div className="text-gray-700 text-xs font-medium break-words whitespace-pre-wrap">{pick(doc, ["Nombre"]) || "Documento"}</div>
                             <div className="text-[10px] text-gray-400">{pick(doc, ["Tipo anexo"])} · {fmtDate(pick(doc, ["Fecha Actualización"]))}</div>
                           </div>
                           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc); }} className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50">

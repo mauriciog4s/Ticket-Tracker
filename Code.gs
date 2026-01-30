@@ -166,7 +166,7 @@ function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
 
   for (let c = 0; c < colCandidates.length; c++) {
     const idx = _findColIndex(headersNorm, [colCandidates[c]]);
-    if (idx === -1) continue;
+    if (idx !== -1) continue;
 
     const colVals = sheet.getRange(2, idx + 1, lastRow - 1, 1).getValues();
     for (let i = 0; i < colVals.length; i++) {
@@ -1241,8 +1241,7 @@ function _runBQQuery(query) {
 /**
  * Manejador central para obtener datos de Activos desde BigQuery.
  * Incluye validación de permisos y protección contra inyección SQL.
- * 
- * @param {string} email Email del usuario para validar contexto.
+ * * @param {string} email Email del usuario para validar contexto.
  * @param {Object} params Parámetros de la acción (action y payload).
  * @returns {Array} Resultados de la consulta a BigQuery.
  */
@@ -1259,34 +1258,48 @@ function getAssetsData(email, { action, payload = {} }) {
   try {
     switch (action) {
       case 'getClients':
-        let clientQuery = `SELECT DISTINCT id_cliente, nombre_cliente FROM \`${projectId}.${DATASET_ID}.DIM_CLIENTES\``;
+        // ACTUALIZADO: COUNT(DISTINCT ...) para evitar duplicados en conteos masivos por joins
+        let clientQuery = `
+          SELECT c.id_cliente, c.nombre_cliente, COUNT(DISTINCT a.id_activo) as total_activos 
+          FROM \`${projectId}.${DATASET_ID}.DIM_CLIENTES\` c
+          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_SEDES\` s ON c.id_cliente = s.id_cliente
+          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_PISOS\` p ON s.id_sede = p.id_sede
+          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
+        `;
         
         if (!context.isAdmin) {
           // Filtrado por nombre de cliente para mayor compatibilidad con Usuarios Filtro
           if (!context.assignedCustomerNames || context.assignedCustomerNames.length === 0) return [];
           const names = context.assignedCustomerNames.map(n => `'${esc(n).toUpperCase()}'`).join(',');
-          clientQuery += ` WHERE UPPER(nombre_cliente) IN (${names})`;
+          clientQuery += ` WHERE UPPER(c.nombre_cliente) IN (${names})`;
         }
         
-        clientQuery += ` ORDER BY nombre_cliente`;
+        clientQuery += ` GROUP BY c.id_cliente, c.nombre_cliente ORDER BY c.nombre_cliente`;
         return _runBQQuery(clientQuery);
       
       case 'getSites':
         if (!payload.clientId) throw new Error("clientId es requerido.");
+        // ACTUALIZADO: COUNT(DISTINCT ...) para conteo preciso por sede
         return _runBQQuery(`
-          SELECT id_sede, nombre_sede 
-          FROM \`${projectId}.${DATASET_ID}.DIM_SEDES\` 
-          WHERE id_cliente = '${esc(payload.clientId)}' 
-          ORDER BY nombre_sede
+          SELECT s.id_sede, s.nombre_sede, COUNT(DISTINCT a.id_activo) as total_activos 
+          FROM \`${projectId}.${DATASET_ID}.DIM_SEDES\` s
+          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_PISOS\` p ON s.id_sede = p.id_sede
+          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
+          WHERE s.id_cliente = '${esc(payload.clientId)}' 
+          GROUP BY s.id_sede, s.nombre_sede
+          ORDER BY s.nombre_sede
         `);
       
       case 'getFloors':
         if (!payload.siteId) throw new Error("siteId es requerido.");
+        // ACTUALIZADO: COUNT(DISTINCT ...) para conteo preciso por piso
         return _runBQQuery(`
-          SELECT id_piso, nombre_piso, nivel, imagen_plano_url 
-          FROM \`${projectId}.${DATASET_ID}.DIM_PISOS\` 
-          WHERE id_sede = '${esc(payload.siteId)}' 
-          ORDER BY nombre_piso
+          SELECT p.id_piso, p.nombre_piso, p.nivel, p.imagen_plano_url, COUNT(DISTINCT a.id_activo) as total_activos 
+          FROM \`${projectId}.${DATASET_ID}.DIM_PISOS\` p
+          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
+          WHERE p.id_sede = '${esc(payload.siteId)}' 
+          GROUP BY p.id_piso, p.nombre_piso, p.nivel, p.imagen_plano_url
+          ORDER BY p.nombre_piso
         `);
       
       case 'getAssets':

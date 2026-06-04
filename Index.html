@@ -8,12 +8,11 @@
     <link rel="shortcut icon" href="https://www.g4s.com/favicon.ico" type="image/x-icon" />
     <title>G4S Ticket Tracker</title>
 
-    <!-- React & Tailwind -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <script>
@@ -105,7 +104,6 @@
   </head>
 
   <body>
-    <!-- ✅ GUARDAMOS LA URL DEL SCRIPT EN UNA VARIABLE GLOBAL PARA EL PROXY -->
     <script>
       var SCRIPT_URL = "<?= scriptUrl ?>";
     </script>
@@ -142,22 +140,18 @@
         return 'fa-circle';
       };
 
-      // --- HELPERS DE COLOR DE ESTADO (NUEVO) ---
+      // --- HELPERS DE COLOR DE ESTADO ---
       const getAssetStatusColorMap = (status) => {
         const s = String(status || '').toLowerCase().trim();
-        // BUENO (Verde)
         if (s === 'bueno' || s === 'operativo') {
           return { bg: 'bg-green-600', dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-200' };
         }
-        // REGULAR (Naranja)
         if (s === 'regular') {
           return { bg: 'bg-orange-500', dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' };
         }
-        // MALO (Rojo)
         if (s === 'malo' || s === 'no operativo' || s === 'dañado') {
           return { bg: 'bg-red-600', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200' };
         }
-        // DEFAULT (Gris)
         return { bg: 'bg-gray-400', dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-700 border-gray-200' };
       };
 
@@ -213,8 +207,8 @@
                 case 'createSolicitudActivo': resolve({ success: true }); break;
                 case 'getClassificationOptions': resolve(MOCK_DATA.classificationOptions); break;
                 case 'getAssetsData': 
-                  if (payload.action === 'getClients') resolve([{ id_cliente: 'CLI-001', nombre_cliente: 'Cliente Demo BQ' }]);
-                  if (payload.action === 'getSites') resolve([{ id_sede: 'SEDE-BQ-1', nombre_sede: 'Sede Demo BQ' }]);
+                  if (payload.action === 'getClients') resolve([{ id_cliente: 'CLI-001', nombre_cliente: 'Cliente de Prueba' }]);
+                  if (payload.action === 'getSites') resolve([{ id_sede: 'SEDE-001', nombre_sede: 'Sede de Prueba' }]);
                   if (payload.action === 'getFloors') resolve([{ id_piso: 'PISO-1', nombre_piso: 'Piso 1', imagen_plano_url: 'plano.png' }]);
                   if (payload.action === 'getAssets') resolve([{ id_activo: 'ACT-001', nombre_activo: 'Cámara 1', tipo_dispositivo: 'Cámara', estado_activo: 'Operativo', coord_x: 50, coord_y: 50 }]);
                   resolve([]);
@@ -310,7 +304,6 @@
         return "bg-yellow-100 text-yellow-700";
       };
 
-      // --- ERROR BOUNDARY ---
       class ErrorBoundary extends React.Component {
         constructor(props) {
           super(props);
@@ -344,12 +337,9 @@
         }
       }
 
-      // --- LOGIN VIEW ---
       const LoginView = ({ onSuccess, isCheckingCache, externalError, onClearError }) => {
         const [loading, setLoading] = useState(false);
         const [localError, setLocalError] = useState(null);
-
-        // Combinamos errores locales con los externos
         const activeError = externalError || localError;
 
         if (isCheckingCache) {
@@ -365,8 +355,7 @@
         const login = async () => {
           setLoading(true);
           setLocalError(null);
-          if (onClearError) onClearError(); // Limpiamos error previo
-          
+          if (onClearError) onClearError();
           try {
             await onSuccess(null);
           } catch (e) {
@@ -383,7 +372,6 @@
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-appRed/5 rounded-full blur-3xl"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-appBlue/5 rounded-full blur-3xl"></div>
                 
-                {/* Logo G4S */}
                 <div className="flex justify-center mb-10">
                   <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                     <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-10 w-auto object-contain" />
@@ -393,7 +381,6 @@
                 <h1 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">Ticket Tracker</h1>
                 <p className="text-slate-400 mb-12 text-xs font-black uppercase tracking-[0.2em]">Gestión de Tecnología</p>
 
-                {/* ALERTA DE ERROR PERSONALIZADA */}
                 {activeError && (
                   <div className="mb-10 bg-red-50/50 border border-red-100 rounded-2xl p-6 text-left animate-fade-up">
                     <div className="flex items-center gap-3 mb-2">
@@ -421,15 +408,13 @@
                     </button>
                   </div>
                 )}
-
-                <div className="mt-16 text-[8px] font-black text-slate-300 uppercase tracking-[0.3em]">© 2025 G4S Secure Solutions</div>
+                <div className="mt-16 text-[8px] font-black text-slate-300 uppercase tracking-[0.3em]">© 2026 G4S Secure Solutions</div>
               </div>
             </div>
           </div>
         );
       };
 
-      // --- SIDEBAR (✅ ACTUALIZADO CON BOTÓN DE REFRESCAR CLIENTE) ---
       const Sidebar = ({ currentView, setView, onLogout, userContext, lastSyncRequests, lastSyncDetails, isSyncing, onRefreshContext }) => {
         const menuItems = [
           { id: "home", icon: "Home", title: "Inicio" },
@@ -439,29 +424,22 @@
           { id: "assets", icon: "Database", title: "Activos" },
         ];
 
-        // Lógica de visualización del nombre de cliente
         const clientDisplay = userContext?.assignedCustomerNames?.length > 0 
           ? userContext.assignedCustomerNames.join(", ") 
           : (userContext?.isAdmin ? "G4S Global" : "Sin asignar");
 
-        // Estado local para evitar spam en el botón
         const [refreshingCtx, setRefreshingCtx] = useState(false);
 
-        // ✅ Manejador del clic con seguridad anti-spam
         const handleCtxClick = async (e) => {
             e.stopPropagation();
-            if (refreshingCtx) return; // Si ya está cargando, ignora nuevos clics
-
+            if (refreshingCtx) return;
             setRefreshingCtx(true);
             try {
                 if (onRefreshContext) await onRefreshContext();
             } catch (error) {
                 console.error("Error refrescando contexto", error);
             } finally {
-                // Cooldown de 1 segundo para evitar clics frenéticos
-                setTimeout(() => {
-                    setRefreshingCtx(false);
-                }, 1000);
+                setTimeout(() => { setRefreshingCtx(false); }, 1000);
             }
         };
 
@@ -469,11 +447,7 @@
           <div className="w-64 bg-white h-screen border-r border-slate-200 flex flex-col shadow-xl z-30 fixed transition-all duration-300">
             <div className="p-8 mb-2 flex items-center gap-3 cursor-pointer group" onClick={() => setView("home")}>
               <div className="bg-appRed/10 p-2 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                <img
-                  src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx"
-                  alt="G4S Logo"
-                  className="h-6 w-auto object-contain"
-                />
+                <img src="https://www.g4s.com/es-co/-/media/g4s/global/images/logos/g4s---an-allied-universal-company-logo/g4s_one-company_logo_180x136.ashx" alt="G4S Logo" className="h-6 w-auto object-contain" />
               </div>
               <span className="font-black text-slate-800 text-lg tracking-tight">Ticket Tracker</span>
             </div>
@@ -493,9 +467,7 @@
                   <div className={`text-sm font-semibold ${currentView === item.id ? "opacity-100" : "opacity-80 group-hover:opacity-100"}`}>
                     {item.title}
                   </div>
-                  {currentView === item.id && (
-                    <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full"></div>
-                  )}
+                  {currentView === item.id && <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full"></div>}
                 </div>
               ))}
 
@@ -516,18 +488,13 @@
               </div>
             </div>
 
-            {/* SECCIÓN USUARIO Y CLIENTE */}
             <div className="p-4 border-t bg-gray-50">
               <div className="flex flex-col gap-2 mb-3">
-                
-                {/* Info del Cliente */}
                 <div className="flex items-center gap-2 mb-1">
                    <div className="p-1.5 rounded bg-white border border-gray-200 text-gray-400">
                      <Icon name="Database" size={14} />
                    </div>
                    <div className="overflow-hidden flex-1">
-                    
-                    {/* ✅ BOTÓN DE ACTUALIZACIÓN AL LADO DEL TÍTULO */}
                     <div className="flex justify-between items-center pr-1">
                         <div className="text-[9px] uppercase font-bold text-gray-400">Cliente Asignado</div>
                         <button 
@@ -539,14 +506,12 @@
                           <Icon name="RefreshCw" size={10} className={refreshingCtx ? "animate-spin text-blue-600" : ""} />
                         </button>
                     </div>
-
                     <div className="text-xs font-bold text-blue-800 truncate w-full" title={clientDisplay}>
                       {clientDisplay}
                     </div>
                    </div>
                 </div>
 
-                {/* Info del Usuario */}
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-full bg-gray-200">
                     <Icon name="User" size={16} className="text-gray-600" />
@@ -588,7 +553,6 @@
         );
       };
 
-      // --- CREATE REQUEST VIEW ---
       const CreateRequest = ({ userContext, setView, onRefresh, showToast }) => {
         const [formData, setFormData] = useState({
           idSede: "",
@@ -602,12 +566,9 @@
 
         const [submitting, setSubmitting] = useState(false);
         const [showSuccess, setShowSuccess] = useState(false);
-        
-        // Estado para clasificaciones dinámicas
         const [classificationOptions, setClassificationOptions] = useState([]);
         const [loadingOptions, setLoadingOptions] = useState(false);
 
-        // --- FETCH DE CLASIFICACIONES ---
         useEffect(() => {
           let mounted = true;
           setLoadingOptions(true);
@@ -615,28 +576,22 @@
             .then(opts => {
                if(mounted && Array.isArray(opts)) {
                  setClassificationOptions(opts);
-                 // Preseleccionar la primera opción si existe
                  if (opts.length > 0) setFormData(prev => ({...prev, tipoServicio: opts[0]}));
                }
             })
             .catch(err => console.error("Error fetching classifications", err))
             .finally(() => mounted && setLoadingOptions(false));
-          
           return () => { mounted = false; };
         }, []);
 
-        // --- FECHA EN FORMATO COLOMBIA ---
         const currentDate = useMemo(() => {
             return new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", hour12: true });
         }, []);
 
-        // --- ANEXOS ---
         const fileInputRef = useRef(null);
         const [attachments, setAttachments] = useState([]);
         const [uploadInfo, setUploadInfo] = useState({ total: 0, done: 0 });
         const MAX_MB = 8;
-
-        // --- ACTIVOS (QR) ---
         const [activos, setActivos] = useState([]);
         const [showActivosModal, setShowActivosModal] = useState(false);
 
@@ -654,10 +609,8 @@
             idPiso: normalize(a?.idPiso),
             idDispositivo: normalize(a?.idDispositivo),
           };
-
           const key = item.qrSerial || item.idActivo;
           if (!key) return;
-
           setActivos((prev) => {
             const exists = prev.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key);
             if (exists) return prev;
@@ -673,7 +626,6 @@
           if (!activos.length) return;
           let anyOk = false;
           let anyErr = false;
-
           for (const a of activos) {
             try {
               await runServer("createSolicitudActivo", {
@@ -691,7 +643,6 @@
               anyErr = true;
             }
           }
-
           if (anyOk && !anyErr) showToast?.("Activos vinculados al ticket.");
           if (anyErr) showToast?.("Ticket creado. Algunos activos no se pudieron vincular.");
         };
@@ -733,10 +684,9 @@
         const removeAttachment = (id) => setAttachments((prev) => prev.filter((a) => a.id !== id));
         const updateTipo = (id, tipo) => setAttachments((prev) => prev.map((a) => (a.id === id ? { ...a, tipo } : a)));
 
-       const uploadAttachments = async (solicitudId) => {
+        const uploadAttachments = async (solicitudId) => {
           const valid = attachments.filter((a) => a.status === "ready");
           if (valid.length === 0) return;
-
           setUploadInfo({ total: valid.length, done: 0 });
 
           for (let i = 0; i < valid.length; i++) {
@@ -744,24 +694,12 @@
             try {
               setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "uploading" } : a)));
               const { base64, mimeType } = await fileToBase64(att.file);
-              
-              // --- ACTUALIZACIÓN: LIMPIEZA DE NOMBRE ---
-              // 1. Quitar tildes
-              // 2. Cambiar espacios por guiones bajos
-              // 3. Eliminar caracteres raros
               const safeName = att.file.name
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes (á -> a)
-                .replace(/\s+/g, "_")                              // Espacios -> _
-                .replace(/[^a-zA-Z0-9._-]/g, "");                  // Solo deja letras, números, . _ -
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
+                .replace(/\s+/g, "_")                              
+                .replace(/[^a-zA-Z0-9._-]/g, "");                  
 
-              await runServer("uploadAnexo", { 
-                solicitudId, 
-                tipoAnexo: att.tipo, 
-                fileName: safeName, // Enviamos el nombre limpio
-                mimeType, 
-                base64 
-              });
-              
+              await runServer("uploadAnexo", { solicitudId, tipoAnexo: att.tipo, fileName: safeName, mimeType, base64 });
               setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "done" } : a)));
             } catch (e) {
               setAttachments((prev) => prev.map((a) => (a.id === att.id ? { ...a, status: "error", error: e.message || String(e) } : a)));
@@ -773,34 +711,25 @@
 
         const handleChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
 
-        // --- MODAL ACTIVOS ---
         const ActivosModal = ({ onClose }) => {
           const [qr, setQr] = useState("");
           const [finding, setFinding] = useState(false);
           const [error, setError] = useState(null);
-
           const [catalog, setCatalog] = useState([]);
           const [catalogLoading, setCatalogLoading] = useState(false);
           const [filter, setFilter] = useState("");
 
-          const close = () => {
-            setQr("");
-            setError(null);
-            onClose?.();
-          };
+          const close = () => { setQr(""); setError(null); onClose?.(); };
 
           const loadCatalog = async () => {
             setCatalogLoading(true);
             try {
               const res = await runServer("getActivosCatalog", {});
-              const list = res?.data || [];
-              setCatalog(list);
+              setCatalog(res?.data || []);
             } catch (e) {
               console.warn("Catálogo no disponible:", e);
               setCatalog([]);
-            } finally {
-              setCatalogLoading(false);
-            }
+            } finally { setCatalogLoading(false); }
           };
 
           useEffect(() => { loadCatalog(); }, []);
@@ -808,7 +737,6 @@
           const findByQr = async () => {
             const q = String(qr || "").trim();
             if (!q) { setError("Ingresa un QR."); return; }
-
             setFinding(true);
             setError(null);
             try {
@@ -820,27 +748,21 @@
               addActivoUnique(res.activo);
               showToast?.("Activo agregado.");
               setQr("");
-            } catch (e) {
-              setError(e.message || String(e));
-            } finally {
-              setFinding(false);
-            }
+            } catch (e) { setError(e.message || String(e)); } 
+            finally { setFinding(false); }
           };
 
           const filteredCatalog = useMemo(() => {
             const q = String(filter || "").toLowerCase().trim();
             if (!q) return catalog.slice(0, 50);
-            const f = catalog.filter((a) => {
-              const hay = `${a?.qrSerial || ""} ${a?.idActivo || ""} ${a?.nombreActivo || ""} ${a?.nombreUbicacion || ""}`.toLowerCase();
-              return hay.includes(q);
-            });
-            return f.slice(0, 50);
+            return catalog.filter((a) => {
+              return `${a?.qrSerial || ""} ${a?.idActivo || ""} ${a?.nombreActivo || ""} ${a?.nombreUbicacion || ""}`.toLowerCase().includes(q);
+            }).slice(0, 50);
           }, [catalog, filter]);
 
           const alreadyAdded = (a) => {
             const key = normalize(a?.qrSerial) || normalize(a?.idActivo);
-            if (!key) return false;
-            return activos.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key);
+            return key ? activos.some((x) => (normalize(x.qrSerial) || normalize(x.idActivo)) === key) : false;
           };
 
           return (
@@ -851,37 +773,22 @@
                     <div className="text-xs uppercase font-bold text-gray-400">Activos asociados</div>
                     <div className="text-lg font-bold text-gray-800">Agregar activo por QR</div>
                   </div>
-                  <button onClick={close} className="p-2 rounded hover:bg-gray-50 text-gray-500">
-                    <Icon name="X" size={18} />
-                  </button>
+                  <button onClick={close} className="p-2 rounded hover:bg-gray-50 text-gray-500"><Icon name="X" size={18} /></button>
                 </div>
 
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <div className="text-sm font-bold text-gray-700 mb-2">Buscar por QR Serial</div>
                     <div className="flex gap-2">
-                      <input
-                        className="input-field"
-                        placeholder="Pega o escribe el QR Serial..."
-                        value={qr}
-                        onChange={(e) => setQr(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") findByQr(); }}
-                      />
-                      <button
-                        type="button"
-                        onClick={findByQr}
-                        disabled={finding}
-                        className="px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {finding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Icon name="Search" size={16} />}
-                        Buscar
+                      <input className="input-field" placeholder="Pega o escribe el QR Serial..." value={qr} onChange={(e) => setQr(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") findByQr(); }} />
+                      <button type="button" onClick={findByQr} disabled={finding} className="px-4 py-2 bg-appRed text-white rounded font-bold text-sm hover:bg-red-700 disabled:opacity-50 flex items-center gap-2">
+                        {finding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Icon name="Search" size={16} />} Buscar
                       </button>
                     </div>
 
                     {error && (
                       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700 flex gap-2">
-                        <Icon name="AlertTriangle" size={16} className="text-red-600" />
-                        <div>{error}</div>
+                        <Icon name="AlertTriangle" size={16} className="text-red-600" /> <div>{error}</div>
                       </div>
                     )}
 
@@ -897,29 +804,15 @@
                                   <div className="mt-0.5 text-gray-400"><Icon name="Monitor" size={16} /></div>
                                   <div className="flex-1 overflow-hidden">
                                     <div className="text-xs font-bold text-gray-800 truncate">{a.nombreActivo || "Activo"}</div>
-                                    <div className="text-[10px] text-gray-500 truncate">
-                                      QR: <span className="font-mono">{a.qrSerial || "-"}</span> · Ubicación: {a.nombreUbicacion || "-"}
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 truncate">
-                                      Estado: {a.estadoActivo || "-"} · Funcionamiento: {a.funcionamiento || "-"}
-                                    </div>
+                                    <div className="text-[10px] text-gray-500 truncate">QR: <span className="font-mono">{a.qrSerial || "-"}</span> · Ubicación: {a.nombreUbicacion || "-"}</div>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeActivo(key)}
-                                    className="p-2 border rounded hover:bg-gray-50"
-                                    title="Quitar"
-                                  >
-                                    <Icon name="X" size={14} />
-                                  </button>
+                                  <button type="button" onClick={() => removeActivo(key)} className="p-2 border rounded hover:bg-gray-50"><Icon name="X" size={14} /></button>
                                 </div>
                               );
                             })}
                           </div>
                         </div>
-                      ) : (
-                        <div className="text-[10px] text-gray-400">Aún no has agregado activos.</div>
-                      )}
+                      ) : <div className="text-[10px] text-gray-400">Aún no has agregado activos.</div>}
                     </div>
                   </div>
 
@@ -930,18 +823,10 @@
                         <div className="text-[10px] text-blue-600 font-bold flex items-center gap-2">
                           <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> Cargando...
                         </div>
-                      ) : (
-                        <div className="text-[10px] text-gray-400">{catalog.length ? `${catalog.length} activos` : "No disponible"}</div>
-                      )}
+                      ) : <div className="text-[10px] text-gray-400">{catalog.length ? `${catalog.length} activos` : "No disponible"}</div>}
                     </div>
 
-                    <input
-                      className="input-field"
-                      placeholder="Filtrar por nombre, QR, ubicación..."
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      disabled={!catalog.length}
-                    />
+                    <input className="input-field" placeholder="Filtrar por nombre..." value={filter} onChange={(e) => setFilter(e.target.value)} disabled={!catalog.length} />
 
                     <div className="mt-3 border rounded overflow-hidden bg-white">
                       <div className="divide-y max-h-96 overflow-y-auto">
@@ -950,41 +835,21 @@
                             const key = normalize(a?.qrSerial) || normalize(a?.idActivo) || `c_${i}`;
                             const disabled = alreadyAdded(a);
                             return (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => { if (!disabled) { addActivoUnique(a); showToast?.("Activo agregado."); } }}
-                                disabled={disabled}
-                                className={`w-full text-left p-3 hover:bg-gray-50 transition flex items-start gap-3 ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                              >
+                              <button key={key} type="button" onClick={() => { if (!disabled) { addActivoUnique(a); showToast?.("Activo agregado."); } }} disabled={disabled} className={`w-full text-left p-3 hover:bg-gray-50 transition flex items-start gap-3 ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
                                 <div className="mt-0.5 text-gray-400"><Icon name="FileText" size={16} /></div>
                                 <div className="flex-1 overflow-hidden">
                                   <div className="text-xs font-bold text-gray-800 truncate">{a?.nombreActivo || "Activo"}</div>
-                                  <div className="text-[10px] text-gray-500 truncate">
-                                    QR: <span className="font-mono">{a?.qrSerial || "-"}</span> · Ubicación: {a?.nombreUbicacion || "-"}
-                                  </div>
-                                  <div className="text-[10px] text-gray-400 truncate">
-                                    Estado: {a?.estadoActivo || "-"} · Funcionamiento: {a?.funcionamiento || "-"}
-                                  </div>
+                                  <div className="text-[10px] text-gray-500 truncate">QR: <span className="font-mono">{a?.qrSerial || "-"}</span> · Ubicación: {a?.nombreUbicacion || "-"}</div>
                                 </div>
-                                {disabled && (
-                                  <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded">Agregado</span>
-                                )}
+                                {disabled && <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded">Agregado</span>}
                               </button>
                             );
                           })
-                        ) : (
-                          <div className="p-6 text-center text-xs text-gray-400">
-                            {catalogLoading ? "Cargando catálogo..." : "No hay resultados."}
-                          </div>
-                        )}
+                        ) : <div className="p-6 text-center text-xs text-gray-400">{catalogLoading ? "Cargando catálogo..." : "No hay resultados."}</div>}
                       </div>
                     </div>
-
                     <div className="mt-4 flex justify-end gap-2">
-                      <button onClick={close} className="px-4 py-2 border rounded text-sm font-bold text-gray-700 hover:bg-gray-50">
-                        Cerrar
-                      </button>
+                      <button onClick={close} className="px-4 py-2 border rounded text-sm font-bold text-gray-700 hover:bg-gray-50">Cerrar</button>
                     </div>
                   </div>
                 </div>
@@ -998,27 +863,12 @@
             alert("Por favor completa los campos obligatorios.");
             return;
           }
-
           setSubmitting(true);
-
-          // ✅ OBSERVACIÓN SIN CONCATENAR
           const payload = { ...formData, observacion: formData.observacion };
-
           try {
             const res = await runServer('createRequest', payload);
-
-            const solicitudId = String(
-              res?.solicitudId ||
-              res?.idSolicitud ||
-              res?.row?.['ID Solicitud'] ||
-              res?.row?.['ID Solicitud '] ||
-              res?.Rows?.[0]?.['ID Solicitud'] ||
-              res?.Rows?.[0]?.['ID Solicitud '] ||
-              ''
-            ).trim();
-
-            if (!solicitudId) throw new Error("No se pudo obtener el ID de la solicitud creada.");
-
+            const solicitudId = String(res?.solicitudId || res?.idSolicitud || res?.row?.['ID Solicitud'] || '').trim();
+            if (!solicitudId) throw new Error("No se pudo obtener el ID del ticket.");
             try { await linkActivosToSolicitud(solicitudId); } catch (e) { console.warn("Vincular activos falló:", e); }
             await uploadAttachments(String(solicitudId).trim());
             setShowSuccess(true);
@@ -1032,7 +882,6 @@
         const handleSuccessClose = async () => {
           setShowSuccess(false);
           setSubmitting(false);
-          // ✅ PRIORIDAD: Refrescar datos inmediatamente para asegurar visibilidad en el listado
           if (onRefresh) await onRefresh(true);
           setView("home");
         };
@@ -1046,32 +895,13 @@
               <div>
                 <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-1">Nueva Solicitud</h2>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-appRed animate-pulse"></span>
-                  Registro de ticket de servicio
+                  <span className="w-2 h-2 rounded-full bg-appRed animate-pulse"></span> Registro de ticket de servicio
                 </p>
               </div>
               <div className="flex gap-3 w-full md:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setView("home")}
-                  disabled={submitting}
-                  className="flex-1 md:flex-none px-6 py-3 border border-slate-200 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={submitting || !formData.idSede || !formData.solicitud || !formData.observacion}
-                  className="flex-1 md:flex-none bg-appRed text-white px-8 py-3 rounded-2xl shadow-xl shadow-red-100 hover:bg-red-700 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Procesando...
-                    </>
-                  ) : (
-                    "Guardar Ticket"
-                  )}
+                <button type="button" onClick={() => setView("home")} disabled={submitting} className="flex-1 md:flex-none px-6 py-3 border border-slate-200 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">Cancelar</button>
+                <button type="button" onClick={handleSubmit} disabled={submitting || !formData.idSede || !formData.solicitud || !formData.observacion} className="flex-1 md:flex-none bg-appRed text-white px-8 py-3 rounded-2xl shadow-xl shadow-red-100 hover:bg-red-700 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95">
+                  {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Procesando...</> : "Guardar Ticket"}
                 </button>
               </div>
             </div>
@@ -1099,9 +929,7 @@
                   <select className="input-field" value={formData.idSede} onChange={(e) => handleChange("idSede", e.target.value)}>
                     <option value="">Seleccione Sede...</option>
                     {userContext?.allowedClientIds?.map((id) => (
-                      <option key={id} value={id}>
-                        {userContext?.clientNames?.[id] ? userContext.clientNames[id] : id}
-                      </option>
+                      <option key={id} value={id}>{userContext?.clientNames?.[id] || id}</option>
                     ))}
                   </select>
                 </div>
@@ -1109,9 +937,7 @@
                   <label className="input-label">Fecha creación cliente *</label>
                   <div className="relative">
                     <input type="text" className="input-field bg-gray-50 text-gray-600" value={currentDate} readOnly />
-                    <div className="absolute right-3 top-2.5 text-gray-400">
-                      <Icon name="Clock" size={16} />
-                    </div>
+                    <div className="absolute right-3 top-2.5 text-gray-400"><Icon name="Clock" size={16} /></div>
                   </div>
                 </div>
               </div>
@@ -1122,7 +948,6 @@
                   <label className="input-label">Solicitud *</label>
                   <input type="text" className="input-field" value={formData.solicitud} onChange={(e) => handleChange("solicitud", e.target.value)} />
                 </div>
-
                 <div>
                   <label className="input-label">Clasificación Solicitud</label>
                   <select className="input-field" value={formData.clasificacion} onChange={(e) => handleChange("clasificacion", e.target.value)}>
@@ -1133,44 +958,27 @@
                     <option value="Otro">Otro</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="input-label">Clasificación *</label>
                   <div className="flex flex-wrap">
                     {loadingOptions && <span className="text-xs text-gray-400 animate-pulse">Cargando opciones...</span>}
-                    {!loadingOptions && classificationOptions.length === 0 && <span className="text-xs text-red-400">Sin opciones disponibles</span>}
-                    
-                    {/* Render dinámico de opciones */}
                     {classificationOptions.map((t, idx) => {
-                       // Lógica para redondear bordes si están "pegados" visualmente (estilo grupo)
                        let radiusClass = "group-single";
-                       
-                       // Si quieres que parezcan unidos:
                        if (classificationOptions.length > 1) {
                          if (idx === 0) radiusClass = "group-start";
                          else if (idx === classificationOptions.length - 1) radiusClass = "group-end";
                          else radiusClass = "";
                        }
-                       
                        return (
-                        <button
-                          type="button"
-                          key={t}
-                          onClick={() => handleChange("tipoServicio", t)}
-                          className={`btn-option ${formData.tipoServicio === t ? "selected" : ""} ${radiusClass}`}
-                        >
-                          {t}
-                        </button>
+                        <button type="button" key={t} onClick={() => handleChange("tipoServicio", t)} className={`btn-option ${formData.tipoServicio === t ? "selected" : ""} ${radiusClass}`}>{t}</button>
                        )
                     })}
                   </div>
                 </div>
-
                 <div>
                   <label className="input-label">Observación</label>
                   <textarea className="input-field h-24 resize-y" value={formData.observacion} onChange={(e) => handleChange("observacion", e.target.value)}></textarea>
                 </div>
-
                 <div>
                   <label className="input-label">Prioridad Solicitud</label>
                   <div className="flex">
@@ -1182,14 +990,7 @@
                             else radiusClass = "";
                         }
                         return (
-                          <button
-                            type="button"
-                            key={p}
-                            onClick={() => handleChange("prioridad", p)}
-                            className={`btn-option ${formData.prioridad === p ? "selected-red" : ""} ${radiusClass}`}
-                          >
-                            {p}
-                          </button>
+                          <button type="button" key={p} onClick={() => handleChange("prioridad", p)} className={`btn-option ${formData.prioridad === p ? "selected-red" : ""} ${radiusClass}`}>{p}</button>
                         );
                     })}
                   </div>
@@ -1197,105 +998,33 @@
               </div>
 
               <h3 className="section-title">Adicionales Solicitud</h3>
-
               <div className="space-y-3">
-                {/* ANEXOS */}
                 <div className="p-3 bg-gray-50 rounded border border-gray-100">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Anexos de la solicitud: Foto, Archivo o Dibujo</span>
-
-                    <div className="flex items-center gap-2">
-                      {uploadInfo.total > 0 && (
-                        <span className="text-[10px] font-bold text-gray-500">
-                          Subiendo {uploadInfo.done}/{uploadInfo.total}
-                        </span>
-                      )}
-
-                      <button
-                        type="button"
-                        disabled={submitting}
-                        className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100 disabled:opacity-50"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Nuevo
-                      </button>
-                    </div>
+                    <button type="button" disabled={submitting} className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100" onClick={() => fileInputRef.current?.click()}>Nuevo</button>
                   </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      addFiles(e.target.files);
-                      e.target.value = "";
-                    }}
-                  />
+                  <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
 
                   {attachments.length > 0 ? (
-                    <div className="mt-3 bg-white border rounded">
-                      <div className="divide-y">
+                    <div className="mt-3 bg-white border rounded divide-y">
                         {attachments.map((a) => (
                           <div key={a.id} className="p-2 flex items-center gap-2">
-                            <div className="text-gray-500">
-                              <Icon name="FileText" size={16} />
-                            </div>
-
+                            <div className="text-gray-500"><Icon name="FileText" size={16} /></div>
                             <div className="flex-1 overflow-hidden">
                               <div className="text-xs font-bold text-gray-700 truncate">{a.file.name}</div>
                               <div className="text-[10px] text-gray-400">{prettySize(a.file.size)}</div>
-                              {a.status === "error" && <div className="text-[10px] text-red-600 font-bold">{a.error}</div>}
-                              {a.status === "uploading" && <div className="text-[10px] text-blue-600 font-bold">Subiendo...</div>}
-                              {a.status === "done" && <div className="text-[10px] text-green-600 font-bold">OK</div>}
                             </div>
-
-                            <select
-                              className="text-[10px] border rounded px-2 py-1 bg-white"
-                              value={a.tipo}
-                              disabled={submitting || a.status === "uploading" || a.status === "done"}
-                              onChange={(e) => updateTipo(a.id, e.target.value)}
-                            >
+                            <select className="text-[10px] border rounded px-2 py-1 bg-white" value={a.tipo} disabled={submitting} onChange={(e) => updateTipo(a.id, e.target.value)}>
                               <option value="Archivo">Archivo</option>
                               <option value="Foto">Foto</option>
                               <option value="Dibujo">Dibujo</option>
                             </select>
-
-                            <button
-                              type="button"
-                              disabled={submitting || a.status === "uploading"}
-                              onClick={() => removeAttachment(a.id)}
-                              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-50"
-                              title="Quitar"
-                            >
-                              <Icon name="X" size={14} />
-                            </button>
+                            <button type="button" disabled={submitting} onClick={() => removeAttachment(a.id)} className="p-1 border rounded hover:bg-gray-50"><Icon name="X" size={14} /></button>
                           </div>
                         ))}
-                      </div>
                     </div>
-                  ) : (
-                    <div className="mt-2 text-[10px] text-gray-400">Puedes agregar varios archivos (máx {MAX_MB}MB c/u).</div>
-                  )}
-                </div>
-
-                {/* QR ACTIVOS (oculto) */}
-                <div className="p-3 bg-gray-50 rounded border border-gray-100 hidden">
-                  <div className="flex justify-between items-center">
-                    <div className="flex flex-col">
-                      <span className="text-sm text-gray-600 font-medium">Activos asociados a la solicitud (QR)</span>
-                      <span className="text-[10px] text-gray-400">{activos.length ? `${activos.length} activo(s) agregado(s)` : "Sin activos aún."}</span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-100 disabled:opacity-50"
-                      onClick={() => setShowActivosModal(true)}
-                    >
-                      Nuevo
-                    </button>
-                  </div>
-                  {/* ... lógica interna de activos ... */}
+                  ) : <div className="mt-2 text-[10px] text-gray-400">Puedes agregar archivos (máx {MAX_MB}MB c/u).</div>}
                 </div>
               </div>
             </div>
@@ -1303,7 +1032,6 @@
         );
       };
 
-      // --- CONFIG VIEW ---
       const ConfigurationView = ({ userContext, onForceSync, onClearCache, isSyncing, lastSyncRequests, lastSyncDetails, syncReport }) => {
         return (
           <div className="p-10 max-w-5xl mx-auto animate-fade-up">
@@ -1311,13 +1039,11 @@
               <div>
                 <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-1">Configuración</h2>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-appBlue animate-pulse"></span>
-                  Gestión de datos y sistema
+                  <span className="w-2 h-2 rounded-full bg-appBlue animate-pulse"></span> Gestión de datos y sistema
                 </p>
               </div>
-              <button onClick={onForceSync} disabled={isSyncing} className="w-full md:w-auto px-8 py-3 bg-appBlue text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95">
-                <Icon name="RefreshCw" size={18} className={isSyncing ? "animate-spin" : ""} />
-                {isSyncing ? "Sincronizando..." : "Forzar Sincronización"}
+              <button onClick={onForceSync} disabled={isSyncing} className="w-full md:w-auto px-8 py-3 bg-appBlue text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95">
+                <Icon name="RefreshCw" size={18} className={isSyncing ? "animate-spin" : ""} /> {isSyncing ? "Sincronizando..." : "Forzar Sincronización"}
               </button>
             </div>
             
@@ -1339,7 +1065,6 @@
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Tarjeta Usuario */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Icon name="User" size={32} /></div>
@@ -1349,15 +1074,12 @@
                     <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold mt-1"><Icon name="ShieldCheck" size={12} /> {userContext?.role}</div>
                   </div>
                 </div>
-                <button onClick={onClearCache} className="w-full mt-2 py-2 px-3 bg-red-50 border border-red-200 text-red-600 rounded hover:bg-red-100 text-sm font-bold flex items-center justify-center gap-2 transition">
-                  <Icon name="Trash2" size={14} /> Reiniciar Datos Locales (Reset)
-                </button>
+                <button onClick={onClearCache} className="w-full mt-2 py-2 px-3 bg-red-50 border border-red-200 text-red-600 rounded hover:bg-red-100 text-sm font-bold flex items-center justify-center gap-2 transition"><Icon name="Trash2" size={14} /> Reiniciar Datos Locales (Reset)</button>
               </div>
 
-              {/* Tarjeta Reporte Sync */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                  <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-700 flex items-center gap-2"><Icon name="Database" size={18} className="text-blue-600" /> Datos Locales</h3>
+                  <h3 className="font-bold text-gray-700 flex items-center gap-2"><Icon name="Database" size={18} className="text-blue-600" /> Auditoría de Hojas Locales</h3>
                   {isSyncing && <span className="text-xs text-blue-600 font-bold animate-pulse">Descargando...</span>}
                 </div>
                 <div className="bg-gray-50 rounded border border-gray-100 overflow-hidden">
@@ -1380,17 +1102,13 @@
                         <span className="font-bold text-gray-800 flex items-center gap-1"> {syncReport.anx} <Icon name="CheckCircle" size={12} className="text-green-500"/></span>
                       </div>
                     </div>
-                   ) : (
-                     <div className="p-4 text-center text-xs text-gray-400">Sin datos. Sincroniza para ver detalles.</div>
-                   )}
+                   ) : <div className="p-4 text-center text-xs text-gray-400">Sin datos. Sincroniza para ver detalles.</div>}
                 </div>
               </div>
             </div>
           </div>
         );
       };
-
-      // --- SUB-COMPONENTES ACTIVOS ---
 
       const MapViewer = ({ imageUrl, assets, onAssetClick }) => {
           const [scale, setScale] = useState(1);
@@ -1417,44 +1135,16 @@
               setPosition({ x: e.clientX - startPos.x, y: e.clientY - startPos.y });
           };
 
-          const handleMouseUp = () => setIsDragging(false);
-
           useEffect(() => { setScale(1); setPosition({ x: 0, y: 0 }); }, [imageUrl]);
 
           return (
-              <div 
-                  ref={containerRef}
-                  className="w-full h-full bg-gray-200 overflow-hidden relative cursor-grab active:cursor-grabbing flex items-center justify-center"
-                  onWheel={handleWheel}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-              >
-                  <div 
-                      style={{ 
-                          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                          transformOrigin: "center center",
-                          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-                      }}
-                      className="relative shadow-xl inline-block bg-white"
-                  >
+              <div ref={containerRef} className="w-full h-full bg-gray-200 overflow-hidden relative cursor-grab active:cursor-grabbing flex items-center justify-center" onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={()=>setIsDragging(false)} onMouseLeave={()=>setIsDragging(false)}>
+                  <div style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: "center center", transition: isDragging ? 'none' : 'transform 0.1s ease-out' }} className="relative shadow-xl inline-block bg-white">
                       <img src={imageUrl} className="max-w-none block pointer-events-none select-none" style={{ height: '800px' }} alt="Plano"/>
-                      
                       {assets.map(asset => {
                           if (!asset.coord_x || !asset.coord_y) return null;
-                          // ✅ NUEVA LÓGICA DE COLORES MAPA
-                          const { bg } = getAssetStatusColorMap(asset.estado_activo);
-                          
                           return (
-                              <div 
-                                  key={asset.id_activo} 
-                                  onClick={(e) => { e.stopPropagation(); onAssetClick(asset); }}
-                                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 border-white shadow-lg cursor-pointer flex items-center justify-center text-[10px] text-white hover:scale-125 transition-transform z-10 hover:z-20
-                                      ${bg}`}
-                                  style={{ left: `${asset.coord_x}%`, top: `${asset.coord_y}%` }}
-                                  title={asset.nombre_activo}
-                              >
+                              <div key={asset.id_activo} onClick={(e) => { e.stopPropagation(); onAssetClick(asset); }} className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 border-white shadow-lg cursor-pointer flex items-center justify-center text-[10px] text-white hover:scale-125 transition-transform z-10 hover:z-20 ${getAssetStatusColorMap(asset.estado_activo).bg}`} style={{ left: `${asset.coord_x}%`, top: `${asset.coord_y}%` }}>
                                   <i className={`fas ${getIconActivo(asset.tipo_dispositivo)}`}></i>
                               </div>
                           )
@@ -1471,40 +1161,17 @@
 
       const FileModal = ({ fileUrl, type, onClose }) => {
           if (!fileUrl) return null;
-
-          const renderContent = () => {
-              if (type === 'image') {
-                  return <img src={fileUrl} className="max-w-full max-h-full object-contain shadow-lg" />;
-              } else {
-                  const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
-                  return (
-                      <div className="w-full h-full relative bg-gray-100">
-                          <iframe src={googleViewerUrl} className="w-full h-full" frameBorder="0" title="Visor"></iframe>
-                          <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
-                              <span className="bg-white/80 px-4 py-2 rounded-full text-xs text-gray-500 shadow border">
-                                  Cargando vista previa...
-                              </span>
-                          </div>
-                      </div>
-                  );
-              }
-          };
-
           return (
               <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-fadeIn backdrop-blur-sm">
                   <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center text-white bg-gradient-to-b from-black/80 to-transparent z-10">
                       <div className="flex items-center gap-3">
-                          <div className="bg-white/10 p-2 rounded-full">
-                              <i className={`fas ${type === 'image' ? 'fa-image' : 'fa-file-pdf'}`}></i>
-                          </div>
+                          <div className="bg-white/10 p-2 rounded-full"><i className={`fas ${type === 'image' ? 'fa-image' : 'fa-file-pdf'}`}></i></div>
                           <h3 className="font-bold text-sm md:text-base">Visualización de Archivo</h3>
                       </div>
-                      <button onClick={onClose} className="bg-white/20 hover:bg-white/40 rounded-full w-9 h-9 flex items-center justify-center transition-colors">
-                          <i className="fas fa-times"></i>
-                      </button>
+                      <button onClick={onClose} className="bg-white/20 hover:bg-white/40 rounded-full w-9 h-9 flex items-center justify-center transition-colors"><i className="fas fa-times"></i></button>
                   </div>
                   <div className="w-full h-full max-w-6xl max-h-[85vh] bg-transparent rounded-lg overflow-hidden flex items-center justify-center relative mt-8 border border-white/10">
-                      {renderContent()}
+                      {type === 'image' ? <img src={fileUrl} className="max-w-full max-h-full object-contain shadow-lg" /> : <iframe src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`} className="w-full h-full" frameBorder="0" title="Visor"></iframe>}
                   </div>
               </div>
           );
@@ -1515,34 +1182,19 @@
         let obj = {};
         try { obj = JSON.parse(data); } catch(e) { return null; }
         if (Object.keys(obj).length === 0) return null;
-
         const [isOpen, setIsOpen] = useState(false);
         const displayDate = date ? String(date).split('T')[0] : '';
 
-        const formatValue = (val) => {
-          if (val === true || val === 'true') return <span className="text-green-600 font-bold text-[10px] bg-green-50 px-2 py-0.5 rounded border border-green-200">SI</span>;
-          if (val === false || val === 'false') return <span className="text-red-500 font-bold text-[10px] bg-red-50 px-2 py-0.5 rounded border border-red-200">NO</span>;
-          return val;
-        };
-
         return (
           <div className="mb-4 border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-200">
-            <div 
-              className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-100 select-none"
-              onClick={() => setIsOpen(!isOpen)}
-            >
+            <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-100 select-none" onClick={() => setIsOpen(!isOpen)}>
               <div className="flex items-center gap-2 flex-1">
                   <i className={`fas ${icon} ${color} text-sm`}></i>
                   <span className="font-bold text-xs text-gray-700 uppercase tracking-wide">{title}</span>
-                  {displayDate && (
-                      <span className="ml-auto mr-2 text-[10px] text-gray-500 font-mono bg-gray-100 px-2 py-0.5 rounded border">
-                          <i className="fas fa-calendar-alt mr-1 text-gray-400"></i> {displayDate}
-                      </span>
-                  )}
+                  {displayDate && <span className="ml-auto mr-2 text-[10px] text-gray-500 font-mono bg-gray-100 px-2 py-0.5 rounded border"><i className="fas fa-calendar-alt mr-1 text-gray-400"></i> {displayDate}</span>}
               </div>
               <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}></i>
             </div>
-
             {isOpen && (
               <div className="p-3 space-y-2 bg-white animate-fadeIn">
                   {Object.entries(obj).map(([k, v]) => {
@@ -1550,28 +1202,12 @@
                   const lowerVal = valStr.toLowerCase();
                   const isImage = lowerVal.includes('.jpg') || lowerVal.includes('.jpeg') || lowerVal.includes('.png') || valStr.includes('_Images/');
                   const isPdf = lowerVal.includes('.pdf');
-                  
                   return (
                       <div key={k} className="flex justify-between items-center text-xs border-b border-gray-50 pb-2 last:border-0 last:pb-0">
                           <span className="text-gray-500 font-medium w-1/2 pr-2 break-words">{k.replace(/_/g, ' ')}</span>
                           <span className="text-gray-900 font-semibold w-1/2 text-right break-words flex justify-end">
-                              {isImage ? (
-                                  <button 
-                                      onClick={() => onLinkClick(valStr, true)} 
-                                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-800 border border-blue-200 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"
-                                  >
-                                      <i className="fas fa-camera"></i> Ver Foto
-                                  </button>
-                              ) : isPdf ? (
-                                  <button 
-                                      onClick={() => onLinkClick(valStr, false)} 
-                                      className="bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-800 border border-orange-200 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"
-                                  >
-                                      <i className="fas fa-file-pdf"></i> Ver Archivo
-                                  </button>
-                              ) : (
-                                  formatValue(v)
-                              )}
+                              {isImage ? <button onClick={() => onLinkClick(valStr, true)} className="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"><i className="fas fa-camera"></i> Ver Foto</button> :
+                               isPdf ? <button onClick={() => onLinkClick(valStr, false)} className="bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"><i className="fas fa-file-pdf"></i> Ver Archivo</button> : String(v)}
                           </span>
                       </div>
                   )
@@ -1582,16 +1218,12 @@
         )
       };
 
-      // --- ASSETS VIEW (CON FILTRO DE ESTADOS) ---
       const AssetsView = ({ userContext }) => {
         const [clients, setClients] = useState([]);
         const [sites, setSites] = useState([]);
         const [floors, setFloors] = useState([]);
         const [assets, setAssets] = useState([]);
-        
-        // Estado para el filtro
         const [filterStatus, setFilterStatus] = useState('Todos');
-
         const [selClient, setSelClient] = useState('');
         const [selSite, setSelSite] = useState('');
         const [selFloor, setSelFloor] = useState(''); 
@@ -1601,22 +1233,11 @@
         const [viewMode, setViewMode] = useState('grid'); 
         const [previewFile, setPreviewFile] = useState(null);
 
-        // Carga Inicial de Clientes (el filtrado se realiza en el servidor)
         useEffect(() => {
           setLoading(true);
           runServer('getAssetsData', { action: 'getClients' })
-            .then(filteredClients => {
-              setClients(filteredClients || []);
-              // Preselección si hay clientes y ninguno seleccionado
-              if (filteredClients?.length > 0 && !selClient) {
-                setSelClient(filteredClients[0].id_cliente);
-              }
-            })
-            .catch(err => { 
-              console.error(err); 
-              setClients([]);
-            })
-            .finally(() => setLoading(false));
+            .then(filteredClients => { setClients(filteredClients || []); if (filteredClients?.length > 0 && !selClient) setSelClient(filteredClients[0].id_cliente); })
+            .catch(err => console.error(err)).finally(() => setLoading(false));
         }, [userContext]);
 
         useEffect(() => {
@@ -1624,12 +1245,7 @@
           if (selClient) { 
             setLoading(true); 
             runServer('getAssetsData', { action: 'getSites', payload: { clientId: selClient } })
-              .then(d => { 
-                setSites(d || []); 
-                // Preselección si solo hay una sede
-                if (d?.length === 1) setSelSite(d[0].id_sede);
-              })
-              .catch(err => console.error("Error sites:", err))
+              .then(d => { setSites(d || []); if (d?.length === 1) setSelSite(d[0].id_sede); })
               .finally(() => setLoading(false));
           }
         }, [selClient]);
@@ -1639,29 +1255,20 @@
           if (selSite) { 
             setLoading(true); 
             runServer('getAssetsData', { action: 'getFloors', payload: { siteId: selSite } })
-              .then(d => { 
-                setFloors(d || []); 
-                // Preselección si solo hay un piso
-                if (d?.length === 1) setSelFloor(d[0].id_piso);
-              })
-              .catch(err => console.error("Error floors:", err))
+              .then(d => { setFloors(d || []); if (d?.length === 1) setSelFloor(d[0].id_piso); })
               .finally(() => setLoading(false));
           }
         }, [selSite]);
 
         useEffect(() => {
-          setAssets([]); setSelAsset(null);
-          // Reiniciar filtro al cambiar de piso
-          setFilterStatus('Todos');
+          setAssets([]); setSelAsset(null); setFilterStatus('Todos');
           if (selFloor) {
             setLoading(true);
             const currentFloor = floors.find(f => f.id_piso === selFloor);
             setFloorInfo(currentFloor);
-            if (currentFloor?.imagen_plano_url) setViewMode('map'); else setViewMode('grid');
+            setViewMode(currentFloor?.imagen_plano_url ? 'map' : 'grid');
             runServer('getAssetsData', { action: 'getAssets', payload: { floorId: selFloor } })
-              .then(d => { setAssets(d || []); })
-              .catch(err => console.error("Error assets:", err))
-              .finally(() => setLoading(false));
+              .then(d => { setAssets(d || []); }).finally(() => setLoading(false));
           }
         }, [selFloor]);
 
@@ -1671,11 +1278,6 @@
             setPreviewFile({ url: url, type: isImage ? 'image' : 'pdf', name: fileName });
         };
 
-        const formatOptionLabel = (name, count) => {
-           return `${name} (${count || 0})`;
-        };
-
-        // --- LÓGICA DE FILTRADO ---
         const filteredAssets = useMemo(() => {
           if (filterStatus === 'Todos') return assets;
           return assets.filter(a => {
@@ -1687,7 +1289,6 @@
           });
         }, [assets, filterStatus]);
 
-        // --- CONTADORES PARA LOS BOTONES ---
         const statusCounts = useMemo(() => {
           let bueno = 0, regular = 0, malo = 0;
           assets.forEach(a => {
@@ -1699,12 +1300,9 @@
           return { bueno, regular, malo, total: assets.length };
         }, [assets]);
 
-        // --- COMPONENTE BOTÓN FILTRO ---
         const FilterPill = ({ label, count, active, color, onClick }) => {
-            let activeClass = "";
-            let dotClass = "";
-            let textClass = "";
-
+            let activeClass = active ? "bg-slate-700 text-white border-slate-700 ring-2 ring-slate-100" : "bg-white text-gray-600 border-gray-200 hover:bg-slate-50";
+            let dotClass = active ? "bg-white" : "bg-slate-400";
             if (color === 'green') {
                 activeClass = active ? "bg-green-600 text-white border-green-600 ring-2 ring-green-100" : "bg-white text-gray-600 border-gray-200 hover:bg-green-50";
                 dotClass = active ? "bg-white" : "bg-green-500";
@@ -1714,40 +1312,22 @@
             } else if (color === 'red') {
                 activeClass = active ? "bg-red-600 text-white border-red-600 ring-2 ring-red-100" : "bg-white text-gray-600 border-gray-200 hover:bg-red-50";
                 dotClass = active ? "bg-white" : "bg-red-500";
-            } else {
-                // Todos (Gris/Azul)
-                activeClass = active ? "bg-slate-700 text-white border-slate-700 ring-2 ring-slate-100" : "bg-white text-gray-600 border-gray-200 hover:bg-slate-50";
-                dotClass = active ? "bg-white" : "bg-slate-400";
             }
-
             return (
                 <button onClick={onClick} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-2 border ${activeClass}`}>
-                    <div className={`w-2 h-2 rounded-full ${dotClass}`}></div>
-                    {label}
-                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] ${active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
-                        {count}
-                    </span>
+                    <div className={`w-2 h-2 rounded-full ${dotClass}`}></div> {label}
+                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] ${active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
                 </button>
             )
         };
 
         return (
           <div className="flex flex-col h-full bg-slate-50 font-sans animate-fade-up">
-            {/* HEADER SELECTORES */}
             <div className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-5 shadow-sm flex flex-col md:flex-row gap-6 items-center justify-between z-20 sticky top-0">
                <div className="flex items-center gap-4">
-                 <div className="p-3 bg-appBlue/10 rounded-2xl text-appBlue shadow-inner">
-                    <Icon name="Database" size={24} />
-                 </div>
+                 <div className="p-3 bg-appBlue/10 rounded-2xl text-appBlue shadow-inner"><Icon name="Database" size={24} /></div>
                  <div>
-                   <h1 className="font-black text-slate-800 text-xl leading-tight flex items-center gap-2">
-                     Gestión de Activos
-                     {filteredAssets.length > 0 && (
-                        <span className="bg-green-500 text-white text-[10px] px-2 py-1 rounded-full shadow-sm animate-fade-in" title="Activos visibles">
-                           {filteredAssets.length}
-                        </span>
-                     )}
-                   </h1>
+                   <h1 className="font-black text-slate-800 text-xl leading-tight flex items-center gap-2">Gestión de Activos {filteredAssets.length > 0 && <span className="bg-green-500 text-white text-[10px] px-2 py-1 rounded-full shadow-sm animate-fade-in">{filteredAssets.length}</span>}</h1>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inventario Tecnológico</p>
                  </div>
                </div>
@@ -1755,23 +1335,23 @@
                  <div className="relative flex-1 md:w-56 group">
                    <select className="appearance-none w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-appBlue/20 transition-all hover:bg-slate-100 cursor-pointer" value={selClient} onChange={e => setSelClient(e.target.value)}>
                      <option value="">1. Seleccionar Cliente</option>
-                     {clients.map(c => <option key={c.id_cliente} value={c.id_cliente}>{formatOptionLabel(c.nombre_cliente, c.total_activos)}</option>)}
+                     {clients.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.nombre_cliente} ({c.total_activos || 0})</option>)}
                    </select>
-                   <div className="absolute right-3 top-3.5 pointer-events-none text-slate-400 group-hover:text-slate-600 transition-colors"><i className="fas fa-chevron-down text-[10px]"></i></div>
+                   <div className="absolute right-3 top-3.5 pointer-events-none text-slate-400"><i className="fas fa-chevron-down text-[10px]"></i></div>
                  </div>
                  <div className="relative flex-1 md:w-56 group">
                    <select className="appearance-none w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-appBlue/20 transition-all hover:bg-slate-100 cursor-pointer disabled:opacity-50" value={selSite} onChange={e => setSelSite(e.target.value)} disabled={!selClient}>
                      <option value="">2. Seleccionar Sede</option>
-                     {sites.map(s => <option key={s.id_sede} value={s.id_sede}>{formatOptionLabel(s.nombre_sede, s.total_activos)}</option>)}
+                     {sites.map(s => <option key={s.id_sede} value={s.id_sede}>{s.nombre_sede} ({s.total_activos || 0})</option>)}
                    </select>
-                   <div className="absolute right-3 top-3.5 pointer-events-none text-slate-400 group-hover:text-slate-600 transition-colors"><i className="fas fa-chevron-down text-[10px]"></i></div>
+                   <div className="absolute right-3 top-3.5 pointer-events-none text-slate-400"><i className="fas fa-chevron-down text-[10px]"></i></div>
                  </div>
                  <div className="relative flex-1 md:w-56 group">
                    <select className="appearance-none w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-appBlue/20 transition-all hover:bg-slate-100 cursor-pointer disabled:opacity-50" value={selFloor} onChange={e => setSelFloor(e.target.value)} disabled={!selSite}>
                      <option value="">3. Seleccionar Piso</option>
-                     {floors.map(f => <option key={f.id_piso} value={f.id_piso}>{formatOptionLabel(f.nombre_piso + (f.nivel ? ` - ${f.nivel}` : ''), f.total_activos)}</option>)}
+                     {floors.map(f => <option key={f.id_piso} value={f.id_piso}>{(f.nombre_piso || 'Piso') + (f.nivel ? ` - ${f.nivel}` : '')} ({f.total_activos || 0})</option>)}
                    </select>
-                   <div className="absolute right-3 top-3.5 pointer-events-none text-slate-400 group-hover:text-slate-600 transition-colors"><i className="fas fa-chevron-down text-[10px]"></i></div>
+                   <div className="absolute right-3 top-3.5 pointer-events-none text-slate-400"><i className="fas fa-chevron-down text-[10px]"></i></div>
                  </div>
                </div>
             </div>
@@ -1787,7 +1367,6 @@
                    </div>
                  ) : (
                    <>
-                     {/* BOTONES DE FILTRO (NUEVO) - Arriba Izquierda */}
                      <div className="absolute top-4 left-6 z-10 flex gap-2 overflow-x-auto pb-2 max-w-[70%] no-scrollbar">
                         <FilterPill label="Todos" count={statusCounts.total} active={filterStatus === 'Todos'} color="gray" onClick={() => setFilterStatus('Todos')} />
                         <FilterPill label="Bueno" count={statusCounts.bueno} active={filterStatus === 'Bueno'} color="green" onClick={() => setFilterStatus('Bueno')} />
@@ -1795,13 +1374,11 @@
                         <FilterPill label="Malo" count={statusCounts.malo} active={filterStatus === 'Malo'} color="red" onClick={() => setFilterStatus('Malo')} />
                      </div>
 
-                     {/* TOGGLE VISTA - Arriba Derecha */}
                      <div className="absolute top-4 right-6 z-10 flex bg-white rounded shadow border overflow-hidden">
                        <button onClick={()=>setViewMode('grid')} className={`px-3 py-1 text-xs font-bold ${viewMode==='grid'?'bg-gray-800 text-white':'text-gray-600 hover:bg-gray-50'}`}><i className="fas fa-th mr-1"></i> Grid</button>
                        <button onClick={()=>setViewMode('map')} disabled={!floorInfo?.imagen_plano_url} className={`px-3 py-1 text-xs font-bold ${viewMode==='map'?'bg-gray-800 text-white':'text-gray-600 hover:bg-gray-50 disabled:opacity-50'}`}><i className="fas fa-map mr-1"></i> Plano</button>
                      </div>
 
-                     {/* VISTA GRID */}
                      {viewMode === 'grid' && (
                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-14 pb-20">
                          {filteredAssets.map(asset => {
@@ -1809,9 +1386,7 @@
                            return (
                              <div key={asset.id_activo} onClick={() => setSelAsset(asset)} className="bg-white p-3 rounded-lg border shadow-sm hover:shadow-md cursor-pointer transition-all hover:-translate-y-1 group">
                                <div className="aspect-video bg-gray-100 rounded mb-2 overflow-hidden relative flex items-center justify-center">
-                                 {asset.foto_1 ? (
-                                   <img src={getAppSheetUrl(asset.foto_1)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e)=>e.target.style.display='none'}/>
-                                 ) : <i className="fas fa-cube text-gray-300 text-2xl"></i>}
+                                 {asset.foto_1 ? <img src={getAppSheetUrl(asset.foto_1)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" /> : <i className="fas fa-cube text-gray-300 text-2xl"></i>}
                                  <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-white ${dot}`}></div>
                                </div>
                                <h3 className="font-bold text-gray-800 text-xs truncate">{asset.nombre_activo}</h3>
@@ -1822,19 +1397,11 @@
                        </div>
                      )}
 
-                     {/* VISTA MAPA */}
-                     {viewMode === 'map' && (
-                       <MapViewer 
-                          imageUrl={getAppSheetUrl(floorInfo.imagen_plano_url, PISOS_TABLE_NAME)}
-                          assets={filteredAssets}
-                          onAssetClick={setSelAsset}
-                       />
-                     )}
+                     {viewMode === 'map' && <MapViewer imageUrl={getAppSheetUrl(floorInfo.imagen_plano_url, PISOS_TABLE_NAME)} assets={filteredAssets} onAssetClick={setSelAsset} />}
                    </>
                  )}
               </div>
 
-              {/* PANEL LATERAL DETALLE */}
               {selAsset && (
                 <div className="w-96 bg-white border-l shadow-2xl absolute right-0 top-0 bottom-0 z-40 flex flex-col animate-slideIn">
                   <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
@@ -1849,9 +1416,7 @@
                         </div>
                         <div>
                           <h1 className="font-bold text-gray-900 leading-tight mb-1">{selAsset.nombre_activo}</h1>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getAssetStatusColorMap(selAsset.estado_activo).badge}`}>
-                            {selAsset.estado_activo}
-                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getAssetStatusColorMap(selAsset.estado_activo).badge}`}>{selAsset.estado_activo}</span>
                         </div>
                      </div>
 
@@ -1865,38 +1430,18 @@
                        </div>
                      )}
 
-                     <JsonBlock 
-                          title="Ficha Técnica" 
-                          data={selAsset.specs} 
-                          icon="fa-microchip" 
-                          color="text-blue-600" 
-                          onLinkClick={(f, isImg) => openPreview(f, isImg)} 
-                      />
-                     <JsonBlock 
-                          title="Mantenimiento / Protocolo" 
-                          data={selAsset.protocol} 
-                          icon="fa-clipboard-check" 
-                          color="text-green-600" 
-                          date={selAsset.fecha_actualizacion} 
-                          onLinkClick={(f, isImg) => openPreview(f, isImg)} 
-                      />
+                     <JsonBlock title="Ficha Técnica" data={selAsset.specs} icon="fa-microchip" color="text-blue-600" onLinkClick={(f, isImg) => openPreview(f, isImg)} />
+                     <JsonBlock title="Mantenimiento / Protocolo" data={selAsset.protocol} icon="fa-clipboard-check" color="text-green-600" date={selAsset.fecha_actualizacion} onLinkClick={(f, isImg) => openPreview(f, isImg)} />
                   </div>
                 </div>
               )}
             </div>
 
-            {previewFile && (
-               <FileModal 
-                  fileUrl={previewFile.url}
-                  type={previewFile.type}
-                  onClose={() => setPreviewFile(null)}
-               />
-            )}
+            {previewFile && <FileModal fileUrl={previewFile.url} type={previewFile.type} onClose={() => setPreviewFile(null)} />}
           </div>
         );
       };
 
-      // --- HOME DASHBOARD ---
       const HomeDashboard = ({ userContext, requests, setView, isSyncing }) => {
         const canvasRef = useRef(null);
         const chartInstance = useRef(null);
@@ -1904,31 +1449,21 @@
         const stats = useMemo(() => {
           const total = requests.length;
           const pending = requests.filter((r) => (r.Estado || "").trim() !== "Cerrado").length;
-          const completed = requests.filter((r) => (r.Estado || "").trim() === "Cerrado").length;
+          const completed = total - pending;
           return { total, pending, completed };
         }, [requests]);
 
         useEffect(() => {
           if (canvasRef.current && typeof Chart !== 'undefined') {
             if (chartInstance.current) chartInstance.current.destroy();
-            
             const ctx = canvasRef.current.getContext('2d');
             chartInstance.current = new Chart(ctx, {
               type: 'doughnut',
               data: {
                 labels: ['Abiertos', 'Cerrados'],
-                datasets: [{
-                  data: [stats.pending, stats.completed],
-                  backgroundColor: ['#0033A0', '#10b981'],
-                  borderWidth: 0,
-                  hoverOffset: 4
-                }]
+                datasets: [{ data: [stats.pending, stats.completed], backgroundColor: ['#0033A0', '#10b981'], borderWidth: 0, hoverOffset: 4 }]
               },
-              options: {
-                cutout: '75%',
-                plugins: { legend: { display: false } },
-                maintainAspectRatio: false
-              }
+              options: { cutout: '75%', plugins: { legend: { display: false } }, maintainAspectRatio: false }
             });
           }
           return () => { if (chartInstance.current) chartInstance.current.destroy(); };
@@ -1950,7 +1485,6 @@
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
-              {/* Tarjeta Principal de Gráfico */}
               <div className="lg:col-span-2 glass p-8 rounded-3xl shadow-2xl shadow-slate-200/50 flex items-center gap-8 group">
                 <div className="relative w-40 h-40 flex-shrink-0">
                   <canvas ref={canvasRef}></canvas>
@@ -1974,9 +1508,7 @@
                         <div className="text-xl font-black text-slate-800">{stats.completed}</div>
                       </div>
                    </div>
-                   <button onClick={() => setView("history")} className="w-full mt-2 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition-all active:scale-95 shadow-lg shadow-slate-200">
-                     Ver Listado Completo
-                   </button>
+                   <button onClick={() => setView("history")} className="w-full mt-2 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 shadow-lg shadow-slate-200">Ver Listado Completo</button>
                 </div>
               </div>
 
@@ -1997,27 +1529,25 @@
             </div>
 
             <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 flex items-center gap-2">
-              <div className="h-[1px] bg-slate-200 flex-1"></div>
-              Acceso Directo
-              <div className="h-[1px] bg-slate-200 flex-1"></div>
+              <div className="h-[1px] bg-slate-200 flex-1"></div> Acceso Directo <div className="h-[1px] bg-slate-200 flex-1"></div>
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <button onClick={() => setView("process")} className="flex items-center justify-between p-6 glass rounded-2xl hover:bg-slate-50 transition-all border-l-4 border-yellow-400 shadow-sm group">
+               <button onClick={() => setView("process")} className="flex items-center justify-between p-6 glass rounded-2xl hover:bg-slate-50 border-l-4 border-yellow-400 shadow-sm group">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-yellow-50 text-yellow-600 rounded-xl group-hover:rotate-12 transition-transform"><Icon name="Clock" size={20} /></div>
                     <div className="text-left"><div className="text-sm font-black text-slate-800">Tickets Activos</div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Ver pendientes</div></div>
                   </div>
                   <Icon name="ChevronRight" size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
                </button>
-               <button onClick={() => setView("history")} className="flex items-center justify-between p-6 glass rounded-2xl hover:bg-slate-50 transition-all border-l-4 border-appBlue shadow-sm group">
+               <button onClick={() => setView("history")} className="flex items-center justify-between p-6 glass rounded-2xl hover:bg-slate-50 border-l-4 border-appBlue shadow-sm group">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-blue-50 text-appBlue rounded-xl group-hover:rotate-12 transition-transform"><Icon name="History" size={20} /></div>
                     <div className="text-left"><div className="text-sm font-black text-slate-800">Historial</div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Registro completo</div></div>
                   </div>
                   <Icon name="ChevronRight" size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
                </button>
-               <button onClick={() => setView("config")} className="flex items-center justify-between p-6 glass rounded-2xl hover:bg-slate-50 transition-all border-l-4 border-slate-400 shadow-sm group">
+               <button onClick={() => setView("config")} className="flex items-center justify-between p-6 glass rounded-2xl hover:bg-slate-50 border-l-4 border-slate-400 shadow-sm group">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-slate-100 text-slate-600 rounded-xl group-hover:rotate-12 transition-transform"><Icon name="Settings" size={20} /></div>
                     <div className="text-left"><div className="text-sm font-black text-slate-800">Ajustes</div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Sincronización</div></div>
@@ -2029,76 +1559,35 @@
         );
       };
 
-      // --- REQUEST DETAIL (✅ AHORA CON FORMATO DE FECHA CO & PROXY FILE OPEN) ---
       const RequestDetail = ({ requestId, onBack, preloadedData, cachedDetails }) => {
         const cache = cachedDetails?.[requestId] || null;
-        
-        const [data, setData] = useState(
-          cache
-            ? { 
-                header: preloadedData, 
-                services: cache.services || [], 
-                history: cache.history || [], 
-                docs: cache.documents || [], 
-                activos: cache.activos || [] 
-              }
-            : (preloadedData ? { header: preloadedData, services: [], history: [], docs: [], activos: [] } : null)
-        );
+        const [data, setData] = useState(cache ? { header: preloadedData, services: cache.services || [], history: cache.history || [], docs: cache.documents || [], activos: cache.activos || [] } : (preloadedData ? { header: preloadedData, services: [], history: [], docs: [], activos: [] } : null));
         const [loading, setLoading] = useState(!cache);
-        const [error, setError] = useState(null);
         
         useEffect(() => {
           if (!cache) {
             setLoading(true);
             runServer("getRequestDetail", { id: requestId })
-              .then((res) => {
-                setData({
-                  header: res.header || preloadedData,
-                  services: res.services || [],
-                  history: res.history || [],
-                  docs: res.documents || [],
-                  activos: res.activos || [] 
-                });
-              })
-              .catch((e) => !preloadedData && setError(e.message))
+              .then((res) => { setData({ header: res.header || preloadedData, services: res.services || [], history: res.history || [], docs: res.documents || [], activos: res.activos || [] }); })
               .finally(() => setLoading(false));
           }
         }, [requestId, cache]);
 
-        if (!data && loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
-        if (error && !data) return <div className="p-10 text-red-600">Error: {error}</div>;
+        if (loading) return <div className="p-10"><div className="skeleton h-10 w-1/3 rounded mb-4"></div><div className="skeleton h-64 w-full rounded"></div></div>;
 
-        const pickAny = (obj, keys) => { if (!obj) return ""; const objKeys = Object.keys(obj); for (const k of keys) { const direct = obj?.[k]; if (direct !== undefined && direct !== null && String(direct).trim() !== "") return direct; const altKey = objKeys.find((x) => String(x).trim() === String(k).trim()); const alt = altKey ? obj?.[altKey] : ""; if (alt !== undefined && alt !== null && String(alt).trim() !== "") return alt; } return ""; };
         const pick = (obj, keys) => { for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && String(v).trim() !== "") return v; } return ""; };
         
-        // Formato Colombia
         const fmtDate = (v) => { 
             if (!v) return "-"; 
             const d = new Date(v); 
             if (isNaN(d.getTime())) return String(v); 
-            return new Intl.DateTimeFormat("es-CO", {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: true,
-                timeZone: "America/Bogota"
-            }).format(d);
+            return new Intl.DateTimeFormat("es-CO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: "America/Bogota" }).format(d);
         };
         
-        // ✅ FUNCIÓN DE APERTURA DE ANEXOS USANDO PROXY (Sin pedir acceso a Drive)
         const openAnexo = (doc) => {
-          // 1. Obtenemos el ID único del anexo en la base de datos
-          const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID"]) || "").trim();
-          
-          if (!anexoId) {
-             alert("Error: Identificador de anexo no encontrado.");
-             return;
-          }
-
-          // 2. Construimos la URL "Puente" usando la variable global SCRIPT_URL
-          const proxyUrl = `${SCRIPT_URL}?v=archivo&id=${encodeURIComponent(anexoId)}`;
-
-          // 3. Abrimos esa URL en nueva pestaña
-          window.open(proxyUrl, "_blank");
+          const anexoId = String(doc?.["ID Solicitudes anexos"] || doc?.["ID Solicitud anexos"] || doc?.["ID Anexo"] || doc?.["ID"] || "").trim();
+          if (!anexoId) { alert("Error: Identificador de anexo no encontrado."); return; }
+          window.open(`${SCRIPT_URL}?v=archivo&id=${encodeURIComponent(anexoId)}`, "_blank");
         };
 
         const Card = ({ title, children, count }) => (
@@ -2114,23 +1603,19 @@
         return (
           <div className="p-10 max-w-7xl mx-auto animate-fade-up">
             <button onClick={onBack} className="mb-8 text-slate-400 hover:text-slate-800 flex items-center gap-2 text-xs font-black uppercase tracking-widest group transition-colors">
-              <div className="p-2 rounded-full group-hover:bg-slate-100 transition-colors"><Icon name="ChevronRight" className="rotate-180" size={14} /></div> Volver al listado
+              <div className="p-2 rounded-full group-hover:bg-slate-100"><Icon name="ChevronRight" className="rotate-180" size={14} /></div> Volver al listado
             </button>
             <div className="grid grid-cols-12 gap-8">
               <div className="col-span-12 lg:col-span-8">
                 <Card title="Información Detallada">
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 max-h-[700px] overflow-y-auto custom-scrollbar">
-                    {Object.entries(data.header || {}).map(([key, value]) => {
+                    {Object.entries(data?.header || {}).map(([key, value]) => {
                       if (!value || value === "0" || key.includes("_rownumber") || key === "Estado" || key === "ID Solicitud") return null;
-                      
-                      const isDate = key.toLowerCase().includes("fecha");
-                      const displayVal = isDate ? fmtDate(value) : value;
-
                       return (
                         <div key={key} className="group transition-all">
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-appBlue transition-colors">{key}</div>
-                          <div className="text-sm text-slate-700 font-bold leading-relaxed break-words whitespace-pre-wrap">{displayVal}</div>
-                          <div className="h-[1px] bg-slate-50 w-full mt-2 group-hover:bg-slate-200 transition-all"></div>
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-appBlue">{key}</div>
+                          <div className="text-sm text-slate-700 font-bold leading-relaxed break-words whitespace-pre-wrap">{key.toLowerCase().includes("fecha") ? fmtDate(value) : value}</div>
+                          <div className="h-[1px] bg-slate-50 w-full mt-2"></div>
                         </div>
                       );
                     })}
@@ -2139,14 +1624,13 @@
               </div>
               <div className="col-span-12 lg:col-span-4">
                 <div className="glass p-8 rounded-3xl shadow-2xl shadow-slate-100 border border-slate-100 text-center mb-8 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
                   <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-3">Estado del Ticket</div>
-                  <div className={`text-3xl font-black mb-4 uppercase tracking-tight ${getStatusTextColor(data.header?.["Estado"])}`}>{data.header?.["Estado"] || "Desconocido"}</div>
-                  <div className="px-4 py-2 bg-slate-50 text-slate-500 text-xs font-black rounded-2xl inline-block border border-slate-100">Ticket #: {data.header?.["Ticket G4S"] || data.header?.["ID Solicitud"] || "N/A"}</div>
+                  <div className={`text-3xl font-black mb-4 uppercase tracking-tight ${getStatusTextColor(data?.header?.["Estado"])}`}>{data?.header?.["Estado"] || "Desconocido"}</div>
+                  <div className="px-4 py-2 bg-slate-50 text-slate-500 text-xs font-black rounded-2xl inline-block border border-slate-100">Ticket #: {data?.header?.["Ticket G4S"] || "N/A"}</div>
                 </div>
                 
-                <Card title="Observaciones" count={data.services?.length || 0}>
-                  {data.services && data.services.length > 0 ? (
+                <Card title="Observaciones" count={data?.services?.length || 0}>
+                  {data?.services && data.services.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
                       {data.services.map((s, i) => (
                         <li key={i} className="px-4 py-3 text-sm flex justify-between items-center hover:bg-gray-50">
@@ -2155,51 +1639,45 @@
                         </li>
                       ))}
                     </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400">No hay observaciones.</div>)}
+                  ) : <div className="p-4 text-center text-xs text-gray-400">No hay observaciones.</div>}
                 </Card>
 
-                <Card title="Activos Asociados" count={data.activos?.length || 0}>
-                  {data.activos && data.activos.length > 0 ? (
+                <Card title="Activos Asociados" count={data?.activos?.length || 0}>
+                  {data?.activos && data.activos.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
                       {data.activos.map((a, i) => (
                         <li key={i} className="px-4 py-2 hover:bg-gray-50">
                           <div className="flex items-start gap-2 mb-1">
                              <div className="mt-0.5 shrink-0"><Icon name="Monitor" size={16} className="text-gray-500" /></div>
-                             <span className="text-xs font-bold text-gray-700 break-words whitespace-pre-wrap">{pick(a, ["Nombre Activo", "Nombre"])}</span>
+                             <span className="text-xs font-bold text-gray-700">{pick(a, ["Nombre Activo", "Nombre"])}</span>
                           </div>
-                          <div className="text-[10px] text-gray-500 ml-6">
-                            QR: <span className="font-mono bg-gray-100 px-1 rounded">{pick(a, ["QR", "QR Serial"])}</span>
-                            {pick(a, ["Observaciones", "Observacion"]) && <span className="block mt-1 text-gray-400 break-words whitespace-pre-wrap">"{pick(a, ["Observaciones", "Observacion"])}"</span>}
-                          </div>
+                          <div className="text-[10px] text-gray-500 ml-6">QR: <span className="font-mono bg-gray-100 px-1 rounded">{pick(a, ["QR", "QR Serial"])}</span></div>
                         </li>
                       ))}
                     </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400">No hay activos vinculados.</div>)}
+                  ) : <div className="p-4 text-center text-xs text-gray-400">No hay activos vinculados.</div>}
                 </Card>
                 
-                <Card title="Anexos" count={data.docs?.length || 0}>
-                  {data.docs && data.docs.length > 0 ? (
+                <Card title="Anexos" count={data?.docs?.length || 0}>
+                  {data?.docs && data.docs.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
                       {data.docs.map((doc, i) => (
                         <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
                           <div className="text-red-500"><Icon name="FileText" size={16} /></div>
                           <div className="flex-1 overflow-hidden">
-                            <div className="text-gray-700 text-xs font-medium break-words whitespace-pre-wrap">{pick(doc, ["Nombre"]) || "Documento"}</div>
+                            <div className="text-gray-700 text-xs font-medium truncate">{pick(doc, ["Nombre"]) || "Documento"}</div>
                             <div className="text-[10px] text-gray-400">{pick(doc, ["Tipo anexo"])} · {fmtDate(pick(doc, ["Fecha Actualización"]))}</div>
                           </div>
-                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc); }} className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50">
-                            Abrir
-                          </button>
+                          <button onClick={() => openAnexo(doc)} className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50">Abrir</button>
                         </li>
                       ))}
                     </ul>
-                  ) : (<div className="p-4 text-center text-xs text-gray-400">No hay adjuntos.</div>)}
+                  ) : <div className="p-4 text-center text-xs text-gray-400">No hay adjuntos.</div>}
                 </Card>
 
-                {/* ✅ MODIFICACIÓN EN EL HISTORIAL PARA LEER 'Estado actual' */}
-                <Card title="Historial" count={data.history?.length || 0}>
+                <Card title="Historial" count={data?.history?.length || 0}>
                   <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                    {data.history && data.history.map((h, i) => (
+                    {data?.history && data.history.map((h, i) => (
                       <li key={i} className="px-4 py-2 hover:bg-gray-50">
                         <div className="text-xs font-bold text-gray-700">{pick(h, ["Estado actual", "Estado Actual", "Estado"])}</div>
                         <div className="text-[10px] text-gray-400">{fmtDate(pick(h, ["Fecha Actualización"]))}</div>
@@ -2213,7 +1691,6 @@
         );
       };
 
-      // --- REQUEST LIST ---
       const RequestList = ({ setView, setSelectedRequest, initialData, onRefresh, refreshing }) => {
         const [filter, setFilter] = useState("Todo");
         const [search, setSearch] = useState("");
@@ -2231,8 +1708,7 @@
             const q = search.toLowerCase();
             result = result.filter((req) => (String(req["Ticket G4S"]) + String(req["ID Solicitud"]) + String(req["Estado"]) + String(req["Clasificación"])).toLowerCase().includes(q));
           }
-          setFilteredRequests(result);
-          setPage(1);
+          setFilteredRequests(result); setPage(1);
         }, [requests, filter, search]);
 
         const paginatedData = filteredRequests.slice((page - 1) * 50, page * 50);
@@ -2244,17 +1720,16 @@
               <div>
                 <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-1">Listado de Tickets</h1>
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  {filteredRequests.length} Solicitudes encontradas
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> {filteredRequests.length} Solicitudes encontradas
                 </p>
               </div>
               
               <div className="flex items-center gap-3 w-full md:w-auto">
                 <div className="relative flex-1 md:w-72 group">
-                  <div className="absolute left-4 top-3 text-slate-300 group-focus-within:text-appBlue transition-colors"><Icon name="Search" size={18} /></div>
-                  <input type="text" className="w-full pl-12 pr-4 py-2.5 bg-white border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-appBlue/5 focus:border-appBlue/20 transition-all shadow-sm" placeholder="Filtrar por ticket, usuario o estado..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <div className="absolute left-4 top-3 text-slate-300"><Icon name="Search" size={18} /></div>
+                  <input type="text" className="w-full pl-12 pr-4 py-2.5 bg-white border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none shadow-sm" placeholder="Filtrar por ticket, usuario o estado..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
-                <button onClick={onRefresh} disabled={refreshing} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-appBlue hover:border-appBlue/20 hover:bg-slate-50 transition-all rounded-2xl shadow-sm active:scale-90" title="Actualizar Datos">
+                <button onClick={onRefresh} disabled={refreshing} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-appBlue rounded-2xl shadow-sm" title="Actualizar Datos">
                   <Icon name="RefreshCw" size={20} className={refreshing ? "animate-spin text-appBlue" : ""} />
                 </button>
               </div>
@@ -2262,7 +1737,7 @@
 
             <div className="flex gap-3 mb-6">
               {["Todo", "Abierto", "Cerrado"].map((f) => (
-                <button key={f} onClick={() => setFilter(f)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm ${filter === f ? "bg-slate-800 text-white shadow-lg shadow-slate-200" : "bg-white border border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}>{f}</button>
+                <button key={f} onClick={() => setFilter(f)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm ${filter === f ? "bg-slate-800 text-white shadow-lg" : "bg-white text-slate-400 hover:bg-slate-50"}`}>{f}</button>
               ))}
             </div>
 
@@ -2277,24 +1752,24 @@
               <div className="overflow-y-auto flex-1">
                 {paginatedData.length === 0 ? <div className="p-10 text-center text-slate-400">No hay tickets coincidentes.</div> :
                   paginatedData.map((req, i) => (
-                    <div key={i} onClick={() => { setSelectedRequest(req); setView("detail"); }} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer text-sm items-center transition-all group active:scale-[0.99]">
-                      <div className="col-span-2 font-black text-appBlue truncate group-hover:underline">{req["Ticket G4S"] || req["ID Solicitud"] || "N/A"}</div>
-                      <div className="col-span-2 text-xs font-bold text-slate-400 uppercase tracking-tighter">{req["Fecha creación cliente"] ? new Date(req["Fecha creación cliente"]).toLocaleDateString() : "-"}</div>
-                      <div className="col-span-3 flex flex-col"><span className="truncate font-bold text-slate-700">{req["Usuario Actualización"] || req["Responsable"] || "Desconocido"}</span></div>
+                    <div key={i} onClick={() => { setSelectedRequest(req); setView("detail"); }} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer text-sm items-center transition-all group">
+                      <div className="col-span-2 font-black text-appBlue truncate group-hover:underline">{req["Ticket G4S"] || "N/A"}</div>
+                      <div className="col-span-2 text-xs font-bold text-slate-400 tracking-tighter">{req["Fecha creación cliente"] ? new Date(req["Fecha creación cliente"]).toLocaleDateString() : "-"}</div>
+                      <div className="col-span-3 truncate font-bold text-slate-700">{req["Usuario Actualización"] || "Desconocido"}</div>
                       <div className="col-span-3 flex flex-col"><span className="truncate font-black text-slate-800">{req["Clasificación"] || "General"}</span><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{req["Prioridad Solicitud"] || "-"}</span></div>
                       <div className="col-span-2 text-right flex justify-end items-center gap-2">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusBadgeColor(req["Estado"])}`}>{req["Estado"] || "Desconocido"}</span>
-                        <Icon name="ChevronRight" size={14} className="text-slate-200 group-hover:text-slate-400 transition-colors" />
+                        <Icon name="ChevronRight" size={14} className="text-slate-200 group-hover:text-slate-400" />
                       </div>
                     </div>
                   ))
                 }
               </div>
               {totalPages > 1 && (
-                <div className="px-8 py-4 border-t border-slate-50 flex justify-between bg-slate-50/20 items-center">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-white border border-slate-100 rounded-xl hover:bg-slate-50 disabled:opacity-30 transition-all active:scale-95 shadow-sm">Anterior</button>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Página {page} de {totalPages}</span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-white border border-slate-100 rounded-xl hover:bg-slate-50 disabled:opacity-30 transition-all active:scale-95 shadow-sm">Siguiente</button>
+                <div className="px-8 py-4 border-t flex justify-between bg-slate-50/20 items-center">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-[10px] font-black px-4 py-2 bg-white border rounded-xl shadow-sm">Anterior</button>
+                  <span className="text-[10px] font-black text-slate-400 uppercase">Página {page} de {totalPages}</span>
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-[10px] font-black px-4 py-2 bg-white border rounded-xl shadow-sm">Siguiente</button>
                 </div>
               )}
             </div>
@@ -2302,27 +1777,22 @@
         );
       };
 
-      // --- MAIN APP ---
       const App = () => {
         const [userCtx, setUserCtx] = useState(null);
         const [initialData, setInitialData] = useState(null); 
         const [detailsCache, setDetailsCache] = useState({}); 
         const [view, setView] = useState("create");
         const [selectedRequest, setSelectedRequest] = useState(null);
-        
         const [isSyncing, setIsSyncing] = useState(false);
-        const [syncStep, setSyncStep] = useState(""); 
         const [lastSyncRequests, setLastSyncRequests] = useState(null);
         const [lastSyncDetails, setLastSyncDetails] = useState(null);
         const [syncReport, setSyncReport] = useState(null); 
-        
         const [toast, setToast] = useState(null);
         const [loginError, setLoginError] = useState(null); 
         const [isCheckingCache, setIsCheckingCache] = useState(true);
 
         const showToast = (msg) => setToast(msg);
 
-        // --- MANEJO DE LOCALSTORAGE ---
         const CACHE_KEY_REQUESTS = (email) => `cache_data_it_${email}`;
         const CACHE_KEY_DETAILS = (email) => `cache_details_it_${email}`;
         const CACHE_KEY_CONTEXT = (email) => `cache_context_it_${email}`;
@@ -2330,101 +1800,56 @@
         const loadFromCache = (email) => {
           if (!email) return { requests: null, details: null, ctx: null };
           const safeEmail = email.toLowerCase();
-          
           let requests = null, details = null, ctx = null;
           try {
-            const r = localStorage.getItem(CACHE_KEY_REQUESTS(safeEmail));
-            if (r) requests = JSON.parse(r);
-            
-            const d = localStorage.getItem(CACHE_KEY_DETAILS(safeEmail));
-            if (d) details = JSON.parse(d);
-
-            const c = localStorage.getItem(CACHE_KEY_CONTEXT(safeEmail));
-            if (c) ctx = JSON.parse(c);
-          } catch(e) { console.error("Cache load error", e); }
-          
+            const r = localStorage.getItem(CACHE_KEY_REQUESTS(safeEmail)); if (r) requests = JSON.parse(r);
+            const d = localStorage.getItem(CACHE_KEY_DETAILS(safeEmail)); if (d) details = JSON.parse(d);
+            const c = localStorage.getItem(CACHE_KEY_CONTEXT(safeEmail)); if (c) ctx = JSON.parse(c);
+          } catch(e) { console.error(e); }
           return { requests, details, ctx };
         };
 
         const saveRequestsToCache = (email, data) => {
-          if (!email) return;
-          const ts = Date.now();
+          if (!email) return; const ts = Date.now();
           localStorage.setItem(CACHE_KEY_REQUESTS(email.toLowerCase()), JSON.stringify({ data, timestamp: ts }));
           setLastSyncRequests(ts);
         };
 
         const saveDetailsToCache = (email, cacheMap) => {
-          if (!email) return;
-          const ts = Date.now();
+          if (!email) return; const ts = Date.now();
           try {
             localStorage.setItem(CACHE_KEY_DETAILS(email.toLowerCase()), JSON.stringify({ data: cacheMap, timestamp: ts }));
             setLastSyncDetails(ts);
-          } catch (e) {
-            console.warn("Storage Full?", e);
-            showToast("⚠️ Memoria llena: No se pudieron guardar todos los detalles offline.");
-          }
-        };
-
-        const clearLocalCache = () => {
-          localStorage.clear();
-          showToast("Datos eliminados. Recargando...");
-          setTimeout(() => window.location.reload(), 1000);
+          } catch (e) { showToast("⚠️ Memoria llena en almacenamiento local offline."); }
         };
 
         const refreshData = async (manual = false, emailOverride = null) => {
           const email = emailOverride || (userCtx ? userCtx.email : null);
           if (!email || isSyncing) return;
-
           setIsSyncing(true);
-          setSyncStep("requests");
-          if (manual) showToast("1/2 Descargando Solicitudes...");
-
+          if (manual) showToast("1/2 Sincronizando Solicitudes...");
           try {
-            // PASO 1: SOLICITUDES
             const reqData = await runServer("getRequests", {});
-            setInitialData(reqData);
-            saveRequestsToCache(email, reqData);
+            setInitialData(reqData); saveRequestsToCache(email, reqData);
 
-            // PASO 2: TABLAS ANEXAS
             if (reqData.data && reqData.data.length > 0) {
-              setSyncStep("details");
-              if (manual) showToast(`2/2 Descargando tablas anexas (${reqData.data.length} tickets)...`);
-              
+              if (manual) showToast(`2/2 Descargando logs estructurados (${reqData.data.length} tickets)...`);
               const allIds = reqData.data.map(r => r["ID Solicitud"]).filter(Boolean);
               const chunkSize = 40;
               let newDetails = { ...detailsCache }; 
-              
               const chunkPromises = [];
               for (let i = 0; i < allIds.length; i += chunkSize) {
-                const chunk = allIds.slice(i, i + chunkSize);
-                chunkPromises.push(runServer("getBatchRequestDetails", { ids: chunk }));
+                chunkPromises.push(runServer("getBatchRequestDetails", { ids: allIds.slice(i, i + chunkSize) }));
               }
-              
-              const parallelBatchSize = 5;
-              for (let i = 0; i < chunkPromises.length; i += parallelBatchSize) {
-                 const currentBatch = chunkPromises.slice(i, i + parallelBatchSize);
-                 const results = await Promise.all(currentBatch);
-                 results.forEach(res => { newDetails = { ...newDetails, ...res }; });
-                 console.log(`Lote paralelo ${i / parallelBatchSize + 1} completado.`);
-              }
+              const results = await Promise.all(chunkPromises);
+              results.forEach(res => { newDetails = { ...newDetails, ...res }; });
 
-              setDetailsCache(newDetails);
-              saveDetailsToCache(email, newDetails);
+              setDetailsCache(newDetails); saveDetailsToCache(email, newDetails);
               updateSyncReport(reqData.data.length, newDetails);
-            } else {
-               setLastSyncDetails(Date.now());
-               updateSyncReport(0, {});
-            }
-
+            } else { setLastSyncDetails(Date.now()); updateSyncReport(0, {}); }
             if (manual) showToast("✅ Sincronización completa.");
-
-          } catch (e) {
-            console.error("Sync Error", e);
-            if (manual) showToast("❌ Error de conexión: " + e.message);
-          } finally {
-            setIsSyncing(false);
-            setSyncStep("");
-          }
+          } catch (e) { if (manual) showToast("❌ Error: " + e.message); } 
+          finally { setIsSyncing(false); }
         };
 
         const updateSyncReport = (reqCount, detailsMap) => {
@@ -2437,146 +1862,60 @@
           setSyncReport({ requests: reqCount, obs, hist, anx });
         };
 
-        // ✅ MANEJADOR PARA REFRESCAR SOLO EL CONTEXTO (CLIENTES/PERMISOS)
         const handleRefreshContext = async () => {
           if (!userCtx || !userCtx.email) return;
           showToast("Actualizando permisos de cliente...");
           try {
-            // Llamamos con ignoreCache: true
             const newCtx = await runServer("getUserContext", { ignoreCache: true });
-            
-            // Actualizamos estado y almacenamiento local
             setUserCtx(newCtx);
             localStorage.setItem("last_active_email_it", newCtx.email);
             localStorage.setItem(CACHE_KEY_CONTEXT(newCtx.email), JSON.stringify(newCtx));
-            
             showToast("✅ Clientes actualizados.");
-            // Refrescar datos automáticamente con los nuevos permisos
             refreshData(false, newCtx.email); 
-          } catch (e) {
-            console.error("Error refresh context", e);
-            showToast("❌ Error actualizando permisos.");
-          }
+          } catch (e) { showToast("❌ Error actualizando permisos."); }
         };
 
-        const handleLoginAttempt = async (email) => {
-          let targetEmail = email ? email.toLowerCase() : localStorage.getItem("last_active_email_it");
+        const handleLoginAttempt = async () => {
+          let targetEmail = localStorage.getItem("last_active_email_it");
           let cacheFound = false;
-
           if (targetEmail) {
             const { requests, details, ctx } = loadFromCache(targetEmail);
             if (ctx && requests?.data) {
-              const hasClients = ctx.allowedClientIds && ctx.allowedClientIds.length > 0;
-              const isAdmin = ctx.isAdmin;
-
-              if (hasClients || isAdmin) {
-                  console.log(`⚡ Carga Instantánea para: ${targetEmail}`);
-                  setUserCtx(ctx);
-                  setInitialData(requests.data);
-                  setLastSyncRequests(requests.timestamp);
-                  
-                  if (details?.data) {
-                    setDetailsCache(details.data);
-                    setLastSyncDetails(details.timestamp);
-                    updateSyncReport(requests.data.data.length, details.data);
-                  }
-                  
-                  setView("home");
-                  cacheFound = true;
-              }
+              setUserCtx(ctx); setInitialData(requests.data); setLastSyncRequests(requests.timestamp);
+              if (details?.data) { setDetailsCache(details.data); setLastSyncDetails(details.timestamp); updateSyncReport(requests.data.data.length, details.data); }
+              setView("home"); cacheFound = true;
             }
           }
-
           setIsCheckingCache(false);
-          
           try {
             if (!cacheFound) setIsSyncing(true);
             const serverCtx = await runServer("getUserContext", {});
             const realEmail = (serverCtx.email || "").toLowerCase();
-            
-            // 1. Validar existencia usuario
-            if (!serverCtx.isValidUser) {
+            if (!serverCtx.isValidUser || (!serverCtx.isAdmin && (!serverCtx.allowedClientIds || serverCtx.allowedClientIds.length === 0))) {
                  throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
             }
-
-            // 2. Validar Clientes Asignados (Si no es admin)
-            if (!serverCtx.isAdmin && (!serverCtx.allowedClientIds || serverCtx.allowedClientIds.length === 0)) {
-                 throw new Error("Acceso no autorizado: Su usuario no tiene permisos registrados en el sistema.");
-            }
-            
             localStorage.setItem("last_active_email_it", realEmail);
             localStorage.setItem(CACHE_KEY_CONTEXT(realEmail), JSON.stringify(serverCtx));
             setUserCtx(serverCtx);
-
-            if (!cacheFound) {
-              setView("home");
-              refreshData(true, realEmail); 
-            } else {
-              refreshData(false, realEmail);
-            }
-          } catch (e) {
-            console.error("Login Error", e);
-            if (!cacheFound) {
-                 setLoginError(e.message);
-            }
-            setIsSyncing(false);
-          }
+            refreshData(!cacheFound, realEmail);
+            if (!cacheFound) setView("home");
+          } catch (e) { if (!cacheFound) setLoginError(e.message); setIsSyncing(false); }
         };
 
-        useEffect(() => { 
-          const lastEmail = localStorage.getItem("last_active_email_it"); 
-          if (lastEmail) handleLoginAttempt(null); 
-          else setIsCheckingCache(false); 
-        }, []);
+        useEffect(() => { handleLoginAttempt(); }, []);
 
-        if (!userCtx) return (
-            <LoginView 
-                onSuccess={() => handleLoginAttempt(null)} 
-                isCheckingCache={isCheckingCache} 
-                externalError={loginError}
-                onClearError={() => setLoginError(null)}
-            />
-        );
+        if (!userCtx) return <LoginView onSuccess={handleLoginAttempt} isCheckingCache={isCheckingCache} externalError={loginError} onClearError={() => setLoginError(null)} />
 
         return (
           <div className="flex h-screen bg-gray-100 text-gray-800 animate-fade-in">
-            <Sidebar 
-              currentView={view} 
-              setView={setView} 
-              onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }} 
-              userContext={userCtx} 
-              lastSyncRequests={lastSyncRequests} 
-              lastSyncDetails={lastSyncDetails} 
-              isSyncing={isSyncing}
-              onRefreshContext={handleRefreshContext} 
-            />
+            <Sidebar currentView={view} setView={setView} onLogout={() => { setUserCtx(null); localStorage.removeItem("last_active_email_it"); }} userContext={userCtx} lastSyncRequests={lastSyncRequests} lastSyncDetails={lastSyncDetails} isSyncing={isSyncing} onRefreshContext={handleRefreshContext} />
             <div className="flex-1 ml-64 overflow-y-auto">
-              {view === "home" ? (
-                <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} />
-              ) : view === "assets" ? (
-                <AssetsView userContext={userCtx} />
-              ) : view === "detail" && selectedRequest ? (
-                <RequestDetail 
-                  requestId={selectedRequest["ID Solicitud"]} 
-                  preloadedData={selectedRequest} 
-                  cachedDetails={detailsCache} 
-                  onBack={() => setView("history")} 
-                />
-              ) : view === "create" ? (
-                <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} />
-              ) : view === "config" ? (
-                <ConfigurationView 
-                  userContext={userCtx} 
-                  onForceSync={() => refreshData(true)} 
-                  onClearCache={clearLocalCache} 
-                  isSyncing={isSyncing} 
-                  lastSyncRequests={lastSyncRequests} 
-                  lastSyncDetails={lastSyncDetails} 
-                  syncReport={syncReport} 
-                />
-              ) : (
-                <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />
-              )}
+              {view === "home" ? <HomeDashboard userContext={userCtx} requests={initialData?.data || []} setView={setView} isSyncing={isSyncing} /> :
+               view === "assets" ? <AssetsView userContext={userCtx} /> :
+               view === "detail" && selectedRequest ? <RequestDetail requestId={selectedRequest["ID Solicitud"]} preloadedData={selectedRequest} cachedDetails={detailsCache} onBack={() => setView("history")} /> :
+               view === "create" ? <CreateRequest userContext={userCtx} setView={setView} onRefresh={() => refreshData(true)} showToast={showToast} /> :
+               view === "config" ? <ConfigurationView userContext={userCtx} onForceSync={() => refreshData(true)} onClearCache={() => { localStorage.clear(); window.location.reload(); }} isSyncing={isSyncing} lastSyncRequests={lastSyncRequests} lastSyncDetails={lastSyncDetails} syncReport={syncReport} /> :
+               <RequestList setView={setView} setSelectedRequest={setSelectedRequest} initialData={initialData} onRefresh={() => refreshData(true)} refreshing={isSyncing} />}
             </div>
             {toast && <Toast message={toast} onClose={() => setToast(null)} />}
           </div>

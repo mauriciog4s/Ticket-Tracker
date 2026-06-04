@@ -1,33 +1,20 @@
 /**
- * ------------------------------------------------------------------
- * CONFIGURACIÓN Y MAPEO DE HOJAS
- * ------------------------------------------------------------------
+ * ==================================================================
+ * CONFIGURACIÓN DE TABLAS
+ * ==================================================================
  */
 
-/**
- * Obtiene la configuración de BigQuery desde ScriptProperties o valores por defecto.
- * Se recomienda almacenar la clave privada en ScriptProperties por seguridad (BQ_PRIVATE_KEY).
- * @returns {Object} Objeto con las credenciales de BigQuery.
- */
-function _getBQConfig() {
-  const props = PropertiesService.getScriptProperties().getProperties();
-  return {
-    private_key: props.BQ_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC8pIXxJuXj2kgo\n3eJ0CuRG7QdZXazXTfTFt04VL6B9b2q+kHyR8UDefeg3LhaYq19jxazqoMvqFsQV\nU/tTCLzKYL+Yew4vy5NOkmENqXmtrjBHmxPqBoHk2R+7aR52RnGkGPcmNAmqcjv4\nCUjgCCq2ko4VDKIQav6/6Psrg1FoaQy4p1lJXZZVTJBU3vUfUIKzlLu7zOrmdZ/K\nUyK+nXSR5Sw6DeE5pf5ElG3QQ9KgjZ/FnzG9gRRWozdW8IgghY6Lw0efyE72ijjf\n873V0K8FqhqDYd1r9stCj05zl07UHqqLXx1ik8YcIxQQR63kcMkqLmysJZx/axds\naDRAvGQbAgMBAAECggEASgqdU/C7jLoxVnD4oCliPgBswQPGgl9jsnLnH+Oor3Ma\nx584daPmnS14Bqh9UAD7mNKOsyzXvJKg9eoXnBiy2RAuQ3AROmtB7zX/B/i7/JKA\n+qoAn/tb4nHiRZHV1gCCPDFcWE9Wd+MMbKdgRiaOdUiCofpqZd1JDhQo+YQ6YKsl\nFZdXPb9SxOFZOxDLjQY64/FV9gn3qFXBbMYf53yNmzd3l6aH/ERgWw3N9YZEgnFM\nBjKn6AN0JSsFLcacjtvgjNDE47U9jO5vdSKu0aFO+vDFBmlewou36i5S9AYLYyAQ\nNC5RDDQ/+WfPv3rGD7D4Nc9JGgK2PbEHRQypmDDNsQKBgQD3AzUE87voHefjH8xw\nWXlRd1H6+0OXt6BwohtSKJmoUvnmbtSjujSppT0EpQzdnrKJ5migbHu3xofaimcH\nmaeqTohuxtQq6E6Yly3kRGexlCAoj0LEW/Hmk1sIiuwI4ukqO6ZiCshMue8pErpE\n5Shb+2xR48nThaeHl8oqrfilCQKBgQDDgaGdKefwE/FCkMgM3ucB12SkHa37Whc9\nPn7YwrcqRC7ZkAvzkzRB/NcyW95fUcD8dYYvHyCHiksMxocwmJ38CbRJWibQlb3y\nMevWes60iAX4NjM1pWWIzADg8MUnncFlUZPWN/b7uxPzMrY1bijtxumGrme0jLwt\nfgOc6CkNAwKBgFhw3IXmYswsEP/APemoD4j8qOytFDl5NMe/MvsKsGGVPAamfhoV\nLI/lKuDD28Rp8tDvH1z5Gp7lRXUZAuS0vlR7A9xt8j9ep+14i6TkXSA2wgDjsmst\n5IHDFuALJZHU9Nj7PIp0A9184UWaf/j096tfbRww6+2BOEeTMH5xhcpJAoGAF9FD\nDxJ73xOO4L0ioe7F1cOXzyaOe4CONDfY3C9cgRmtW3PhANt+EkvrK4dln9cl25u1\nrSftnpWKbxQAhDsThBDqlcUV1XNooIjUYlyzseqgT4zK0E5GAFRaBw1N93WQifdW\nO1K2FBTGaWpUKE4zTkRdTrsQhz5d7mzbo9HkrmECgYAxR0UNwZeSLe+yZhdeK3cv\qz55RbNeHwrhE10PE49CwlUDDdTHk2qK7raAV+LMFEz2Lq8umXxx2OgJSEip3ty4\noVA5qOjr5M62v1wTbrDpmi2ItWXxuzH+oHVW3MBS4jnrbZzsoZ0ZF855xbgfAEwI\nDAygge9kB/HNsXs2OMufAw==\n-----END PRIVATE KEY-----\n",
-    client_email: props.BQ_CLIENT_EMAIL || "tz1-bigquery@g4s-shared-tz1.iam.gserviceaccount.com",
-    project_id: props.BQ_PROJECT_ID || "g4s-shared-tz1"
-  };
-}
+const MAIN_SPREADSHEET_ID        = '1m1XnSzqlTqvKgvn9yLK8CKw_n1MmnUgCVKhrFrEJe4Q'; 
+const PERMISSIONS_SPREADSHEET_ID = '18Ur6__aI2xjDjpA_yl-oqMz7dNh1h8Ds1lhYFA7LB14'; 
+const CLIENTS_SPREADSHEET_ID     = '1GleT24bySpMAPd5lgRPvS0zQ4FsI8u04GGaTT05jLSo';
+const SEDES_SPREADSHEET_ID       = '1GEXwm13dOw8ExF_DxJ7BaL7nqdKP7rB35bH0dkEdktU'; 
+const ACTIVOS_SPREADSHEET_ID     = '1-n3WCFErmS7aOPR3l4VHmKdGh0EtvodyhEuahvWPUwg'; 
 
-const DATASET_ID = "ControlTower";
+// HOJAS MIGRADAS DE BIGQUERY A GOOGLE SHEETS
+const PISOS_SPREADSHEET_ID       = '1WWA6xqMZtKHrTvacqP6KUlZLjfPoEVnZdfYpudR8DRw'; 
+const DISPOSITIVOS_SPREADSHEET_ID = '1r07LqMwpJyKQ2DvT7f9elteay4r80MBJl88NSiVvV2o';
 
-// IDs extraídos de las URLs proporcionadas
-const MAIN_SPREADSHEET_ID = '1MC76eZZt7qiso2M8LMz777_xJnzrl_ZpZptDZBnPlDo'; 
-const PERMISSIONS_SPREADSHEET_ID = '1zcZZGe_93ytWXtCF1kmk_Y8zc5b5cL1xH34i7v1w01k'; 
-const CLIENTS_SPREADSHEET_ID = '1hHWPJF9KSC0opplpCNgHRNkW6CLf7StXG2Y31m6yUpo'; 
-const SEDES_SPREADSHEET_ID = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM'; 
-const ACTIVOS_SPREADSHEET_ID = '1JU8c1MidgV4DRFg6W-GxZ2tHkfKNqGt1_cR5VDTehC4'; 
-
-// Configuración para saber en qué Spreadsheet buscar cada tabla
+// Mapeo 
 const SHEET_CONFIG = {
   'Solicitudes': MAIN_SPREADSHEET_ID,
   'Estados historico': MAIN_SPREADSHEET_ID,
@@ -40,23 +27,29 @@ const SHEET_CONFIG = {
   'Sedes': SEDES_SPREADSHEET_ID,
   'Solicitudes activos': MAIN_SPREADSHEET_ID,
   'Activos': ACTIVOS_SPREADSHEET_ID,
+  'Pisos': PISOS_SPREADSHEET_ID,
+  'Dispositivos': DISPOSITIVOS_SPREADSHEET_ID
 };
 
 /**
  * ------------------------------------------------------------------
- * OPTIMIZACIÓN: Reuso de Spreadsheet abiertos (memoria por ejecución)
+ * OPTIMIZACIÓN: Apertura de Hojas de cálculo por ID o URL
  * ------------------------------------------------------------------
  */
-const __SS_MEMO = {}; 
-function _openSS(spreadsheetId) {
-  if (!__SS_MEMO[spreadsheetId]) __SS_MEMO[spreadsheetId] = SpreadsheetApp.openById(spreadsheetId);
-  return __SS_MEMO[spreadsheetId];
+const __SS_MEMO = {};
+function _openSS(idOrUrl) {
+  if (!__SS_MEMO[idOrUrl]) {
+    if (String(idOrUrl).includes("docs.google.com/spreadsheets")) {
+      __SS_MEMO[idOrUrl] = SpreadsheetApp.openByUrl(idOrUrl);
+    } else {
+      __SS_MEMO[idOrUrl] = SpreadsheetApp.openById(idOrUrl);
+    }
+  }
+  return __SS_MEMO[idOrUrl];
 }
 
 /**
- * ------------------------------------------------------------------
- * HELPER DE SEGURIDAD Y CONCURRENCIA
- * ------------------------------------------------------------------
+ * Helper concurrencia
  */
 function _withLock(callback) {
   const lock = LockService.getScriptLock();
@@ -73,10 +66,7 @@ function _withLock(callback) {
   }
 }
 
-/**
- * OPTIMIZACIÓN: memo de info de hoja por ejecución
- */
-const __SHEET_INFO_MEMO = {}; 
+const __SHEET_INFO_MEMO = {};
 function _normHeader(x) { return String(x || "").trim().toLowerCase(); }
 
 function _getSheetInfo(sheetName) {
@@ -95,7 +85,6 @@ function _getSheetInfo(sheetName) {
 
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
-
   if (lastRow < 1 || lastCol < 1) {
     const info = { sheet, headers: [], headersNorm: [], indexByNorm: {}, lastRow, lastCol };
     __SHEET_INFO_MEMO[sheetName] = info;
@@ -106,7 +95,6 @@ function _getSheetInfo(sheetName) {
   const headersNorm = headers.map(_normHeader);
   const indexByNorm = {};
   headersNorm.forEach((h, i) => { if (h && indexByNorm[h] === undefined) indexByNorm[h] = i; });
-
   const info = { sheet, headers, headersNorm, indexByNorm, lastRow, lastCol };
   __SHEET_INFO_MEMO[sheetName] = info;
   return info;
@@ -163,10 +151,10 @@ function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
 
   const k = String(keyValue || "").trim();
   if (!k) return null;
-
+  
   for (let c = 0; c < colCandidates.length; c++) {
-    const idx = _findColIndex(headersNorm, [colCandidates[c]]);
-    if (idx !== -1) continue;
+    const idx = headersNorm.indexOf(_normHeader(colCandidates[c]));
+    if (idx === -1) continue;
 
     const colVals = sheet.getRange(2, idx + 1, lastRow - 1, 1).getValues();
     for (let i = 0; i < colVals.length; i++) {
@@ -178,7 +166,6 @@ function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
       }
     }
   }
-
   return null;
 }
 
@@ -189,12 +176,9 @@ function _getChildrenFast(sheetName, parentKeys) {
   const fkCandidates = ['ID Solicitudes', 'ID Solicitud', 'ID Solicitudes '];
   const idxFk = _findColIndex(headersNorm, fkCandidates);
   if (idxFk === -1) return [];
-
   const idxDate = _findColIndex(headersNorm, ['Fecha Actualización', 'Fecha Actualizacion', 'Fecha', 'FechaCambio']);
-
   const set = new Set((parentKeys || []).map(x => String(x || "").trim()).filter(Boolean));
   if (!set.size) return [];
-
   const fkVals = sheet.getRange(2, idxFk + 1, lastRow - 1, 1).getValues();
   const rowNums = [];
   for (let i = 0; i < fkVals.length; i++) {
@@ -205,14 +189,12 @@ function _getChildrenFast(sheetName, parentKeys) {
 
   rowNums.sort((a, b) => a - b);
   const runs = _mergeRowRuns(rowNums);
-
   const rows = _fetchRowRuns(sheet, runs, lastCol);
 
   const out = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const obj = _rowToObject(headers, r);
-
     let ts = 0;
     if (idxDate !== -1) {
       const dv = r[idxDate];
@@ -221,28 +203,17 @@ function _getChildrenFast(sheetName, parentKeys) {
     obj.__ts = ts;
     out.push(obj);
   }
-
   out.sort((a, b) => (b.__ts || 0) - (a.__ts || 0));
   out.forEach(o => delete o.__ts);
-
   return out;
 }
 
-/**
- * ------------------------------------------------------------------
- * ROUTER INTELIGENTE
- * ------------------------------------------------------------------
- */
 function doGet(e) {
-  // ✅ ROUTER DE ARCHIVOS (MODO PROXY)
   if (e.parameter && e.parameter.v === 'archivo' && e.parameter.id) {
     return _renderFileView(e.parameter.id);
   }
-
   const template = HtmlService.createTemplateFromFile('Index');
-  // ✅ IMPORTANTE: Inyectamos la URL del script para el frontend
   template.scriptUrl = ScriptApp.getService().getUrl();
-  
   return template
     .evaluate()
     .setTitle('G4S Ticket Tracker')
@@ -254,21 +225,13 @@ function doGet(e) {
 function _resolveCallerEmail(request) {
   const active = Session.getActiveUser().getEmail();
   if (active) return String(active).toLowerCase().trim();
-
   const p = request?.payload || {};
   const fromClient = p.__clientEmail || p.clientEmail || request?.clientEmail || "";
   const email = String(fromClient).toLowerCase().trim();
   if (email && email.includes("@")) return email;
-
   return "";
 }
 
-/**
- * Entry point para compatibilidad con código proporcionado por el usuario.
- * @param {string} action Acción a realizar.
- * @param {Object} payload Parámetros de la acción.
- * @returns {any} Resultado del apiHandler.
- */
 function getData(action, payload) {
   return apiHandler({ endpoint: 'getAssetsData', payload: { action: action, payload: payload } });
 }
@@ -276,43 +239,32 @@ function getData(action, payload) {
 function apiHandler(request) {
   const userEmail = _resolveCallerEmail(request);
   const { endpoint, payload } = request || {};
-
   console.log(`🔒 [API CHECK] Endpoint: ${endpoint} | ActiveUser: ${Session.getActiveUser().getEmail()} | Resuelto: ${userEmail}`);
-
   try {
     if (!userEmail) throw new Error("No se pudo verificar la identidad del usuario.");
-
     switch (endpoint) {
       case 'getUserContext': return getUserContext(userEmail, payload?.ignoreCache);
       case 'getRequests': return getRequests(userEmail);
       case 'getRequestDetail': return getRequestDetail(userEmail, payload);
-      
       case 'createRequest': return createRequest(userEmail, payload);
       case 'uploadAnexo': return uploadAnexo(userEmail, payload);
       case 'createSolicitudActivo': return createSolicitudActivo(userEmail, payload);
-      
       case 'getAnexoDownload': return getAnexoDownload(userEmail, payload);
       case 'getSolicitudActivos': return getSolicitudActivos(userEmail, payload);
       case 'getActivosCatalog': return getActivosCatalog(userEmail);
       case 'getActivoByQr': return getActivoByQr(userEmail, payload);
-      
       case 'getClassificationOptions': return getClassificationOptions(userEmail);
-      
       case 'getBatchRequestDetails': return getBatchRequestDetails(userEmail, payload);
-
       case 'getAssetsData': return getAssetsData(userEmail, payload);
-
       default: throw new Error(`Endpoint desconocido: ${endpoint}`);
     }
-
   } catch (err) {
     console.error(`❌ ERROR DE SEGURIDAD/EJECUCIÓN: ${err.message}`, err);
     return { error: true, message: "Error procesando su solicitud. Contacte al administrador." };
   }
 }
 
-// CACHE
-const DETAIL_CACHE_VER = "v3"; 
+const DETAIL_CACHE_VER = "v3";
 function _detailCacheKey(email, id) {
   const e = String(email || "").toLowerCase().trim();
   const rid = String(id || "").trim();
@@ -322,9 +274,6 @@ function _invalidateDetailCache(email, id) {
   try { CacheService.getScriptCache().remove(_detailCacheKey(email, id)); } catch (e) {}
 }
 
-// ------------------------------------------------------------------
-// ✅ FUNCIÓN DE SANITIZACIÓN ROBUSTA (Sin espacios ni caracteres raros)
-// ------------------------------------------------------------------
 function _sanitizeFileName(name) {
   const n = String(name || 'anexo').trim();
   return n.normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
@@ -346,17 +295,12 @@ function _ensurePathFromRoot(root, parts) {
   return current;
 }
 
-// ------------------------------------------------------------------
-// ✅ FUNCIÓN UPLOAD V4: CARPETAS FIJAS POR TIPO (IDS ESPECÍFICOS)
-// ------------------------------------------------------------------
 function uploadAnexo(email, payload) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
-  // --- IDs DE CARPETAS PROPORCIONADOS ---
-  const IMAGES_FOLDER_ID = '1tzYk9jiQ7Lp_bSZylMn0vuzfWZt4xTHb'; // Carpeta para Fotos/Dibujos
-  const DOCS_FOLDER_ID   = '1-CBsinL67dJUPfr8WXtKP1wM93B6zPDX'; // Carpeta para Documentos
-  // ----------------------------------------
+  const IMAGES_FOLDER_ID = '1tzYk9jiQ7Lp_bSZylMn0vuzfWZt4xTHb'; 
+  const DOCS_FOLDER_ID   = '1-CBsinL67dJUPfr8WXtKP1wM93B6zPDX';
 
   const solicitudId = String(payload?.solicitudId || '').trim();
   const tipoAnexo = String(payload?.tipoAnexo || 'Archivo').trim();
@@ -366,15 +310,14 @@ function uploadAnexo(email, payload) {
 
   if (!solicitudId) throw new Error("solicitudId requerido");
   if (!base64) throw new Error("base64 requerido");
-
+  
   const headerFound = _findRowObjectByKey('Solicitudes', solicitudId, ['ID Solicitud', 'ID Solicitudes']);
   if (!headerFound) throw new Error("Solicitud padre no encontrada.");
   
   const maxBytes = 10 * 1024 * 1024;
   const bytes = Utilities.base64Decode(base64);
   if (bytes.length > maxBytes) throw new Error("Archivo demasiado grande (máx 10MB).");
-
-  // Limpieza de nombre
+  
   const safeFileName = _sanitizeFileName(fileNameInput).replace(/\s+/g, '_'); 
   const shortId = solicitudId.replace(/-/g, '').slice(0, 8);
   const rand = Math.floor(Math.random() * 900000) + 100000;
@@ -382,46 +325,30 @@ function uploadAnexo(email, payload) {
   const extMatch = safeFileName.match(/\.([0-9a-z]+)$/i);
   const ext = extMatch ? extMatch[1] : (mimeType.includes('image') ? 'jpg' : 'pdf');
   const baseName = safeFileName.replace(/\.[^/.]+$/, "").replace(/\./g, "_");
-  
   const finalName = `${shortId}_${tipoAnexo}_${rand}_${baseName}.${ext}`;
-
   const blob = Utilities.newBlob(bytes, mimeType, finalName);
 
   return _withLock(() => {
     let file;
     let storedPath;
-
     if (tipoAnexo === 'Foto' || tipoAnexo === 'Dibujo' || mimeType.startsWith('image/')) {
-        // --- MODO FOTO: Guardar en carpeta específica IMAGES_FOLDER_ID ---
-        
         try {
           const targetFolder = DriveApp.getFolderById(IMAGES_FOLDER_ID);
           file = targetFolder.createFile(blob);
-          
-          // OJO: Para que AppSheet vea la foto, escribimos: "NombreCarpeta/NombreArchivo"
-          // Esto asume que la carpeta IMAGES_FOLDER_ID está en la ubicación correcta para AppSheet
           storedPath = `${targetFolder.getName()}/${finalName}`;
-          
         } catch (e) {
           throw new Error("No se pudo acceder a la carpeta de Imágenes definida. Verifique el ID.");
         }
-        
     } else {
-        // --- MODO DOCUMENTO: Guardar en carpeta específica DOCS_FOLDER_ID ---
-        
         try {
           const targetFolder = DriveApp.getFolderById(DOCS_FOLDER_ID);
           file = targetFolder.createFile(blob);
-          
-          // Para documentos usamos URL completa para descarga web
           storedPath = `https://drive.google.com/file/d/${file.getId()}/view`;
-          
         } catch (e) {
           throw new Error("No se pudo acceder a la carpeta de Documentos definida. Verifique el ID.");
         }
     }
 
-    // Permisos (Intento de hacerlos visibles para lectores)
     try {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch(e) {
@@ -430,7 +357,6 @@ function uploadAnexo(email, payload) {
 
     const anexoUuid = Utilities.getUuid();
     const now = new Date();
-
     const row = {
       "ID Solicitudes anexos": anexoUuid,
       "ID Solicitudes": solicitudId,
@@ -439,37 +365,28 @@ function uploadAnexo(email, payload) {
       "Usuario Actualización": email,
       "Fecha Actualización": now
     };
-
-    if (tipoAnexo === 'Foto') {
-      row['Foto'] = storedPath;
-    } else if (tipoAnexo === 'Dibujo') {
-      row['Dibujo'] = storedPath;
-    } else {
-      row['Archivo'] = storedPath;
-    }
+    if (tipoAnexo === 'Foto') { row['Foto'] = storedPath; } 
+    else if (tipoAnexo === 'Dibujo') { row['Dibujo'] = storedPath; } 
+    else { row['Archivo'] = storedPath; }
 
     appendDataToSheet('Solicitudes anexos', row);
     _invalidateDetailCache(email, solicitudId);
-
     return { success: true, anexoId: anexoUuid, fileName: file.getName(), path: storedPath };
   });
 }
 
-// HELPERS
 function getDataFromSheet(sheetName) {
   const { sheet, headers, lastRow, lastCol } = _getSheetInfo(sheetName);
   if (!sheet || lastRow < 2 || lastCol < 1) return [];
-
   const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
   if (values.length < 2) return [];
-
   const data = values.slice(1);
   return data.map(row => _rowToObject(headers, row));
 }
 
 function appendDataToSheet(sheetName, objectData) {
   const spreadsheetId = SHEET_CONFIG[sheetName];
-  const ss = SpreadsheetApp.openById(spreadsheetId); 
+  const ss = _openSS(spreadsheetId); 
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error(`Hoja ${sheetName} no encontrada.`);
 
@@ -486,12 +403,10 @@ function appendDataToSheet(sheetName, objectData) {
     }
     return val === undefined || val === null ? "" : val;
   });
-
   sheet.appendRow(rowArray);
   
   const possibleTicketId = objectData["ID Solicitud"] || objectData["ID Solicitudes"] || "";
   if (possibleTicketId) _invalidateDetailCache(String(objectData["Usuario Actualización"] || ""), possibleTicketId);
-
   return { success: true };
 }
 
@@ -526,23 +441,14 @@ function _getRootFolderForFiles() {
 
 function _resolveDriveFileFromAppSheetPath(pathValue) {
   const p = String(pathValue || "").trim();
-
-  // Si ya es una URL de view, la devolvemos como tal
-  if (/file\/d\/([^/]+)/.test(p)) {
-     return { kind: "url", url: p };
-  }
-  
-  // Soporte para URLs antiguas con id=
+  if (/file\/d\/([^/]+)/.test(p)) { return { kind: "url", url: p }; }
   if (/id=([^&]+)/.test(p)) {
      const id = p.match(/id=([^&]+)/)[1];
      return { kind: "url", url: `https://drive.google.com/file/d/${id}/view` };
   }
-
-  // Lógica legacy para rutas relativas
   const root = _getRootFolderForFiles();
   const parts = p.split('/').filter(Boolean);
   const filename = parts.pop();
-
   try {
     let current = root;
     parts.forEach(folderName => {
@@ -550,19 +456,14 @@ function _resolveDriveFileFromAppSheetPath(pathValue) {
       if (!it.hasNext()) throw new Error(`Carpeta no encontrada: ${folderName}`);
       current = it.next();
     });
-
     const files = current.getFilesByName(filename);
     if (files.hasNext()) return { kind: "file", file: files.next() };
-
-  } catch (e) {
-    // fallback
-  }
+  } catch (e) {}
 
   const safeName = filename.replace(/"/g, '\\"');
   const q = `name = "${safeName}" and trashed = false`;
   const it2 = DriveApp.searchFiles(q);
   if (it2.hasNext()) return { kind: "file", file: it2.next() };
-
   throw new Error(`Archivo no encontrado: ${filename}`);
 }
 
@@ -572,12 +473,9 @@ function _findSolicitudHeaderFast(key) {
   ]);
 }
 
-// LOGICA NEGOCIO
-
 function getUserContext(email, ignoreCache = false) {
   const cache = CacheService.getScriptCache();
-  const cacheKey = `ctx_it_v6_${Utilities.base64Encode(email)}`; 
-  
+  const cacheKey = `ctx_it_v6_${Utilities.base64Encode(email)}`;
   if (!ignoreCache) {
     const cachedData = cache.get(cacheKey);
     if (cachedData) return JSON.parse(cachedData);
@@ -594,10 +492,8 @@ function getUserContext(email, ignoreCache = false) {
       isValidUser: false,
       isAdmin: false
     };
-
     const allPermissions = getDataFromSheet('Permisos');
     const userData = allPermissions.find(row => String(row['Correo']).toLowerCase() === email.toLowerCase());
-
     if (userData) {
       context.isValidUser = true;
       const rol = (userData['Rol_Asignado'] || '').trim().toLowerCase();
@@ -613,7 +509,6 @@ function getUserContext(email, ignoreCache = false) {
 
     const allRelations = getDataFromSheet('Usuarios filtro');
     const myRelations = allRelations.filter(row => String(row['Usuario']).toLowerCase() === email.toLowerCase());
-
     const assignedClientIds = [];
     myRelations.forEach(row => {
       const id = row['Cliente'];
@@ -626,29 +521,23 @@ function getUserContext(email, ignoreCache = false) {
       const myClients = allClientes.filter(c => 
         assignedClientIds.includes(String(_getField(c, ['ID Cliente', 'Id Cliente', 'Cliente'])))
       );
-
       myClients.forEach(c => {
         const clientName = _getField(c, ['Nombre cliente', 'Nombre Cliente', 'Nombre', 'RazonSocial']);
         if (clientName) context.assignedCustomerNames.push(String(clientName).trim());
       });
-
       const allSedes = getDataFromSheet('Sedes');
       const mySedes = allSedes.filter(sede => assignedClientIds.includes(String(_getField(sede, ['ID Cliente', 'Id Cliente', 'Cliente']))));
-
       mySedes.forEach(sede => {
         const idSede = String(_getField(sede, ['ID Sede', 'Id Sede', 'Sede', 'IDSede'])).trim();
         const nombreSede = _getField(sede, ['Nombre', 'Nombre_Sede', 'Nombre sede', 'Nombre Sede', 'Sede', 'Label']) || idSede;
-
         if (idSede) {
           context.allowedClientIds.push(idSede);
           context.clientNames[idSede] = String(nombreSede).trim() || idSede;
         }
       });
     }
-
     cache.put(cacheKey, JSON.stringify(context), 350);
     return context;
-
   } catch (e) {
     console.error("Error getUserContext", e);
     throw e;
@@ -659,27 +548,22 @@ function getRequests(email) {
   const t0 = Date.now();
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
-
   try {
     let allRows = getDataFromSheet('Solicitudes');
     let filteredRows = [];
-
     if (context.isAdmin) {
       filteredRows = allRows;
     } else {
       if (context.allowedClientIds.length === 0) return { data: [], total: 0 };
       filteredRows = allRows.filter(row => context.allowedClientIds.includes(String(_getField(row, ['ID Sede']))));
     }
-
     filteredRows.sort((a, b) => {
       const dateA = new Date(_getField(a, ['Fecha creación cliente', 'Fecha creacion cliente'])).getTime() || 0;
       const dateB = new Date(_getField(b, ['Fecha creación cliente', 'Fecha creacion cliente'])).getTime() || 0;
       return dateB - dateA;
     });
-
     console.log(`⚡ [PERF] getRequests: ${Date.now() - t0}ms | total=${filteredRows.length}`);
     return { data: filteredRows, total: filteredRows.length };
-
   } catch (e) {
     console.error("Error getRequests", e);
     throw new Error("Error obteniendo datos.");
@@ -687,7 +571,6 @@ function getRequests(email) {
 }
 
 function getRequestDetail(email, { id }) {
-  const t0 = Date.now();
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado");
   if (!id) throw new Error("ID requerido");
@@ -695,13 +578,9 @@ function getRequestDetail(email, { id }) {
   const rid = String(id).trim();
   const cache = CacheService.getScriptCache();
   const ck = _detailCacheKey(email, rid);
-
   const cached = cache.get(ck);
   if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      return parsed;
-    } catch (e) {}
+    try { return JSON.parse(cached); } catch (e) {}
   }
 
   const headerFound = _findSolicitudHeaderFast(rid);
@@ -720,30 +599,25 @@ function getRequestDetail(email, { id }) {
     String(_getField(header, ['Ticket G4S'])),
     String(_getField(header, ['Ticket Cliente', 'Ticket (Opcional)']))
   ].filter(x => x && x !== "undefined" && x !== "null").map(x => String(x).trim());
-
   const services = _getChildrenFast('Observaciones historico', parentKeys);
   const history = _getChildrenFast('Estados historico', parentKeys);
   const documents = _getChildrenFast('Solicitudes anexos', parentKeys);
-
-  const result = { header, services, history, documents };
-
+  
+  // Buscar activos vinculados usando el método nativo optimizado
+  const activos = _getChildrenFast('Solicitudes activos', parentKeys);
+  
+  const result = { header, services, history, documents, activos };
   const json = JSON.stringify(result);
   if (json.length < 90000) cache.put(ck, json, 30);
-
   return result;
 }
 
-// ------------------------------------------------------------------
-// ✅ CREATE REQUEST ACTUALIZADO CON API DE APPSHEET
-// ------------------------------------------------------------------
 function createRequest(email, payload) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
-
   if (!payload?.idSede || !payload?.solicitud || !payload?.observacion) {
     throw new Error("Faltan campos obligatorios.");
   }
-
   if (!context.isAdmin && !context.allowedClientIds.includes(String(payload.idSede))) {
     throw new Error("No tiene permisos para esta sede.");
   }
@@ -751,7 +625,6 @@ function createRequest(email, payload) {
   return _withLock(() => {
     const now = new Date();
     const uuid = Utilities.getUuid();
-
     const allSedes = getDataFromSheet('Sedes');
     const sedeInfo = allSedes.find(s => String(_getField(s, ['ID Sede', 'Id Sede', 'Sede'])).trim() === String(payload.idSede).trim());
     const idCliente = sedeInfo ? _getField(sedeInfo, ['ID Cliente', 'Id Cliente', 'Cliente']) : null;
@@ -766,13 +639,11 @@ function createRequest(email, payload) {
       }
     }
 
-    const ss = SpreadsheetApp.openById(MAIN_SPREADSHEET_ID);
+    const ss = _openSS(MAIN_SPREADSHEET_ID);
     const sheet = ss.getSheetByName('Solicitudes');
     const nextRow = sheet.getLastRow() + 1;
-
     const rand = Math.floor(Math.random() * 90) + 10;
     const ticketG4S = `${letraInicial}${1000000 + nextRow}${rand}`;
-
     const newRow = {
       "ID Solicitud": uuid,
       "Ticket G4S": ticketG4S,
@@ -780,30 +651,18 @@ function createRequest(email, payload) {
       "Estado": "Creado",
       "ID Sede": String(payload.idSede).trim(),
       "Ticket Cliente": payload.ticketCliente || "",
-      
-      // ✅ MAPEADO CORRECTO SEGÚN SOLICITUD
       "Clasificación Solicitud": payload.clasificacion, 
       "Clasificación": payload.tipoServicio,
-      "Técnicos Clientes": "Por disponibilidad", // Valor fijo solicitado
-
+      "Técnicos Clientes": "Por disponibilidad", 
       "Prioridad Solicitud": payload.prioridad,
       "Solicitud": payload.solicitud,
       "Observación": payload.observacion,
       "Usuario Actualización": email
     };
-
-    // --- INTEGRACIÓN DE LA API PARA ACTIVAR CORREOS ---
-    // ✅ PRIORIDAD: Guardado directo para asegurar disponibilidad inmediata y evitar latencia de AppSheet
     appendDataToSheet('Solicitudes', newRow);
-    SpreadsheetApp.flush(); // Aseguramos que los cambios se persistan antes de seguir
+    SpreadsheetApp.flush();
 
-    // ✅ SECUNDARIO: Notificación a AppSheet para disparar automatizaciones (emails)
-    try {
-      enviarAppSheetAPI('Solicitudes', newRow);
-    } catch (e) {
-      console.warn("Notificación a AppSheet API falló o detectó duplicado, pero el ticket ya está en la hoja:", e);
-    }
-    // ------------------------------------------------
+    try { enviarAppSheetAPI('Solicitudes', newRow); } catch (e) { console.warn("AppSheet Sync advertencia:", e); }
 
     try {
       const historyRow = {
@@ -814,28 +673,14 @@ function createRequest(email, payload) {
         "Fecha Actualización": now
       };
       appendDataToSheet('Estados historico', historyRow);
-    } catch (e) {
-      console.warn("No se pudo guardar el historial inicial:", e);
-    }
+    } catch (e) { console.warn("Historial falló:", e); }
 
     _invalidateDetailCache(email, uuid);
-
     const returnRow = {
       ...newRow,
-      "Fecha creación cliente": (newRow["Fecha creación cliente"] instanceof Date)
-        ? newRow["Fecha creación cliente"].toISOString()
-        : newRow["Fecha creación cliente"]
+      "Fecha creación cliente": (newRow["Fecha creación cliente"] instanceof Date) ? newRow["Fecha creación cliente"].toISOString() : newRow["Fecha creación cliente"]
     };
-
-    return {
-      success: true,
-      solicitudId: uuid,
-      ticketG4S: ticketG4S,
-      GeneratedTicket: ticketG4S,
-      Status: "Success",
-      Rows: [returnRow],
-      row: returnRow
-    };
+    return { success: true, solicitudId: uuid, ticketG4S: ticketG4S, GeneratedTicket: ticketG4S, Status: "Success", Rows: [returnRow], row: returnRow };
   });
 }
 
@@ -849,7 +694,6 @@ function getAnexoDownload(email, { anexoId }) {
   ]);
   if (!found) throw new Error("Anexo no encontrado.");
   const row = found.obj;
-
   const parentKey = _getField(row, ['ID Solicitudes', 'ID Solicitud']);
   const headerFound = _findSolicitudHeaderFast(parentKey);
   if (!headerFound) throw new Error("No se pudo validar la solicitud padre del anexo.");
@@ -863,18 +707,13 @@ function getAnexoDownload(email, { anexoId }) {
   }
 
   const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
-  
   if (pathValue.includes("drive.google.com")) {
      return { mode: "url", url: pathValue, fileName: _getField(row, ['Nombre']) };
   }
-
   const resolved = _resolveDriveFileFromAppSheetPath(pathValue);
-
   if (resolved.kind === "url") {
-    const fileNameFromRow = _getField(row, ['Nombre']) || "Anexo";
-    return { mode: "url", fileName: fileNameFromRow, url: resolved.url };
+    return { mode: "url", fileName: _getField(row, ['Nombre']) || "Anexo", url: resolved.url };
   }
-
   const file = resolved.file;
   return { mode: "url", url: `https://drive.google.com/file/d/${file.getId()}/view`, fileName: file.getName() };
 }
@@ -896,7 +735,6 @@ function createSolicitudActivo(email, payload) {
   const headerFound = _findSolicitudHeaderFast(solicitudId);
   if (!headerFound) throw new Error("Solicitud padre no encontrada.");
   const header = headerFound.obj;
-
   if (!context.isAdmin) {
     const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
     if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
@@ -915,17 +753,12 @@ function createSolicitudActivo(email, payload) {
       const fileName = `${short}.Dibujo.${rand}.png`;
       const blob = Utilities.newBlob(bytes, 'image/png', fileName);
       const file = folder.createFile(blob);
-      
-      try {
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch(e) {}
-
+      try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
       dibujoPath = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
     }
 
     const now = new Date();
     const rowId = Utilities.getUuid();
-
     const row = {
       "ID Solicitudes activos": rowId,
       "ID Solicitudes": solicitudId,
@@ -936,10 +769,8 @@ function createSolicitudActivo(email, payload) {
       "Usuario Actualización": email,
       "Fecha Actualización": now
     };
-
     appendDataToSheet('Solicitudes activos', row);
     _invalidateDetailCache(email, solicitudId);
-
     return { success: true, activoRowId: rowId, dibujoPath };
   });
 }
@@ -972,7 +803,6 @@ function getActivosCatalog(email) {
       funcionamiento: String(_getField(r, ['Funcionamiento'])).trim()
     };
   }).filter(x => x.idActivo || x.qrSerial);
-
   const res = { data: mapped, total: mapped.length };
   cache.put(key, JSON.stringify(res), 600);
   return res;
@@ -1004,7 +834,6 @@ function getBatchRequestDetails(email, { ids }) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado");
   if (!ids || !Array.isArray(ids) || ids.length === 0) return {};
-
   const targetIds = new Set(ids.map(x => String(x).trim()));
   const allServices = getDataFromSheet('Observaciones historico');
   const allHistory = getDataFromSheet('Estados historico');
@@ -1013,7 +842,7 @@ function getBatchRequestDetails(email, { ids }) {
 
   const result = {};
   targetIds.forEach(id => { result[id] = { services: [], history: [], documents: [], activos: [] }; });
-
+  
   const findParentIdInRow = (row) => {
     if (!row) return "";
     const candidates = ['idsolicitud', 'idsolicitudes', 'ticketg4s', 'ticketcliente'];
@@ -1042,7 +871,6 @@ function getBatchRequestDetails(email, { ids }) {
   groupByParentSmart(allHistory, targetIds, 'history');
   groupByParentSmart(allDocs, targetIds, 'documents');
   groupByParentSmart(allActivos, targetIds, 'activos');
-
   console.log(`⚡ [BATCH SMART] Procesados ${ids.length} tickets. Tiempo: ${Date.now() - t0}ms`);
   return result;
 }
@@ -1053,20 +881,15 @@ function getClassificationOptions(email) {
   return ["Visita técnica", "Visita comercial"];
 }
 
-// ------------------------------------------------------------------
-// ✅ MODO PROXY V5: CORRECCIÓN DE RUTAS RELATIVAS (INTERFAZ ORIGINAL COMPLETA)
-// ------------------------------------------------------------------
 function _renderFileView(anexoId) {
   try {
     const found = _findRowObjectByKey('Solicitudes anexos', anexoId, [
       'ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID'
     ]);
-    
     if (!found) return HtmlService.createHtmlOutput("<h1>Archivo no encontrado en la base de datos.</h1>").setFaviconUrl('https://www.g4s.com/favicon.ico');
     const row = found.obj;
     const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
     const fileName = _getField(row, ['Nombre']) || "Archivo_G4S";
-
     let file = null;
 
     if (pathValue.includes("drive.google.com") || pathValue.includes("/d/")) {
@@ -1077,12 +900,9 @@ function _renderFileView(anexoId) {
     } else {
         const parts = pathValue.split('/');
         const exactFileName = parts[parts.length - 1]; 
-
         if (exactFileName) {
             const filesIt = DriveApp.getFilesByName(exactFileName);
-            if (filesIt.hasNext()) {
-                file = filesIt.next();
-            }
+            if (filesIt.hasNext()) { file = filesIt.next(); }
         }
     }
 
@@ -1107,7 +927,6 @@ function _renderFileView(anexoId) {
     const blob = file.getBlob();
     const base64 = Utilities.base64Encode(blob.getBytes());
     const mimeType = blob.getContentType();
-
     const html = `
       <!DOCTYPE html>
       <html>
@@ -1140,7 +959,8 @@ function _renderFileView(anexoId) {
             const url = URL.createObjectURL(blob);
             const btn = document.getElementById('dlBtn');
             btn.onclick = function() {
-              const a = document.createElement('a'); a.href = url; a.download = "${fileName}"; a.click();
+              const a = document.createElement('a');
+              a.href = url; a.download = "${fileName}"; a.click();
             };
             document.getElementById('loader').style.display = 'none';
             document.getElementById('content').style.display = 'block';
@@ -1150,185 +970,153 @@ function _renderFileView(anexoId) {
       </body>
       </html>
     `;
-
     return HtmlService.createHtmlOutput(html).setFaviconUrl('https://www.g4s.com/favicon.ico');
-
   } catch (e) {
     return HtmlService.createHtmlOutput(`<h3>Error de Sistema: ${e.message}</h3>`).setFaviconUrl('https://www.g4s.com/favicon.ico');
   }
 }
 
-/**
- * ------------------------------------------------------------------
- * ✅ FUNCIÓN PUENTE: API DE APPSHEET
- * ------------------------------------------------------------------
- */
 function enviarAppSheetAPI(tableName, rowData) {
-  const appId = "c0817cfb-b068-4a46-ae3b-228c0385a486"; 
+  const appId = "c0817cfb-b068-4a46-ae3b-228c0385a486";
   const accessKey = "V2-gaw9Q-LcMsx-wfJof-pFCgC-u6igd-FMxtR-23Zr1-V3O4K"; 
-  
   const url = `https://api.appsheet.com/api/v1/apps/${appId}/tables/${tableName}/Action`;
-  
   const payload = {
     "Action": "Add",
-    "Properties": { 
-       "Locale": "es-CO", 
-       "Timezone": "SA Pacific Standard Time",
-       "RunAsUserEmail": rowData["Usuario Actualización"] 
-    },
+    "Properties": { "Locale": "es-CO", "Timezone": "SA Pacific Standard Time", "RunAsUserEmail": rowData["Usuario Actualización"] },
     "Rows": [ rowData ]
   };
-  
   const options = {
-    "method": "post",
-    "contentType": "application/json",
+    "method": "post", "contentType": "application/json",
     "headers": { "ApplicationAccessKey": accessKey },
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
+    "payload": JSON.stringify(payload), "muteHttpExceptions": true
   };
-
   try {
     const response = UrlFetchApp.fetch(url, options);
-    const resText = response.getContentText();
-    console.log("Respuesta AppSheet API: " + resText);
-    return JSON.parse(resText);
+    return JSON.parse(response.getContentText());
   } catch (e) {
     console.error("Error en la API de AppSheet: " + e);
     return null;
   }
 }
 
-// --- UTILIDADES DE CONEXIÓN BIGQUERY (OAuth2) ---
-function _getBQService() {
-  const config = _getBQConfig();
-  return OAuth2.createService('BigQueryApp')
-    .setTokenUrl('https://oauth2.googleapis.com/token')
-    .setPrivateKey(config.private_key)
-    .setIssuer(config.client_email)
-    .setPropertyStore(PropertiesService.getScriptProperties())
-    .setScope('https://www.googleapis.com/auth/bigquery');
-}
-
-function _runBQQuery(query) {
-  const config = _getBQConfig();
-  const service = _getBQService();
-  if (!service.hasAccess()) throw new Error('Error de Autenticación BigQuery: ' + service.getLastError());
-  
-  const url = `https://bigquery.googleapis.com/bigquery/v2/projects/${config.project_id}/queries`;
-  const response = UrlFetchApp.fetch(url, {
-    method: 'post', contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + service.getAccessToken() },
-    payload: JSON.stringify({ query: query, useLegacySql: false })
-  });
-  
-  const json = JSON.parse(response.getContentText());
-  if (json.error) throw new Error(json.error.message);
-  
-  if (!json.rows) return [];
-  const fields = json.schema.fields.map(f => f.name);
-  return json.rows.map(row => {
-    let obj = {};
-    row.f.forEach((cell, i) => { obj[fields[i]] = cell.v; });
-    return obj;
-  });
-}
-
 /**
  * ------------------------------------------------------------------
- * LÓGICA DE ACTIVOS (BIGQUERY)
+ * REFACTORIZACIÓN INTEGRAL: CONTROL DE ACTIVOS POR MEMORIA DE GOOGLE SHEETS
+ * (Remplaza completamente a BigQuery emulando los conteos y joins en JS)
  * ------------------------------------------------------------------
- */
-/**
- * Manejador central para obtener datos de Activos desde BigQuery.
- * Incluye validación de permisos y protección contra inyección SQL.
- * * @param {string} email Email del usuario para validar contexto.
- * @param {Object} params Parámetros de la acción (action y payload).
- * @returns {Array} Resultados de la consulta a BigQuery.
  */
 function getAssetsData(email, { action, payload = {} }) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
-  const config = _getBQConfig();
-  const projectId = config.project_id;
-  
-  // Helper para escapar comillas simples y prevenir inyección SQL básica
-  const esc = (v) => String(v || '').replace(/'/g, "''");
-
   try {
     switch (action) {
-      case 'getClients':
-        // ACTUALIZADO: COUNT(DISTINCT ...) para evitar duplicados en conteos masivos por joins
-        let clientQuery = `
-          SELECT c.id_cliente, c.nombre_cliente, COUNT(DISTINCT a.id_activo) as total_activos 
-          FROM \`${projectId}.${DATASET_ID}.DIM_CLIENTES\` c
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_SEDES\` s ON c.id_cliente = s.id_cliente
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_PISOS\` p ON s.id_sede = p.id_sede
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
-        `;
-        
-        if (!context.isAdmin) {
-          // Filtrado por nombre de cliente para mayor compatibilidad con Usuarios Filtro
-          if (!context.assignedCustomerNames || context.assignedCustomerNames.length === 0) return [];
-          const names = context.assignedCustomerNames.map(n => `'${esc(n).toUpperCase()}'`).join(',');
-          clientQuery += ` WHERE UPPER(c.nombre_cliente) IN (${names})`;
-        }
-        
-        clientQuery += ` GROUP BY c.id_cliente, c.nombre_cliente ORDER BY c.nombre_cliente`;
-        return _runBQQuery(clientQuery);
-      
-      case 'getSites':
-        if (!payload.clientId) throw new Error("clientId es requerido.");
-        // ACTUALIZADO: COUNT(DISTINCT ...) para conteo preciso por sede
-        return _runBQQuery(`
-          SELECT s.id_sede, s.nombre_sede, COUNT(DISTINCT a.id_activo) as total_activos 
-          FROM \`${projectId}.${DATASET_ID}.DIM_SEDES\` s
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_PISOS\` p ON s.id_sede = p.id_sede
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
-          WHERE s.id_cliente = '${esc(payload.clientId)}' 
-          GROUP BY s.id_sede, s.nombre_sede
-          ORDER BY s.nombre_sede
-        `);
-      
-      case 'getFloors':
-        if (!payload.siteId) throw new Error("siteId es requerido.");
-        // ACTUALIZADO: COUNT(DISTINCT ...) para conteo preciso por piso
-        return _runBQQuery(`
-          SELECT p.id_piso, p.nombre_piso, p.nivel, p.imagen_plano_url, COUNT(DISTINCT a.id_activo) as total_activos 
-          FROM \`${projectId}.${DATASET_ID}.DIM_PISOS\` p
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
-          WHERE p.id_sede = '${esc(payload.siteId)}' 
-          GROUP BY p.id_piso, p.nombre_piso, p.nivel, p.imagen_plano_url
-          ORDER BY p.nombre_piso
-        `);
-      
-      case 'getAssets':
-        if (!payload.floorId) throw new Error("floorId es requerido.");
-        return _runBQQuery(`
-          SELECT 
-            A.id_activo, 
-            A.nombre_activo, 
-            COALESCE(D.clasificacion, A.id_dispositivo) as tipo_dispositivo, 
-            A.estado_activo, 
-            A.coord_x, 
-            A.coord_y, 
-            A.fecha_actualizacion, 
-            A.foto_1, 
-            A.foto_2, 
-            A.foto_3, 
-            TO_JSON_STRING(A.datos_tecnicos_json) as specs,
-            TO_JSON_STRING(A.ultimo_protocolo_json) as protocol
-          FROM \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` A
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_DISPOSITIVOS\` D 
-            ON A.id_dispositivo = D.id_dispositivo
-          WHERE A.id_piso = '${esc(payload.floorId)}'
-          LIMIT 2000
-        `);
+      case 'getClients': {
+        const clients = getDataFromSheet('Clientes');
+        const sedes = getDataFromSheet('Sedes');
+        const pisos = getDataFromSheet('Pisos');
+        const activos = getDataFromSheet('Activos');
 
+        let filteredClients = clients;
+        if (!context.isAdmin) {
+          if (!context.assignedCustomerNames || context.assignedCustomerNames.length === 0) return [];
+          const names = context.assignedCustomerNames.map(n => String(n).trim().toUpperCase());
+          filteredClients = clients.filter(c => {
+            const name = String(_getField(c, ['Nombre cliente', 'Nombre Cliente', 'Nombre', 'RazonSocial'])).trim().toUpperCase();
+            return names.includes(name);
+          });
+        }
+
+        return filteredClients.map(c => {
+          const clientId = String(_getField(c, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim();
+          const clientName = String(_getField(c, ['Nombre cliente', 'Nombre Cliente', 'Nombre', 'RazonSocial'])).trim();
+          
+          const connectedSedes = sedes.filter(s => String(_getField(s, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim() === clientId)
+                                      .map(s => String(_getField(s, ['ID Sede', 'Id Sede', 'Sede', 'IDSede'])).trim());
+          const connectedPisos = pisos.filter(p => connectedSedes.includes(String(_getField(p, ['ID Sede', 'Id Sede', 'Sede'])).trim()))
+                                      .map(p => String(_getField(p, ['ID Piso', 'Id Piso', 'Piso'])).trim());
+          const totalActivos = activos.filter(a => connectedPisos.includes(String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim())).length;
+
+          return { id_cliente: clientId, nombre_cliente: clientName, total_activos: totalActivos };
+        }).sort((a, b) => a.nombre_cliente.localeCompare(b.nombre_cliente));
+      }
+      
+      case 'getSites': {
+        if (!payload.clientId) throw new Error("clientId es requerido.");
+        const sedes = getDataFromSheet('Sedes');
+        const pisos = getDataFromSheet('Pisos');
+        const activos = getDataFromSheet('Activos');
+
+        const targetSedes = sedes.filter(s => String(_getField(s, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim() === String(payload.clientId).trim());
+
+        return targetSedes.map(s => {
+          const siteId = String(_getField(s, ['ID Sede', 'Id Sede', 'Sede', 'IDSede'])).trim();
+          const siteName = String(_getField(s, ['Nombre', 'Nombre_Sede', 'Nombre sede', 'Nombre Sede', 'Sede', 'Label']) || siteId).trim();
+
+          const connectedPisos = pisos.filter(p => String(_getField(p, ['ID Sede', 'Id Sede', 'Sede'])).trim() === siteId)
+                                      .map(p => String(_getField(p, ['ID Piso', 'Id Piso', 'Piso'])).trim());
+          const totalActivos = activos.filter(a => connectedPisos.includes(String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim())).length;
+
+          return { id_sede: siteId, nombre_sede: siteName, total_activos: totalActivos };
+        }).sort((a, b) => a.nombre_sede.localeCompare(b.nombre_sede));
+      }
+      
+      case 'getFloors': {
+        if (!payload.siteId) throw new Error("siteId es requerido.");
+        const pisos = getDataFromSheet('Pisos');
+        const activos = getDataFromSheet('Activos');
+
+        const targetPisos = pisos.filter(p => String(_getField(p, ['ID Sede', 'Id Sede', 'Sede'])).trim() === String(payload.siteId).trim());
+
+        return targetPisos.map(p => {
+          const floorId = String(_getField(p, ['ID Piso', 'Id Piso', 'Piso'])).trim();
+          const floorName = String(_getField(p, ['Nombre Piso', 'Nombre piso', 'Nombre'])).trim();
+          const nivel = _getField(p, ['Nivel', 'nivel']);
+          const planoUrl = _getField(p, ['Imagen Plano URL', 'imagen_plano_url', 'Plano', 'Imagen']);
+          const totalActivos = activos.filter(a => String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim() === floorId).length;
+
+          return { id_piso: floorId, nombre_piso: floorName, nivel: nivel, imagen_plano_url: planoUrl, total_activos: totalActivos };
+        }).sort((a, b) => a.nombre_piso.localeCompare(b.nombre_piso));
+      }
+      
+      case 'getAssets': {
+        if (!payload.floorId) throw new Error("floorId es requerido.");
+        const activos = getDataFromSheet('Activos');
+        let dispositivos = [];
+        try { dispositivos = getDataFromSheet('Dispositivos'); } catch(e) { console.warn("Hoja auxiliar de dispositivos no cargada."); }
+
+        const targetActivos = activos.filter(a => String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim() === String(payload.floorId).trim());
+
+        return targetActivos.map(a => {
+          const idDispositivo = String(_getField(a, ['ID Dispositivo', 'Id Dispositivo', 'id_dispositivo'])).trim();
+          let tipoDispositivo = _getField(a, ['Tipo Dispositivo', 'Tipo dispositivo', 'tipo_dispositivo', 'Tipo']);
+          
+          if (!tipoDispositivo && dispositivos.length > 0) {
+            const dispInfo = dispositivos.find(d => String(_getField(d, ['ID Dispositivo', 'Id Dispositivo'])).trim() === idDispositivo);
+            if (dispInfo) tipoDispositivo = _getField(dispInfo, ['Clasificación', 'Clasificacion', 'clasificacion']);
+          }
+          if (!tipoDispositivo) tipoDispositivo = idDispositivo || "General";
+
+          return {
+            id_activo: String(_getField(a, ['ID Activo', 'Id Activo', 'id_activo'])).trim(),
+            nombre_activo: String(_getField(a, ['Nombre Activo', 'Nombre activo', 'nombre_activo'])).trim(),
+            tipo_dispositivo: tipoDispositivo,
+            estado_activo: String(_getField(a, ['Estado Activo', 'Estado activo', 'estado_activo'])).trim(),
+            coord_x: _getField(a, ['Coord X', 'coord_x', 'X']),
+            coord_y: _getField(a, ['Coord Y', 'coord_y', 'Y']),
+            fecha_actualizacion: _getField(a, ['Fecha Actualización', 'Fecha Actualizacion', 'fecha_actualizacion', 'Fecha']),
+            foto_1: _getField(a, ['Foto 1', 'foto_1', 'Foto']),
+            foto_2: _getField(a, ['Foto 2', 'foto_2']),
+            foto_3: _getField(a, ['Foto 3', 'foto_3']),
+            specs: _getField(a, ['Specs', 'specs', 'Datos Tecnicos', 'datos_tecnicos_json']),
+            protocol: _getField(a, ['Protocol', 'protocol', 'Ultimo Protocolo', 'ultimo_protocolo_json'])
+          };
+        });
+      }
       default: return [];
     }
   } catch (e) { 
     console.error("Error en getAssetsData", e);
-    throw new Error("Error obteniendo datos de activos: " + e.message); 
+    throw new Error("Error procesando inventario desde Hojas de Cálculo: " + e.message); 
   }
 }

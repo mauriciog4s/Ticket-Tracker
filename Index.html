@@ -2046,6 +2046,7 @@
         );
         const [loading, setLoading] = useState(!cache);
         const [error, setError] = useState(null);
+        const [downloadingId, setDownloadingId] = useState(null);
         
         useEffect(() => {
           if (!cache) {
@@ -2083,22 +2084,49 @@
                 timeZone: "America/Bogota"
             }).format(d);
         };
-        
-        // ✅ FUNCIÓN DE APERTURA DE ANEXOS USANDO PROXY (Sin pedir acceso a Drive)
-        const openAnexo = (doc) => {
-          // 1. Obtenemos el ID único del anexo en la base de datos
+
+        // ✅ FUNCIÓN DE DESCARGA DIRECTA DE ANEXOS SIN NUEVAS PESTAÑAS (Con Fallback a Proxy)
+        const downloadAnexo = async (doc) => {
           const anexoId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID"]) || "").trim();
-          
           if (!anexoId) {
              alert("Error: Identificador de anexo no encontrado.");
              return;
           }
 
-          // 2. Construimos la URL "Puente" usando la variable global SCRIPT_URL
-          const proxyUrl = `${SCRIPT_URL}?v=archivo&id=${encodeURIComponent(anexoId)}`;
+          setDownloadingId(anexoId);
+          try {
+            const res = await runServer("getAnexoFileBase64", { anexoId });
+            if (!res || !res.base64) {
+               throw new Error("No se pudo obtener el contenido del archivo.");
+            }
 
-          // 3. Abrimos esa URL en nueva pestaña
-          window.open(proxyUrl, "_blank");
+            // Convertir Base64 a Blob
+            const byteCharacters = atob(res.base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: res.contentType || "application/octet-stream" });
+
+            // Trigger directo de descarga en el navegador
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = res.fileName || "Archivo_G4S";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+          } catch (e) {
+            console.error("Direct download failed, falling back to proxy tab:", e);
+            // Fallback a abrir el proxy en nueva pestaña si falla la API
+            const proxyUrl = `${SCRIPT_URL}?v=archivo&id=${encodeURIComponent(anexoId)}`;
+            window.open(proxyUrl, "_blank");
+          } finally {
+            setDownloadingId(null);
+          }
         };
 
         const Card = ({ title, children, count }) => (
@@ -2180,18 +2208,33 @@
                 <Card title="Anexos" count={data.docs?.length || 0}>
                   {data.docs && data.docs.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
-                      {data.docs.map((doc, i) => (
-                        <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
-                          <div className="text-red-500"><Icon name="FileText" size={16} /></div>
-                          <div className="flex-1 overflow-hidden">
-                            <div className="text-gray-700 text-xs font-medium break-words whitespace-pre-wrap">{pick(doc, ["Nombre"]) || "Documento"}</div>
-                            <div className="text-[10px] text-gray-400">{pick(doc, ["Tipo anexo"])} · {fmtDate(pick(doc, ["Fecha Actualización"]))}</div>
-                          </div>
-                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAnexo(doc); }} className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50">
-                            Abrir
-                          </button>
-                        </li>
-                      ))}
+                      {data.docs.map((doc, i) => {
+                        const docId = String(pickAny(doc, ["ID Solicitudes anexos", "ID Solicitud anexos", "ID Anexo", "ID"]) || "").trim();
+                        const isThisDownloading = downloadingId === docId;
+                        return (
+                          <li key={i} className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50">
+                            <div className="text-red-500"><Icon name="FileText" size={16} /></div>
+                            <div className="flex-1 overflow-hidden">
+                              <div className="text-gray-700 text-xs font-medium break-words whitespace-pre-wrap">{pick(doc, ["Nombre"]) || "Documento"}</div>
+                              <div className="text-[10px] text-gray-400">{pick(doc, ["Tipo anexo"])} · {fmtDate(pick(doc, ["Fecha Actualización"]))}</div>
+                            </div>
+                            <button
+                              disabled={downloadingId !== null}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadAnexo(doc); }}
+                              className="ml-2 px-2 py-1 text-[10px] font-bold rounded border bg-white text-appBlue hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1 shrink-0"
+                            >
+                              {isThisDownloading ? (
+                                <>
+                                  <i className="fas fa-spinner animate-spin"></i>
+                                  Descargando...
+                                </>
+                              ) : (
+                                "Descargar"
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : (<div className="p-4 text-center text-xs text-gray-400">No hay adjuntos.</div>)}
                 </Card>

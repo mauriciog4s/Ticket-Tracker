@@ -166,7 +166,7 @@ function _findRowObjectByKey(sheetName, keyValue, colCandidates) {
 
   for (let c = 0; c < colCandidates.length; c++) {
     const idx = _findColIndex(headersNorm, [colCandidates[c]]);
-    if (idx !== -1) continue;
+    if (idx === -1) continue;
 
     const colVals = sheet.getRange(2, idx + 1, lastRow - 1, 1).getValues();
     for (let i = 0; i < colVals.length; i++) {
@@ -292,6 +292,7 @@ function apiHandler(request) {
       case 'createSolicitudActivo': return createSolicitudActivo(userEmail, payload);
       
       case 'getAnexoDownload': return getAnexoDownload(userEmail, payload);
+      case 'getAnexoFileBase64': return getAnexoFileBase64(userEmail, payload);
       case 'getSolicitudActivos': return getSolicitudActivos(userEmail, payload);
       case 'getActivosCatalog': return getActivosCatalog(userEmail);
       case 'getActivoByQr': return getActivoByQr(userEmail, payload);
@@ -877,6 +878,73 @@ function getAnexoDownload(email, { anexoId }) {
 
   const file = resolved.file;
   return { mode: "url", url: `https://drive.google.com/file/d/${file.getId()}/view`, fileName: file.getName() };
+}
+
+function getAnexoFileBase64(email, { anexoId }) {
+  const context = getUserContext(email);
+  if (!context.isValidUser) throw new Error("Acceso Denegado.");
+  if (!anexoId) throw new Error("anexoId requerido");
+
+  const found = _findRowObjectByKey('Solicitudes anexos', anexoId, [
+    'ID Solicitudes anexos', 'ID Solicitud anexos', 'ID Anexo', 'ID', 'ID Solicitudes anexos '
+  ]);
+  if (!found) throw new Error("Anexo no encontrado.");
+  const row = found.obj;
+
+  const parentKey = _getField(row, ['ID Solicitudes', 'ID Solicitud']);
+  const headerFound = _findSolicitudHeaderFast(parentKey);
+  if (!headerFound) throw new Error("No se pudo validar la solicitud padre del anexo.");
+  const header = headerFound.obj;
+
+  if (!context.isAdmin) {
+    const recordSedeId = String(_getField(header, ['ID Sede'])).trim();
+    if (recordSedeId && !context.allowedClientIds.includes(recordSedeId)) {
+      throw new Error("No tiene permisos para descargar este anexo.");
+    }
+  }
+
+  const pathValue = _getField(row, ['Archivo', 'Archivo ', 'Foto', 'Dibujo', 'QR']) || "";
+  const fileName = _getField(row, ['Nombre']) || "Archivo_G4S";
+  let file = null;
+
+  if (pathValue.includes("drive.google.com") || pathValue.includes("/d/")) {
+    const idMatch = pathValue.match(/\/d\/([a-zA-Z0-9_-]+)/) || pathValue.match(/id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+      try { file = DriveApp.getFileById(idMatch[1]); } catch(e) {}
+    }
+  } else {
+    try {
+      const resolved = _resolveDriveFileFromAppSheetPath(pathValue);
+      if (resolved && resolved.kind === "file") {
+        file = resolved.file;
+      } else if (resolved && resolved.kind === "url") {
+        const idMatch = resolved.url.match(/\/d\/([a-zA-Z0-9_-]+)/) || resolved.url.match(/id=([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) {
+          file = DriveApp.getFileById(idMatch[1]);
+        }
+      }
+    } catch (e) {
+      const parts = pathValue.split('/');
+      const exactFileName = parts[parts.length - 1];
+      if (exactFileName) {
+        const filesIt = DriveApp.getFilesByName(exactFileName);
+        if (filesIt.hasNext()) {
+          file = filesIt.next();
+        }
+      }
+    }
+  }
+
+  if (!file) {
+    throw new Error("No se pudo encontrar el archivo físico en Google Drive.");
+  }
+
+  const blob = file.getBlob();
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  const contentType = blob.getContentType();
+  const finalName = file.getName() || fileName;
+
+  return { base64, contentType, fileName: finalName };
 }
 
 function createSolicitudActivo(email, payload) {

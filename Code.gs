@@ -1,31 +1,31 @@
 /**
  * ------------------------------------------------------------------
- * CONFIGURACIÓN Y MAPEO DE HOJAS
+ * CONFIGURACIÓN Y MAPEO DE HOJAS DE CÁLCULO (GOOGLE SHEETS)
  * ------------------------------------------------------------------
+ * Coloque aquí los ID o las URL completas (p. ej. 'https://docs.google.com/spreadsheets/d/ID/edit')
+ * de cada una de las hojas de Google Sheets necesarias.
  */
 
-/**
- * Obtiene la configuración de BigQuery desde ScriptProperties o valores por defecto.
- * Se recomienda almacenar la clave privada en ScriptProperties por seguridad (BQ_PRIVATE_KEY).
- * @returns {Object} Objeto con las credenciales de BigQuery.
- */
-function _getBQConfig() {
-  const props = PropertiesService.getScriptProperties().getProperties();
-  return {
-    private_key: props.BQ_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC8pIXxJuXj2kgo\n3eJ0CuRG7QdZXazXTfTFt04VL6B9b2q+kHyR8UDefeg3LhaYq19jxazqoMvqFsQV\nU/tTCLzKYL+Yew4vy5NOkmENqXmtrjBHmxPqBoHk2R+7aR52RnGkGPcmNAmqcjv4\nCUjgCCq2ko4VDKIQav6/6Psrg1FoaQy4p1lJXZZVTJBU3vUfUIKzlLu7zOrmdZ/K\nUyK+nXSR5Sw6DeE5pf5ElG3QQ9KgjZ/FnzG9gRRWozdW8IgghY6Lw0efyE72ijjf\n873V0K8FqhqDYd1r9stCj05zl07UHqqLXx1ik8YcIxQQR63kcMkqLmysJZx/axds\naDRAvGQbAgMBAAECggEASgqdU/C7jLoxVnD4oCliPgBswQPGgl9jsnLnH+Oor3Ma\nx584daPmnS14Bqh9UAD7mNKOsyzXvJKg9eoXnBiy2RAuQ3AROmtB7zX/B/i7/JKA\n+qoAn/tb4nHiRZHV1gCCPDFcWE9Wd+MMbKdgRiaOdUiCofpqZd1JDhQo+YQ6YKsl\nFZdXPb9SxOFZOxDLjQY64/FV9gn3qFXBbMYf53yNmzd3l6aH/ERgWw3N9YZEgnFM\nBjKn6AN0JSsFLcacjtvgjNDE47U9jO5vdSKu0aFO+vDFBmlewou36i5S9AYLYyAQ\nNC5RDDQ/+WfPv3rGD7D4Nc9JGgK2PbEHRQypmDDNsQKBgQD3AzUE87voHefjH8xw\nWXlRd1H6+0OXt6BwohtSKJmoUvnmbtSjujSppT0EpQzdnrKJ5migbHu3xofaimcH\nmaeqTohuxtQq6E6Yly3kRGexlCAoj0LEW/Hmk1sIiuwI4ukqO6ZiCshMue8pErpE\n5Shb+2xR48nThaeHl8oqrfilCQKBgQDDgaGdKefwE/FCkMgM3ucB12SkHa37Whc9\nPn7YwrcqRC7ZkAvzkzRB/NcyW95fUcD8dYYvHyCHiksMxocwmJ38CbRJWibQlb3y\nMevWes60iAX4NjM1pWWIzADg8MUnncFlUZPWN/b7uxPzMrY1bijtxumGrme0jLwt\nfgOc6CkNAwKBgFhw3IXmYswsEP/APemoD4j8qOytFDl5NMe/MvsKsGGVPAamfhoV\nLI/lKuDD28Rp8tDvH1z5Gp7lRXUZAuS0vlR7A9xt8j9ep+14i6TkXSA2wgDjsmst\n5IHDFuALJZHU9Nj7PIp0A9184UWaf/j096tfbRww6+2BOEeTMH5xhcpJAoGAF9FD\nDxJ73xOO4L0ioe7F1cOXzyaOe4CONDfY3C9cgRmtW3PhANt+EkvrK4dln9cl25u1\nrSftnpWKbxQAhDsThBDqlcUV1XNooIjUYlyzseqgT4zK0E5GAFRaBw1N93WQifdW\nO1K2FBTGaWpUKE4zTkRdTrsQhz5d7mzbo9HkrmECgYAxR0UNwZeSLe+yZhdeK3cv\qz55RbNeHwrhE10PE49CwlUDDdTHk2qK7raAV+LMFEz2Lq8umXxx2OgJSEip3ty4\noVA5qOjr5M62v1wTbrDpmi2ItWXxuzH+oHVW3MBS4jnrbZzsoZ0ZF855xbgfAEwI\nDAygge9kB/HNsXs2OMufAw==\n-----END PRIVATE KEY-----\n",
-    client_email: props.BQ_CLIENT_EMAIL || "tz1-bigquery@g4s-shared-tz1.iam.gserviceaccount.com",
-    project_id: props.BQ_PROJECT_ID || "g4s-shared-tz1"
-  };
-}
+// Hoja Principal: Contiene Solicitudes, Solicitudes anexos, Estados historico, Observaciones historico, Solicitudes activos
+const MAIN_SPREADSHEET_ID        = '1MC76eZZt7qiso2M8LMz777_xJnzrl_ZpZptDZBnPlDo';
 
-const DATASET_ID = "ControlTower";
-
-// IDs extraídos de las URLs proporcionadas
-const MAIN_SPREADSHEET_ID = '1MC76eZZt7qiso2M8LMz777_xJnzrl_ZpZptDZBnPlDo'; 
+// Hoja de Permisos: Contiene las pestañas Permisos y Usuarios filtro
 const PERMISSIONS_SPREADSHEET_ID = '1zcZZGe_93ytWXtCF1kmk_Y8zc5b5cL1xH34i7v1w01k'; 
-const CLIENTS_SPREADSHEET_ID = '1hHWPJF9KSC0opplpCNgHRNkW6CLf7StXG2Y31m6yUpo'; 
-const SEDES_SPREADSHEET_ID = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM'; 
-const ACTIVOS_SPREADSHEET_ID = '1JU8c1MidgV4DRFg6W-GxZ2tHkfKNqGt1_cR5VDTehC4'; 
+
+// Hoja de Clientes: Contiene la pestaña Clientes
+const CLIENTS_SPREADSHEET_ID     = '1hHWPJF9KSC0opplpCNgHRNkW6CLf7StXG2Y31m6yUpo';
+
+// Hoja de Sedes: Contiene la pestaña Sedes
+const SEDES_SPREADSHEET_ID       = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM';
+
+// Hoja de Pisos: Contiene la pestaña Pisos (puede ser el mismo ID de Sedes si están en el mismo archivo)
+const PISOS_SPREADSHEET_ID       = '1tbcmOM_LLwr62P6O1RjpYn3GirpzGyK98frYKVAqIsM';
+
+// Hoja de Activos: Contiene la pestaña Activos
+const ACTIVOS_SPREADSHEET_ID     = '1JU8c1MidgV4DRFg6W-GxZ2tHkfKNqGt1_cR5VDTehC4';
+
+// Hoja de Dispositivos (Opcional): Contiene catálogo de dispositivos
+const DISPOSITIVOS_SPREADSHEET_ID = '1JU8c1MidgV4DRFg6W-GxZ2tHkfKNqGt1_cR5VDTehC4';
 
 // Configuración para saber en qué Spreadsheet buscar cada tabla
 const SHEET_CONFIG = {
@@ -38,9 +38,24 @@ const SHEET_CONFIG = {
   'Usuarios filtro': PERMISSIONS_SPREADSHEET_ID,
   'Clientes': CLIENTS_SPREADSHEET_ID,
   'Sedes': SEDES_SPREADSHEET_ID,
+  'Pisos': PISOS_SPREADSHEET_ID,
   'Solicitudes activos': MAIN_SPREADSHEET_ID,
   'Activos': ACTIVOS_SPREADSHEET_ID,
+  'Dispositivos': DISPOSITIVOS_SPREADSHEET_ID,
 };
+
+/**
+ * Extrae el ID del Spreadsheet a partir de un ID puro o de una URL completa de Google Sheets.
+ * @param {string} idOrUrl ID o URL completa de Google Sheets.
+ * @returns {string} ID formateado del Spreadsheet.
+ */
+function _extractSpreadsheetId(idOrUrl) {
+  if (!idOrUrl) return '';
+  const str = String(idOrUrl).trim();
+  const match = str.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) return match[1];
+  return str;
+}
 
 /**
  * ------------------------------------------------------------------
@@ -48,7 +63,9 @@ const SHEET_CONFIG = {
  * ------------------------------------------------------------------
  */
 const __SS_MEMO = {}; 
-function _openSS(spreadsheetId) {
+function _openSS(spreadsheetIdOrUrl) {
+  const spreadsheetId = _extractSpreadsheetId(spreadsheetIdOrUrl);
+  if (!spreadsheetId) throw new Error("ID o URL de Spreadsheet no válido.");
   if (!__SS_MEMO[spreadsheetId]) __SS_MEMO[spreadsheetId] = SpreadsheetApp.openById(spreadsheetId);
   return __SS_MEMO[spreadsheetId];
 }
@@ -470,7 +487,7 @@ function getDataFromSheet(sheetName) {
 
 function appendDataToSheet(sheetName, objectData) {
   const spreadsheetId = SHEET_CONFIG[sheetName];
-  const ss = SpreadsheetApp.openById(spreadsheetId); 
+  const ss = SpreadsheetApp.openById(_extractSpreadsheetId(spreadsheetId));
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error(`Hoja ${sheetName} no encontrada.`);
 
@@ -519,7 +536,7 @@ function _normalizePath(path) {
 }
 
 function _getRootFolderForFiles() {
-  const file = DriveApp.getFileById(MAIN_SPREADSHEET_ID);
+  const file = DriveApp.getFileById(_extractSpreadsheetId(MAIN_SPREADSHEET_ID));
   const parents = file.getParents();
   if (parents.hasNext()) return parents.next();
   return DriveApp.getRootFolder();
@@ -767,7 +784,7 @@ function createRequest(email, payload) {
       }
     }
 
-    const ss = SpreadsheetApp.openById(MAIN_SPREADSHEET_ID);
+    const ss = SpreadsheetApp.openById(_extractSpreadsheetId(MAIN_SPREADSHEET_ID));
     const sheet = ss.getSheetByName('Solicitudes');
     const nextRow = sheet.getLastRow() + 1;
 
@@ -1032,12 +1049,12 @@ function getActivosCatalog(email) {
   const rows = getDataFromSheet('Activos');
   const mapped = rows.map(r => {
     return {
-      idActivo: String(_getField(r, ['ID Activo'])).trim(),
-      nombreActivo: String(_getField(r, ['Nombre Activo'])).trim(),
-      qrSerial: String(_getField(r, ['QR Serial'])).trim(),
-      nombreUbicacion: String(_getField(r, ['Nombre Ubicacion'])).trim(),
-      estadoActivo: String(_getField(r, ['Estado Activo'])).trim(),
-      funcionamiento: String(_getField(r, ['Funcionamiento'])).trim()
+      idActivo: String(_getField(r, ['ID Activo', 'id_activo'])).trim(),
+      nombreActivo: String(_getField(r, ['Nombre Activo', 'nombre_activo'])).trim(),
+      qrSerial: String(_getField(r, ['QR Serial', 'qr_serial'])).trim(),
+      nombreUbicacion: String(_getField(r, ['Nombre Ubicacion', 'nombre_ubicacion'])).trim(),
+      estadoActivo: String(_getField(r, ['Estado Activo', 'estado_activo'])).trim(),
+      funcionamiento: String(_getField(r, ['Funcionamiento', 'funcionamiento'])).trim()
     };
   }).filter(x => x.idActivo || x.qrSerial);
 
@@ -1052,17 +1069,17 @@ function getActivoByQr(email, payload) {
   const q = String(payload?.qr || '').trim();
   if (!q) throw new Error("qr requerido");
   const rows = getDataFromSheet('Activos');
-  const found = rows.find(r => String(_getField(r, ['QR Serial', 'QR', 'Qr', 'Codigo QR'])).trim() === q);
+  const found = rows.find(r => String(_getField(r, ['QR Serial', 'QR', 'Qr', 'Codigo QR', 'qr_serial'])).trim() === q);
   if (!found) return { found: false };
   return {
     found: true,
     activo: {
-      idActivo: String(_getField(found, ['ID Activo'])).trim(),
-      nombreActivo: String(_getField(found, ['Nombre Activo'])).trim(),
+      idActivo: String(_getField(found, ['ID Activo', 'id_activo'])).trim(),
+      nombreActivo: String(_getField(found, ['Nombre Activo', 'nombre_activo'])).trim(),
       qrSerial: q,
-      nombreUbicacion: String(_getField(found, ['Nombre Ubicacion'])).trim(),
-      estadoActivo: String(_getField(found, ['Estado Activo'])).trim(),
-      funcionamiento: String(_getField(found, ['Funcionamiento'])).trim()
+      nombreUbicacion: String(_getField(found, ['Nombre Ubicacion', 'nombre_ubicacion'])).trim(),
+      estadoActivo: String(_getField(found, ['Estado Activo', 'estado_activo'])).trim(),
+      funcionamiento: String(_getField(found, ['Funcionamiento', 'funcionamiento'])).trim()
     }
   };
 }
@@ -1266,137 +1283,151 @@ function enviarAppSheetAPI(tableName, rowData) {
   }
 }
 
-// --- UTILIDADES DE CONEXIÓN BIGQUERY (OAuth2) ---
-function _getBQService() {
-  const config = _getBQConfig();
-  return OAuth2.createService('BigQueryApp')
-    .setTokenUrl('https://oauth2.googleapis.com/token')
-    .setPrivateKey(config.private_key)
-    .setIssuer(config.client_email)
-    .setPropertyStore(PropertiesService.getScriptProperties())
-    .setScope('https://www.googleapis.com/auth/bigquery');
-}
-
-function _runBQQuery(query) {
-  const config = _getBQConfig();
-  const service = _getBQService();
-  if (!service.hasAccess()) throw new Error('Error de Autenticación BigQuery: ' + service.getLastError());
-  
-  const url = `https://bigquery.googleapis.com/bigquery/v2/projects/${config.project_id}/queries`;
-  const response = UrlFetchApp.fetch(url, {
-    method: 'post', contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + service.getAccessToken() },
-    payload: JSON.stringify({ query: query, useLegacySql: false })
-  });
-  
-  const json = JSON.parse(response.getContentText());
-  if (json.error) throw new Error(json.error.message);
-  
-  if (!json.rows) return [];
-  const fields = json.schema.fields.map(f => f.name);
-  return json.rows.map(row => {
-    let obj = {};
-    row.f.forEach((cell, i) => { obj[fields[i]] = cell.v; });
-    return obj;
-  });
-}
-
 /**
  * ------------------------------------------------------------------
- * LÓGICA DE ACTIVOS (BIGQUERY)
+ * LÓGICA DE ACTIVOS (100% GOOGLE SHEETS)
  * ------------------------------------------------------------------
  */
 /**
- * Manejador central para obtener datos de Activos desde BigQuery.
- * Incluye validación de permisos y protección contra inyección SQL.
- * * @param {string} email Email del usuario para validar contexto.
+ * Manejador central para obtener datos de Activos desde Google Sheets.
+ * Incluye validación de permisos y procesamiento de relaciones jerárquicas.
+ * @param {string} email Email del usuario para validar contexto.
  * @param {Object} params Parámetros de la acción (action y payload).
- * @returns {Array} Resultados de la consulta a BigQuery.
+ * @returns {Array} Resultados estructurados para la interfaz de activos.
  */
 function getAssetsData(email, { action, payload = {} }) {
   const context = getUserContext(email);
   if (!context.isValidUser) throw new Error("Acceso Denegado.");
 
-  const config = _getBQConfig();
-  const projectId = config.project_id;
-  
-  // Helper para escapar comillas simples y prevenir inyección SQL básica
-  const esc = (v) => String(v || '').replace(/'/g, "''");
-
   try {
     switch (action) {
-      case 'getClients':
-        // ACTUALIZADO: COUNT(DISTINCT ...) para evitar duplicados en conteos masivos por joins
-        let clientQuery = `
-          SELECT c.id_cliente, c.nombre_cliente, COUNT(DISTINCT a.id_activo) as total_activos 
-          FROM \`${projectId}.${DATASET_ID}.DIM_CLIENTES\` c
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_SEDES\` s ON c.id_cliente = s.id_cliente
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_PISOS\` p ON s.id_sede = p.id_sede
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
-        `;
-        
-        if (!context.isAdmin) {
-          // Filtrado por nombre de cliente para mayor compatibilidad con Usuarios Filtro
-          if (!context.assignedCustomerNames || context.assignedCustomerNames.length === 0) return [];
-          const names = context.assignedCustomerNames.map(n => `'${esc(n).toUpperCase()}'`).join(',');
-          clientQuery += ` WHERE UPPER(c.nombre_cliente) IN (${names})`;
-        }
-        
-        clientQuery += ` GROUP BY c.id_cliente, c.nombre_cliente ORDER BY c.nombre_cliente`;
-        return _runBQQuery(clientQuery);
-      
-      case 'getSites':
-        if (!payload.clientId) throw new Error("clientId es requerido.");
-        // ACTUALIZADO: COUNT(DISTINCT ...) para conteo preciso por sede
-        return _runBQQuery(`
-          SELECT s.id_sede, s.nombre_sede, COUNT(DISTINCT a.id_activo) as total_activos 
-          FROM \`${projectId}.${DATASET_ID}.DIM_SEDES\` s
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_PISOS\` p ON s.id_sede = p.id_sede
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
-          WHERE s.id_cliente = '${esc(payload.clientId)}' 
-          GROUP BY s.id_sede, s.nombre_sede
-          ORDER BY s.nombre_sede
-        `);
-      
-      case 'getFloors':
-        if (!payload.siteId) throw new Error("siteId es requerido.");
-        // ACTUALIZADO: COUNT(DISTINCT ...) para conteo preciso por piso
-        return _runBQQuery(`
-          SELECT p.id_piso, p.nombre_piso, p.nivel, p.imagen_plano_url, COUNT(DISTINCT a.id_activo) as total_activos 
-          FROM \`${projectId}.${DATASET_ID}.DIM_PISOS\` p
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` a ON p.id_piso = a.id_piso
-          WHERE p.id_sede = '${esc(payload.siteId)}' 
-          GROUP BY p.id_piso, p.nombre_piso, p.nivel, p.imagen_plano_url
-          ORDER BY p.nombre_piso
-        `);
-      
-      case 'getAssets':
-        if (!payload.floorId) throw new Error("floorId es requerido.");
-        return _runBQQuery(`
-          SELECT 
-            A.id_activo, 
-            A.nombre_activo, 
-            COALESCE(D.clasificacion, A.id_dispositivo) as tipo_dispositivo, 
-            A.estado_activo, 
-            A.coord_x, 
-            A.coord_y, 
-            A.fecha_actualizacion, 
-            A.foto_1, 
-            A.foto_2, 
-            A.foto_3, 
-            TO_JSON_STRING(A.datos_tecnicos_json) as specs,
-            TO_JSON_STRING(A.ultimo_protocolo_json) as protocol
-          FROM \`${projectId}.${DATASET_ID}.DIM_ACTIVOS\` A
-          LEFT JOIN \`${projectId}.${DATASET_ID}.DIM_DISPOSITIVOS\` D 
-            ON A.id_dispositivo = D.id_dispositivo
-          WHERE A.id_piso = '${esc(payload.floorId)}'
-          LIMIT 2000
-        `);
+      case 'getClients': {
+        const clientes = getDataFromSheet('Clientes');
+        const sedes = getDataFromSheet('Sedes');
+        const pisos = getDataFromSheet('Pisos');
+        const activos = getDataFromSheet('Activos');
 
+        let targetClientes = clientes;
+        if (!context.isAdmin) {
+          if (!context.assignedCustomerNames || context.assignedCustomerNames.length === 0) return [];
+          const assignedUpper = context.assignedCustomerNames.map(n => String(n).trim().toUpperCase());
+          targetClientes = clientes.filter(c => {
+            const name = String(_getField(c, ['Nombre cliente', 'Nombre Cliente', 'Nombre', 'RazonSocial'])).trim().toUpperCase();
+            return assignedUpper.includes(name);
+          });
+        }
+
+        return targetClientes.map(c => {
+          const clientId = String(_getField(c, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim();
+          const clientName = String(_getField(c, ['Nombre cliente', 'Nombre Cliente', 'Nombre', 'RazonSocial'])).trim();
+
+          const connectedSedes = sedes.filter(s => String(_getField(s, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim() === clientId)
+                                      .map(s => String(_getField(s, ['ID Sede', 'Id Sede', 'Sede', 'IDSede'])).trim());
+          const connectedPisos = pisos.filter(p => connectedSedes.includes(String(_getField(p, ['ID Sede', 'Id Sede', 'Sede'])).trim()))
+                                      .map(p => String(_getField(p, ['ID Piso', 'Id Piso', 'Piso'])).trim());
+          const totalActivos = activos.filter(a => connectedPisos.includes(String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim())).length;
+
+          return { id_cliente: clientId, nombre_cliente: clientName, total_activos: totalActivos };
+        }).sort((a, b) => a.nombre_cliente.localeCompare(b.nombre_cliente));
+      }
+      
+      case 'getSites': {
+        if (!payload.clientId) throw new Error("clientId es requerido.");
+        const sedes = getDataFromSheet('Sedes');
+        const pisos = getDataFromSheet('Pisos');
+        const activos = getDataFromSheet('Activos');
+        const targetSedes = sedes.filter(s => String(_getField(s, ['ID Cliente', 'Id Cliente', 'Cliente'])).trim() === String(payload.clientId).trim());
+        return targetSedes.map(s => {
+          const siteId = String(_getField(s, ['ID Sede', 'Id Sede', 'Sede', 'IDSede'])).trim();
+          const siteName = String(_getField(s, ['Nombre', 'Nombre_Sede', 'Nombre sede', 'Nombre Sede', 'Sede', 'Label']) || siteId).trim();
+
+          const connectedPisos = pisos.filter(p => String(_getField(p, ['ID Sede', 'Id Sede', 'Sede'])).trim() === siteId)
+                                      .map(p => String(_getField(p, ['ID Piso', 'Id Piso', 'Piso'])).trim());
+          const totalActivos = activos.filter(a => connectedPisos.includes(String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim())).length;
+
+          return { id_sede: siteId, nombre_sede: siteName, total_activos: totalActivos };
+        }).sort((a, b) => a.nombre_sede.localeCompare(b.nombre_sede));
+      }
+      
+      case 'getFloors': {
+        if (!payload.siteId) throw new Error("siteId es requerido.");
+        const pisos = getDataFromSheet('Pisos');
+        const activos = getDataFromSheet('Activos');
+
+        const targetPisos = pisos.filter(p => String(_getField(p, ['ID Sede', 'Id Sede', 'Sede'])).trim() === String(payload.siteId).trim());
+        return targetPisos.map(p => {
+          const floorId = String(_getField(p, ['ID Piso', 'Id Piso', 'Piso'])).trim();
+          const floorName = String(_getField(p, ['Nombre Piso', 'Nombre piso', 'Nombre'])).trim();
+
+          // Mapear la columna real del CSV "Número de piso" al parámetro "nivel" esperado en Index.html
+          const nivel = _getField(p, ['Número de piso', 'Numero de piso', 'Nivel', 'nivel']);
+
+          const planoUrl = _getField(p, ['Imagen Plano URL', 'imagen_plano_url', 'Plano', 'Imagen']);
+          const totalActivos = activos.filter(a => String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim() === floorId).length;
+
+          return { id_piso: floorId, nombre_piso: floorName, nivel: nivel, imagen_plano_url: planoUrl, total_activos: totalActivos };
+        }).sort((a, b) => a.nombre_piso.localeCompare(b.nombre_piso));
+      }
+      
+      case 'getAssets': {
+        if (!payload.floorId) throw new Error("floorId es requerido.");
+        const activos = getDataFromSheet('Activos');
+        let dispositivos = [];
+        try {
+          dispositivos = getDataFromSheet('Dispositivos');
+        } catch(e) {
+          console.warn("Hoja auxiliar de dispositivos no cargada.");
+        }
+
+        const targetActivos = activos.filter(a => String(_getField(a, ['ID Piso', 'Id Piso', 'Piso'])).trim() === String(payload.floorId).trim());
+        return targetActivos.map(a => {
+          const idDispositivo = String(_getField(a, ['ID Dispositivo', 'Id Dispositivo', 'id_dispositivo'])).trim();
+          let tipoDispositivo = _getField(a, ['Tipo Dispositivo', 'Tipo dispositivo', 'tipo_dispositivo', 'Tipo']);
+
+          if (!tipoDispositivo && dispositivos.length > 0) {
+            const dispInfo = dispositivos.find(d => String(_getField(d, ['ID Dispositivo', 'Id Dispositivo'])).trim() === idDispositivo);
+            if (dispInfo) tipoDispositivo = _getField(dispInfo, ['Clasificación', 'Clasificacion', 'clasificacion']);
+          }
+          if (!tipoDispositivo) tipoDispositivo = idDispositivo || "General";
+
+          // Parseo seguro de la columna unificada "Ubicación plano" para obtener coord_x y coord_y individuales si viene como "45.5, 62.3"
+          const ubicacionPlano = _getField(a, ['Ubicación plano', 'Ubicacion plano', 'ubicacion_plano']);
+          let coordX = "";
+          let coordY = "";
+
+          if (ubicacionPlano) {
+            const strCoords = String(ubicacionPlano).trim();
+            if (strCoords.includes(',')) {
+              const partesCoords = strCoords.split(',');
+              if (partesCoords.length >= 2) {
+                coordX = partesCoords[0].trim();
+                coordY = partesCoords[1].trim();
+              }
+            }
+          }
+
+          return {
+            id_activo: String(_getField(a, ['ID Activo', 'Id Activo', 'id_activo'])).trim(),
+            nombre_activo: String(_getField(a, ['Nombre Activo', 'Nombre activo', 'nombre_activo'])).trim(),
+            tipo_dispositivo: tipoDispositivo,
+            estado_activo: String(_getField(a, ['Estado Activo', 'Estado activo', 'estado_activo'])).trim(),
+
+            coord_x: coordX || _getField(a, ['Coord X', 'coord_x', 'X']),
+            coord_y: coordY || _getField(a, ['Coord Y', 'coord_y', 'Y']),
+
+            fecha_actualizacion: _getField(a, ['Fecha Actualización', 'Fecha Actualizacion', 'fecha_actualizacion', 'Fecha']),
+            foto_1: _getField(a, ['Foto 1', 'foto_1', 'Foto']),
+            foto_2: _getField(a, ['Foto 2', 'foto_2']),
+            foto_3: _getField(a, ['Foto 3', 'foto_3']),
+            specs: _getField(a, ['Specs', 'specs', 'Datos Tecnicos', 'datos_tecnicos_json']),
+            protocol: _getField(a, ['Protocol', 'protocol', 'Ultimo Protocolo', 'ultimo_protocolo_json'])
+          };
+        });
+      }
       default: return [];
     }
   } catch (e) { 
     console.error("Error en getAssetsData", e);
-    throw new Error("Error obteniendo datos de activos: " + e.message); 
+    throw new Error("Error procesando inventario desde Hojas de Cálculo: " + e.message);
   }
 }
